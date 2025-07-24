@@ -8,7 +8,7 @@ class BackendApplicationTests {
 
 	@Test
 	void contextLoads() {
-			System.out.println("1");
+			System.out.println("1수정");
 	}
 
 }
