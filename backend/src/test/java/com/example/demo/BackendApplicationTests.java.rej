@@ -1,0 +1,10 @@
+diff a/backend/src/test/java/com/example/demo/BackendApplicationTests.java b/backend/src/test/java/com/example/demo/BackendApplicationTests.java	(rejected hunks)
+@@ -8,7 +8,7 @@
+ 
+ 	@Test
+ 	void contextLoads() {
+-			System.out.println("1");
++			System.out.println("1수정");
+ 	}
+ 
+ }
