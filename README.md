@@ -33,6 +33,18 @@
 - 반응형 UI
 - 사용자 권한 기반 기능 제한
 
+## 🛠️ 사용 기술 (Tech Stack)
+
+| 분야 | 사용 기술 |
+|------|-----------|
+| 백엔드 | Java, Spring Boot, JPA, Spring Security |
+| 프론트엔드 | React, HTML/CSS |
+| DB | MySQL |
+| 외부 API | Kakao Map API, Kakao Navi API |
+| 인증 | JWT, bcrypt |
+| 형상 관리 | Git, GitHub |
+
+
 ## 📄 문서
 
 - [요구사항 정의서 보기](./docs/요구사항정의서.md)
