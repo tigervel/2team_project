@@ -49,5 +49,9 @@ freight-logistics-system/
 │   ├── src/
 │   └── public/
 ├── docs/                   # 프로젝트 문서
-│   └── 요구사항정의서.md
+│   └── G2I4_2TeamProject_요구사항_정의서.md
 └── README.md
+
+## 📄 문서
+
+- [요구사항 정의서 보기](./docs/G2I4_2TeamProject_요구사항_정의서.md)
