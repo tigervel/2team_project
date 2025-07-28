@@ -33,6 +33,10 @@
 - 반응형 UI
 - 사용자 권한 기반 기능 제한
 
+## 📄 문서
+
+- [요구사항 정의서 보기](./docs/G2I4_2TeamProject_요구사항_정의서.md)
+
 ---
 
 ## 📁 프로젝트 구조
@@ -52,6 +56,3 @@ freight-logistics-system/
 │   └── G2I4_2TeamProject_요구사항_정의서.md
 └── README.md
 
-## 📄 문서
-
-- [요구사항 정의서 보기](./docs/G2I4_2TeamProject_요구사항_정의서.md)
