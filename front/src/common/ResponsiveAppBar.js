@@ -41,7 +41,7 @@ function ResponsiveAppBar() {
   const handleCloseUserMenu = () => {
     setAnchorElUser(null);
   };
-  const id = true;
+  const id = false;
 
   return (
     <AppBar position="static" sx={{ bgcolor: '#299AF0' }}>
@@ -52,7 +52,7 @@ function ResponsiveAppBar() {
             variant="h6"
             noWrap
             component="a"
-            href=""
+            href="/"
             sx={{
               mr: 2,
               display: { xs: 'none', md: 'flex' },
@@ -107,12 +107,12 @@ function ResponsiveAppBar() {
               ))}
             </Menu>
           </Box>
-          <AdbIcon sx={{ display: { xs: 'flex', md: 'none' }, mr: 1 }} />
+          {/* <AdbIcon sx={{ display: { xs: 'flex', md: 'none' }, mr: 1 }} /> */}
           <Typography
             variant="h5"
             noWrap
             component="a"
-            href="#app-bar-with-responsive-menu"
+            href="/"
             sx={{
               mr: 2,
               display: { xs: 'flex', md: 'none' },
@@ -124,7 +124,12 @@ function ResponsiveAppBar() {
               textDecoration: 'none',
             }}
           >
-            LOGO
+            <img
+              src="../../image/logo/KakaoTalk_20250508_113520617.png"
+              alt="Logo"
+              style={{ height: '40px' }} //모바일 로고 이미지홈
+            /> 
+            
           </Typography>
           <Box sx={{ flexGrow: 1, display: { xs: 'none', md: 'flex' } }}>
             {pages.map((page) => (
@@ -170,7 +175,14 @@ function ResponsiveAppBar() {
                 </MenuItem>
               ))}
             </Menu>
-          </Box> : <></>}
+          </Box> : <div><Button sx={{
+            fontSize:'18px',
+            color:'inherit'
+          }} >로그인</Button>
+           <Button sx={{
+            fontSize:'18px',
+            color:'inherit'
+          }}>회원가입</Button></div> }
         </Toolbar>
       </Container>
     </AppBar>
