@@ -1,3 +1,17 @@
+# 프로젝트 코드 제작 전 React Install
+- material UI 핵심 패키지 설치(필수 3종)
+- yarn add @mui/material @emotion/react @emotion/styled  
+  
+- Material UI 아이콘 설치
+- yarn add @mui/icons-material
+
+- React Router DOM (페이지 이동용)
+- yarn add react-router-dom
+
+- 전체 한 줄 설치 (처음부터 전체 설치 경우 해당)
+- yarn add @mui/material @emotion/react @emotion/styled @mui/icons-material react-router-dom react react-dom
+
+
 # 🚚 화물 운송 시스템 플랫폼 (Freight Logistics System)
 
 > 화물주(고객)와 차주(운송업체)를 연결해주는 통합 운송 관리 플랫폼입니다.
