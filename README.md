@@ -11,6 +11,8 @@
 - 전체 한 줄 설치 (처음부터 전체 설치 경우 해당)
 - yarn add @mui/material @emotion/react @emotion/styled @mui/icons-material react-router-dom react react-dom
 
+- Redux Install
+- yarn add @reduxjs/toolkit react-redux 
 
 # 🚚 화물 운송 시스템 플랫폼 (Freight Logistics System)
 
