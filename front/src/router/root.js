@@ -3,6 +3,8 @@ import { createBrowserRouter } from "react-router-dom";
 import orderRouter from "./orderRouter"
 import adminRouter from "./adminRouter"
 import mypageRouter from "./mypageRouter"
+import servicecenterRouter from "./servicecenterRouter"
+
 
 
 
@@ -49,7 +51,7 @@ const root = createBrowserRouter([
             {
                 path: "servicecenterpage",
                 element: <Suspense fallback={Loading}><ServiceCenter /></Suspense>,
-                //children: orderRouter()
+                //children: servicecenterRouter()
             }
 
 
