@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import React, { useEffect, useRef } from 'react';
 import Chart from 'chart.js/auto';
 import {
@@ -150,4 +151,11 @@ const MyPage = () => {
   );
 };
 
+=======
+const MyPage = ()=>{
+    return(
+        <div>MyPage</div>
+    )
+}
+>>>>>>> 2f20f7a (123)
 export default MyPage;

@@ -3,4 +3,4 @@ const OrderPage = ()=>{
         <div>OrderPage</div>
     )
 }
-export default OrderPage;
+export default OrderPage
