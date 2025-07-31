@@ -1,10 +1,5 @@
-<<<<<<< HEAD
-const MyPage = ()=>{
-    return(
-        <div>MyPage</div>
-    )
-}
-=======
+
+
 import React, { useEffect, useRef } from 'react';
 import Chart from 'chart.js/auto';
 import {
@@ -157,5 +152,5 @@ const MyPage = () => {
   );
 };
 
->>>>>>> c0bc3120cb1805073f89acc659d0936fb7ff5d5d
+
 export default MyPage;
