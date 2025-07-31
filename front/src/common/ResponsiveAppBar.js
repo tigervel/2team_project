@@ -146,7 +146,7 @@ function ResponsiveAppBar() {
                 sx={{ my: 2, color: 'white', display: 'block', fontSize: '20px', paddingRight: '25px' }}
               >
                 {page.label}
-              </Button>
+              </Button>;
             ))}
           </Box>
           {id ? <Box sx={{ flexGrow: 0 }}>
