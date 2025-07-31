@@ -3,4 +3,4 @@ const MyPage = ()=>{
         <div>MyPage</div>
     )
 }
-export default MyPage
+export default MyPage;
