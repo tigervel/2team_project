@@ -1,6 +1,10 @@
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
+=======
+
+>>>>>>> b1ad540 (커밋)
 
 
 >>>>>>> f540d5b (커밋)
@@ -157,6 +161,7 @@ const MyPage = () => {
 };
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 const MyPage = ()=>{
     return(
@@ -167,4 +172,6 @@ const MyPage = ()=>{
 =======
 
 >>>>>>> f540d5b (커밋)
+=======
+>>>>>>> b1ad540 (커밋)
 export default MyPage;
