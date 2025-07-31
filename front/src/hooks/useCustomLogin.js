@@ -14,7 +14,7 @@ const useCustomLogin = ()=>{
     const dispatch = useDispatch();
 
     //로그인 상태 변수 선언
-    const loginState= useSelector(state=> state.loginSlice);
+    const loginState= useSelector(state=> state.login);
 
     const isLogin = loginState.email?true:false;//로그인 여부
 
@@ -28,13 +28,13 @@ const useCustomLogin = ()=>{
         dispatch(logout())
      }
 
-     const moveToPath=(path)=>{
-        navigate({pathname:path},{replace:true})
-     }
+     const moveToPath = (path) => {
+      navigate(path, { replace: true });
+};
 
-     const moveToLogin=()=>{
-        navigate({pathname:'/member/login'},{replace:true})
-     }
+const moveToLogin = () => {
+  navigate('/member/login', { replace: true });
+};
      const moveToLoginReturn =()=>{//로그인 페이지로 이동하는 컴포넌트
         return <Navigate replace to={"/member/login"}/>
      }
