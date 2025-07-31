@@ -1,10 +1,4 @@
-<<<<<<< HEAD
-const MyPage = ()=>{
-    return(
-        <div>MyPage</div>
-    )
-}
-=======
+
 
 
 import React, { useEffect, useRef } from 'react';
@@ -159,6 +153,4 @@ const MyPage = () => {
   );
 };
 
-
->>>>>>> f540d5b8b6be5dceea90f631a48f9ad444ea6d22
 export default MyPage;
