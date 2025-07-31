@@ -1,0 +1,7 @@
+const adminRouter = () =>{
+    return[
+        {
+            path:"/"
+        }
+    ]
+}

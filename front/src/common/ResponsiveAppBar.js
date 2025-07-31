@@ -16,12 +16,17 @@ import { Link } from 'react-router-dom';
 
 
 const pages = [
-  { label: '견적서 작성', path: '/' },
+  { label: '견적서 작성', path: '/orderpage' },
   { label: '운송 접수 사항', path: '/abc' },
-  { label: '고객지원', path: '/cda' },
-  { label: '문의사항', path: '/yas' }
+  { label: '고객지원', path: '/servicecenterpage' },
+  { label: '문의사항', path: '/servicecenterpage' }
 ];
-const settings = ['마이페이지', '주문내역 확인', '배송상태', '로그아웃'];
+const settings = [
+  { label: '마이페이지', path: '/mypage' },
+  { label: '주문내역 확인', path: '/mypage' },
+  { label: '배송상태', path: '/mypage' },
+  { label: '로그아웃', path: '/mypage' }
+];
 
 function ResponsiveAppBar() {
   const [anchorElNav, setAnchorElNav] = React.useState(null);
@@ -41,7 +46,7 @@ function ResponsiveAppBar() {
   const handleCloseUserMenu = () => {
     setAnchorElUser(null);
   };
-  const id = false;
+  const id = true;
 
   return (
     <AppBar position="static" sx={{ bgcolor: '#299AF0' }}>
@@ -99,9 +104,9 @@ function ResponsiveAppBar() {
             >
               {pages.map((page) => (
                 <MenuItem key={page.label} //모바일 네비바
-                to={page.path}
-                component={Link}
-                onClick={handleCloseNavMenu}>
+                  to={page.path}
+                  component={Link}
+                  onClick={handleCloseNavMenu}>
                   <Typography sx={{ textAlign: 'center' }}>{page.label}</Typography>
                 </MenuItem>
               ))}
@@ -128,17 +133,17 @@ function ResponsiveAppBar() {
               src="../../image/logo/KakaoTalk_20250508_113520617.png"
               alt="Logo"
               style={{ height: '40px' }} //모바일 로고 이미지홈
-            /> 
-            
+            />
+
           </Typography>
           <Box sx={{ flexGrow: 1, display: { xs: 'none', md: 'flex' } }}>
             {pages.map((page) => (
               <Button
-               key={page.label}
+                key={page.label}
                 to={page.path}
                 component={Link}
                 onClick={handleCloseNavMenu}
-                sx={{ my: 2, color: 'white', display: 'block', fontSize:'20px', paddingRight:'25px'}}
+                sx={{ my: 2, color: 'white', display: 'block', fontSize: '20px', paddingRight: '25px' }}
               >
                 {page.label}
               </Button>
@@ -147,9 +152,9 @@ function ResponsiveAppBar() {
           {id ? <Box sx={{ flexGrow: 0 }}>
             <Tooltip title="Open settings">
               <IconButton onClick={handleOpenUserMenu} sx={{ p: 0 }}>
-                <Avatar alt="Remy Sharp" 
-                src="../../image/icon/channels4_profile.jpg" 
-                sx={{width:70,height:70}}
+                <Avatar alt="Remy Sharp"
+                  src="../../image/icon/channels4_profile.jpg"
+                  sx={{ width: 70, height: 70 }}
                 />
               </IconButton>
             </Tooltip>
@@ -170,19 +175,21 @@ function ResponsiveAppBar() {
               onClose={handleCloseUserMenu}
             >
               {settings.map((setting) => (
-                <MenuItem key={setting} onClick={handleCloseUserMenu}>
-                  <Typography sx={{ textAlign: 'center' }}>{setting}</Typography>
+                <MenuItem key={setting.label} onClick={handleCloseUserMenu} 
+                component={Link} to={setting.path}
+                >
+                  <Typography sx={{ textAlign: 'center' }}>{setting.label}</Typography>
                 </MenuItem>
               ))}
             </Menu>
           </Box> : <div><Button sx={{
-            fontSize:'18px',
-            color:'inherit'
+            fontSize: '18px',
+            color: 'inherit'
           }} >로그인</Button>
-           <Button sx={{
-            fontSize:'18px',
-            color:'inherit'
-          }}>회원가입</Button></div> }
+            <Button sx={{
+              fontSize: '18px',
+              color: 'inherit'
+            }}>회원가입</Button></div>}
         </Toolbar>
       </Container>
     </AppBar>
