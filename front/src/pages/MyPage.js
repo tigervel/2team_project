@@ -6,7 +6,7 @@ import {
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow
 } from '@mui/material';
 
-import Sidebar from '../common/Sidebar'; // 사이드바 추가
+//import Sidebar from '../common/Sidebar'; // 사이드바 추가
 import ResponsiveAppBar from '../common/ResponsiveAppBar'; // 상단 앱바 추가
 
 const MyPage = () => {
