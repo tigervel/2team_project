@@ -3,6 +3,6 @@ const servicecenterRouter = () =>{
         {
             path:"/"
         }
-    ]
+    ];
 }
 export default servicecenterRouter
