@@ -1,4 +1,9 @@
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+
+
+>>>>>>> f540d5b (커밋)
 import React, { useEffect, useRef } from 'react';
 import Chart from 'chart.js/auto';
 import {
@@ -151,6 +156,7 @@ const MyPage = () => {
   );
 };
 
+<<<<<<< HEAD
 =======
 const MyPage = ()=>{
     return(
@@ -158,4 +164,7 @@ const MyPage = ()=>{
     )
 }
 >>>>>>> 2f20f7a (123)
+=======
+
+>>>>>>> f540d5b (커밋)
 export default MyPage;
