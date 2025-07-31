@@ -1,20 +1,8 @@
 import React, { useState, useEffect } from "react";
 import {
-  TextField,
-  Button,
-  Grid,
-  Typography,
-  InputAdornment,
-  IconButton,
-  Box,
-  Divider,
-  Select,
-  MenuItem,
-  OutlinedInput,
-  Checkbox,
-  ListItemText,
-  FormControl,
-  Stack,
+  TextField, Button, Stack, Typography, Select, MenuItem,
+  FormControl, InputLabel, OutlinedInput, Checkbox, ListItemText,
+  Box, IconButton, InputAdornment, Grid, useMediaQuery, useTheme,
 } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
 import TmapViewer from "./TmapViewer";
@@ -25,33 +13,38 @@ const SPECIAL_NOTE_OPTIONS = [
   { label: "파손주의", cost: 150000 },
 ];
 
-export default function OrderComponent() {
+export default function EstimateForm() {
   const [startAddress, setStartAddress] = useState("");
   const [endAddress, setEndAddress] = useState("");
   const [distanceKm, setDistanceKm] = useState("");
   const [cargoType, setCargoType] = useState("");
-  const [cargoWeight, setCargoWeight] = useState(0);
+  const [cargoWeight, setCargoWeight] = useState("");
   const [specialNotes, setSpecialNotes] = useState([]);
   const [specialNoteCost, setSpecialNoteCost] = useState(0);
   const [baseCost, setBaseCost] = useState(0);
   const [distanceCost, setDistanceCost] = useState(0);
   const [totalCost, setTotalCost] = useState(0);
-  const [tab, setTab] = useState("map"); // 'map' or 'price'
+  const [showMap, setShowMap] = useState(false);
+
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("md"));
 
   useEffect(() => {
     const base = cargoWeight <= 1000 ? 250000 : 350000;
-    setBaseCost(base);
     const distCost = distanceKm * 1000;
+    const extra = specialNotes.reduce((sum, n) => sum + n.cost, 0);
+    setBaseCost(base);
     setDistanceCost(distCost);
-    setTotalCost(Number(base) + Number(distCost) + Number(specialNoteCost));
-  }, [cargoWeight, distanceKm, specialNoteCost]);
+    setSpecialNoteCost(extra);
+    setTotalCost(base + distCost + extra);
+  }, [cargoWeight, distanceKm, specialNotes]);
 
-  const handleSpecialNoteChange = (event) => {
-    const selected = SPECIAL_NOTE_OPTIONS.filter((opt) =>
-      event.target.value.includes(opt.label)
+  const handleSpecialNoteChange = (e) => {
+    const selectedLabels = e.target.value;
+    const selected = SPECIAL_NOTE_OPTIONS.filter((n) =>
+      selectedLabels.includes(n.label)
     );
     setSpecialNotes(selected);
-    setSpecialNoteCost(selected.reduce((acc, cur) => acc + cur.cost, 0));
   };
 
   const handleAddressSearch = (setter) => {
@@ -87,36 +80,36 @@ export default function OrderComponent() {
       const meters = data.routes[0].summary.distance;
       setDistanceKm((meters / 1000).toFixed(1));
     } catch (e) {
-      console.error("거리 계산 실패", e);
+      console.error("거리 계산 오류", e);
     }
   };
 
   return (
-    <Box
-      sx={{
-        maxWidth: 1200,
-        mx: "auto",
-        py: 6,
-        px: 3,
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-      }}
-    >
-      <Typography variant="h5" fontWeight="bold" mb={4}>
+    <Box sx={{ px: 2, py: 4 }}>
+      <Typography variant="h5" fontWeight="bold" align="center" mb={5}>
         견적서 작성
       </Typography>
 
-      {/* 주소 입력 */}
-      <Grid container spacing={2} alignItems="center" mb={4}>
-        <Grid item xs={12} md={6}>
+
+
+      <Grid
+        container
+        spacing={4}
+        direction={isMobile ? "column" : "row"}
+        justifyContent="center"
+      >
+        <Stack
+          direction={isMobile ? "column" : "row"}
+          spacing={4}
+          justifyContent="center"
+          alignItems="flex-start"
+          sx={{ mb: 4 }}
+        >
           <TextField
-            fullWidth
             placeholder="출발지 주소"
-            variant="filled"
             value={startAddress}
+            onChange={(e) => setStartAddress(e.target.value)}
             InputProps={{
-              disableUnderline: true,
               endAdornment: (
                 <InputAdornment position="end">
                   <IconButton onClick={() => handleAddressSearch(setStartAddress)}>
@@ -124,18 +117,15 @@ export default function OrderComponent() {
                   </IconButton>
                 </InputAdornment>
               ),
-              sx: { backgroundColor: "#f3f3f3", borderRadius: 2 },
             }}
+            sx={{ width: 520 }}
           />
-        </Grid>
-        <Grid item xs={12} md={6}>
+
           <TextField
-            fullWidth
             placeholder="도착지 주소"
-            variant="filled"
             value={endAddress}
+            onChange={(e) => setEndAddress(e.target.value)}
             InputProps={{
-              disableUnderline: true,
               endAdornment: (
                 <InputAdornment position="end">
                   <IconButton onClick={() => handleAddressSearch(setEndAddress)}>
@@ -143,134 +133,137 @@ export default function OrderComponent() {
                   </IconButton>
                 </InputAdornment>
               ),
-              sx: { backgroundColor: "#f3f3f3", borderRadius: 2 },
             }}
+            sx={{ width: 520 }}
           />
-        </Grid>
-      </Grid>
+        </Stack>
 
-      {/* 본문 영역 */}
-      <Grid container spacing={6} justifyContent="center" alignItems="flex-start">
         {/* 좌측 입력 영역 */}
-        <Grid item xs={12} md={5}>
-          <Stack spacing={2}>
+        <Grid item xs={12} md={"auto"}>
+
+          <Stack spacing={2} sx={{ width: isMobile ? "100%" : 520 }}>
             <TextField
-              placeholder="예상 거리(km)"
-              variant="filled"
+              label="예상 거리(km)"
               value={distanceKm}
-              InputProps={{
-                readOnly: true,
-                disableUnderline: true,
-                sx: { backgroundColor: "#f3f3f3", borderRadius: 2, width:500},
-              }}
+              InputProps={{ readOnly: true }}
               fullWidth
             />
             <TextField
-              placeholder="화물 종류"
-              variant="filled"
+              label="화물 종류"
               value={cargoType}
               onChange={(e) => setCargoType(e.target.value)}
-              InputProps={{
-                disableUnderline: true,
-                sx: { backgroundColor: "#f3f3f3", borderRadius: 2 },
-              }}
               fullWidth
             />
             <TextField
-              placeholder="화물 무게 (kg)"
-              variant="filled"
+              label="화물 무게(kg)"
               type="number"
               value={cargoWeight}
-              onChange={(e) => setCargoWeight(Number(e.target.value))}
-              InputProps={{
-                disableUnderline: true,
-                sx: { backgroundColor: "#f3f3f3", borderRadius: 2 },
+              onChange={(e) => {
+                const value = Number(e.target.value);
+                if (value >= 0) setCargoWeight(value);
+                else setCargoWeight("");
               }}
               fullWidth
             />
             <FormControl fullWidth>
+              <InputLabel>특이사항 선택</InputLabel>
               <Select
                 multiple
-                displayEmpty
                 value={specialNotes.map((n) => n.label)}
                 onChange={handleSpecialNoteChange}
-                input={<OutlinedInput />}
-                renderValue={(selected) => selected.join(", ") || "특이사항 선택"}
+                input={<OutlinedInput label="특이사항 선택" />}
+                renderValue={(selected) => selected.join(", ")}
               >
                 {SPECIAL_NOTE_OPTIONS.map((opt) => (
                   <MenuItem key={opt.label} value={opt.label}>
-                    <Checkbox checked={specialNotes.map((n) => n.label).includes(opt.label)} />
-                    <ListItemText primary={`${opt.label} (+${opt.cost.toLocaleString()}원)`} />
+                    <Checkbox checked={specialNotes.some((n) => n.label === opt.label)} />
+                    <ListItemText
+                      primary={`${opt.label} +${opt.cost.toLocaleString()}원`}
+                    />
                   </MenuItem>
                 ))}
               </Select>
             </FormControl>
-
             {specialNotes.length > 0 && (
-              <Box sx={{ bgcolor: "#eee", p: 2, borderRadius: 2 }}>
+              <Box bgcolor="#f1f1f1" borderRadius={2} p={2}>
                 {specialNotes.map((note) => (
                   <Typography key={note.label} fontSize={14}>
-                    {note.label} &nbsp;&nbsp;&nbsp;&nbsp; +{note.cost.toLocaleString()}원
+                    {note.label}: +{note.cost.toLocaleString()}원
                   </Typography>
                 ))}
               </Box>
             )}
-
             <Button variant="contained" fullWidth onClick={calculateDistance}>
               거리 계산
             </Button>
           </Stack>
         </Grid>
 
-        {/* 우측 지도 or 금액 */}
-        <Grid item xs={12} md={5}>
-          <Stack direction="row" spacing={1} mb={1}>
-            <Button
-              variant={tab === "map" ? "contained" : "outlined"}
-              onClick={() => setTab("map")}
-            >
-              지도
-            </Button>
-            <Button
-              variant={tab === "price" ? "contained" : "outlined"}
-              onClick={() => setTab("price")}
-            >
-              금액 산정
-            </Button>
-          </Stack>
+        {/* 우측 결과 영역 */}
+        <Grid item xs={12} md={"auto"}>
+          <Stack spacing={2} sx={{ width: isMobile ? "100%" : 520 }}>
 
-          <Box
-            sx={{
-              border: "1px solid #ccc",
-              borderRadius: 2,
-              p: 2,
-              minHeight: 300,
-              minWidth:500,
-              backgroundColor: "white",
-            }}
-          >
-            {tab === "map" ? (
-              <TmapViewer startAddress={startAddress} endAddress={endAddress} />
-            ) : (
-              <>
-                <Typography mb={1}>기본 요금: {baseCost.toLocaleString()}원</Typography>
-                <Typography mb={1}>거리 요금: {distanceCost.toLocaleString()}원</Typography>
-                <Typography mb={1}>추가 요금: {specialNoteCost.toLocaleString()}원</Typography>
-                <Divider sx={{ my: 2 }} />
-                <Typography variant="h6" fontWeight="bold">
-                  총 금액: {totalCost.toLocaleString()}원
-                </Typography>
-              </>
-            )}
-          </Box>
+            <Stack direction="row" spacing={1}>
+              <Button
+                size="small"
+                fullWidth
+                variant={!showMap ? "contained" : "outlined"}
+                onClick={() => setShowMap(false)}
+              >
+                금액 산정
+              </Button>
+              <Button
+                size="small"
+                fullWidth
+                variant={showMap ? "contained" : "outlined"}
+                onClick={() => setShowMap(true)}
+              >
+                지도
+              </Button>
+            </Stack>
+
+            <Box
+              sx={{
+                minHeight: 300,
+                border: "1px solid #ccc",
+                borderRadius: 2,
+                p: 2,
+                bgcolor: "#fff",
+              }}
+            >
+              {showMap ? (
+                <TmapViewer startAddress={startAddress} endAddress={endAddress} />
+              ) : (
+                <>
+                  <Typography>기본 요금: {baseCost.toLocaleString()}원</Typography>
+                  <Typography>거리 요금: {distanceCost.toLocaleString()}원</Typography>
+                  <Typography>추가 요금: {specialNoteCost.toLocaleString()}원</Typography>
+                  <Typography fontWeight="bold" mt={2}>
+                    총 금액: {totalCost.toLocaleString()}원
+                  </Typography>
+                </>
+              )}
+            </Box>
+          </Stack>
         </Grid>
       </Grid>
 
-      {/* 하단 버튼 */}
-      <Stack direction="row" spacing={2} justifyContent="center" mt={6}>
-        <Button variant="outlined" sx={{ minWidth: 140 }}>임시 저장</Button>
-        <Button variant="contained" sx={{ minWidth: 140 }}>견적서 제출</Button>
-        <Button variant="text" sx={{ minWidth: 140 }}>취소</Button>
+      {/* 제출 버튼들 */}
+      <Stack
+        direction={isMobile ? "column" : "row"}
+        spacing={2}
+        mt={5}
+        alignItems="center"
+      >
+        <Button variant="outlined" fullWidth>
+          임시 저장
+        </Button>
+        <Button variant="contained" fullWidth>
+          견적서 제출
+        </Button>
+        <Button variant="text" fullWidth>
+          취소
+        </Button>
       </Stack>
     </Box>
   );
