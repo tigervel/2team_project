@@ -50,9 +50,9 @@ const MyPage = () => {
 
   return (
     <Box sx={{ display: 'flex' }}>
+        
       <Sidebar ownerId={ownerId} /> {/* 좌측 사이드바 */}
       <Box sx={{ flexGrow: 1 }}>
-        <ResponsiveAppBar /> {/* 상단 앱바 */}
 
         <Box component="main" sx={{ p: 4, bgcolor: '#f3f4f6' }}>
           <Typography variant="h5" fontWeight="bold" gutterBottom>
