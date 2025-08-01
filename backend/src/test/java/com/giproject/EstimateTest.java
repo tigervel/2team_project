@@ -1,27 +1,28 @@
-package com.example.demo;
+package com.giproject;
 
 import java.time.LocalDateTime;
-import java.util.Date;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.annotation.Rollback;
 
 import com.giproject.dto.estimate.EstimateDTO;
-import com.giproject.entity.estimate.Estimate;
 import com.giproject.service.estimate.EstimateService;
 
 import jakarta.transaction.Transactional;
-
+@Transactional
 @SpringBootTest
-class BackendApplicationTests {
+@Rollback(false) 
+public class EstimateTest {
+	
 	@Autowired
 	EstimateService estimateService;
 	//@Test
 	void contextLoads() {
 			System.out.println("1수정");
 	}
-	@Transactional
+	
 	@Test
 	void test() {
 		EstimateDTO dto =  EstimateDTO.builder().startAddress("서울시")

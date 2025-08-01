@@ -12,11 +12,11 @@ import lombok.extern.log4j.Log4j2;
 @Service
 @RequiredArgsConstructor
 @Log4j2
-public class EstimateServiceImpl implements EstimeateService{
+public class EstimateServiceImpl implements EstimateService{
 	private final EsmateRepository esmateRepository;
 	
 	@Override
-	public void requstEstimate(EstimateDTO dto) {
+	public void requestEstimate(EstimateDTO dto) {
 		Estimate estimate= DTOToEntity(dto);
 		esmateRepository.save(estimate);
 	}

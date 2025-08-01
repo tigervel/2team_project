@@ -6,7 +6,7 @@ import com.giproject.entity.estimate.Estimate;
 import jakarta.transaction.Transactional;
 
 @Transactional
-public interface EstimeateService {
+public interface EstimateService {
 
 	default EstimateDTO entityToDTO(Estimate estimate) {
 		EstimateDTO dto =  new EstimateDTO(estimate.getEno(), estimate.getStartAddress(),
@@ -29,5 +29,5 @@ public interface EstimeateService {
 		return estimate;
 	}
 	
-	void requstEstimate(EstimateDTO dto);
+	void requestEstimate(EstimateDTO dto);
 }

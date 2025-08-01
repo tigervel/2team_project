@@ -1,5 +1,6 @@
 package com.giproject.entity.estimate;
 
+import java.time.LocalDateTime;
 import java.util.Date;
 
 import jakarta.persistence.Entity;
@@ -30,7 +31,7 @@ public class Estimate {
 	private String endAddress;
 	private int cargoWeight;
 	private String cargoType;
-	private Date startTime;
+	private LocalDateTime  startTime;
 	private int totalCost;
 	
 	public void changeStartAddress(String startAddress) {
@@ -46,7 +47,7 @@ public class Estimate {
 		this.cargoType = cargoType;
 	}
 	
-	public void changeStartTime(Date startTime) {
+	public void changeStartTime(LocalDateTime  startTime) {
 		this.startTime = startTime;
 	}
 	public void changeTotalCost(int totalCost) {
