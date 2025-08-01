@@ -4,6 +4,9 @@ import orderRouter from "./orderRouter"
 import adminRouter from "./adminRouter"
 import mypageRouter from "./mypageRouter"
 import servicecenterRouter from "./servicecenterRouter"
+import AdminLayout from "../layout/AdminLayout";
+import AdminNoticeList from "../pages/AdminNoticeList";
+import AdminInquiryList from "../pages/AdminInquiryList";
 
 
 
@@ -16,7 +19,7 @@ const My = lazy(() => import("../pages/MyPage"));
 const Home = lazy(() => import("../pages/HomePage"))
 const Admin = lazy(() => import("../pages/AdminPage"));
 const Order = lazy(() => import("../pages/OrderPage"));
-const ServiceCenter =lazy(() => import("../pages/ServiceCenterPage"));
+const ServiceCenter = lazy(() => import("../pages/ServiceCenterPage"));
 const root = createBrowserRouter([
     //내부에는 객체 형태로 요청에 따른 페이지 설정을 잡아줍니다
     //
@@ -30,14 +33,14 @@ const root = createBrowserRouter([
                 element: <Suspense fallback={Loading}><Home /></Suspense>
             },
             {
-                path:"mypage",
+                path: "mypage",
                 element: <Suspense fallback={Loading}><My /></Suspense>
             },
             {
                 path: "login",
                 element: <Suspense fallback={Loading}><Login /></Suspense>
             },
-       
+
             {
                 path: "adminpage",
                 element: <Suspense fallback={Loading}><Admin /></Suspense>,
@@ -52,6 +55,14 @@ const root = createBrowserRouter([
                 path: "servicecenterpage",
                 element: <Suspense fallback={Loading}><ServiceCenter /></Suspense>,
                 //children: servicecenterRouter()
+            },
+            {
+                path: '/admin',
+                element: <AdminLayout />,
+                children: [
+                    { path: 'notice', element: <AdminNoticeList /> },
+                    { path: 'inquiry', element: <AdminInquiryList /> },
+                ]
             }
 
 
