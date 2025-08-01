@@ -32,7 +32,7 @@ const TmapViewer = ({ startAddress, endAddress }) => {
         center: new window.Tmapv2.LatLng(start.lat, start.lng),
         width: "100%",
         height: "400px",
-        zoom: 14,
+        zoom: 10,
       });
 
       mapRef.current = map;

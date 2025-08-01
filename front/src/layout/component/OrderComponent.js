@@ -6,6 +6,13 @@ import {
 } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
 import TmapViewer from "./TmapViewer";
+import { DateTimePicker, LocalizationProvider } from "@mui/x-date-pickers";
+import { AdapterDayjs  } from '@mui/x-date-pickers/AdapterDayjs'
+import dayjs from "dayjs";
+
+
+
+
 
 const SPECIAL_NOTE_OPTIONS = [
   { label: "냉동식품 및 유제품", cost: 300000 },
@@ -13,7 +20,7 @@ const SPECIAL_NOTE_OPTIONS = [
   { label: "파손주의", cost: 150000 },
 ];
 
-export default function EstimateForm() {
+const OrderComponent = () => {
   const [startAddress, setStartAddress] = useState("");
   const [endAddress, setEndAddress] = useState("");
   const [distanceKm, setDistanceKm] = useState("");
@@ -25,6 +32,7 @@ export default function EstimateForm() {
   const [distanceCost, setDistanceCost] = useState(0);
   const [totalCost, setTotalCost] = useState(0);
   const [showMap, setShowMap] = useState(false);
+  const [dateTime, setDateTime] = useState(dayjs());
 
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
@@ -108,7 +116,7 @@ export default function EstimateForm() {
           <TextField
             placeholder="출발지 주소"
             value={startAddress}
-            onChange={(e) => setStartAddress(e.target.value)}
+
             InputProps={{
               endAdornment: (
                 <InputAdornment position="end">
@@ -124,7 +132,7 @@ export default function EstimateForm() {
           <TextField
             placeholder="도착지 주소"
             value={endAddress}
-            onChange={(e) => setEndAddress(e.target.value)}
+
             InputProps={{
               endAdornment: (
                 <InputAdornment position="end">
@@ -165,6 +173,17 @@ export default function EstimateForm() {
               }}
               fullWidth
             />
+            <LocalizationProvider dateAdapter={AdapterDayjs}>
+              <DateTimePicker
+                label="예약 시간"
+                value={dateTime}
+                onChange={(newValue) => setDateTime(newValue)}
+                format="YYYY년 MM월 DD일 A hh:mm"
+                renderInput={(params) => <TextField {...params} fullWidth />}
+              />
+
+            </LocalizationProvider>
+
             <FormControl fullWidth>
               <InputLabel>특이사항 선택</InputLabel>
               <Select
@@ -234,14 +253,14 @@ export default function EstimateForm() {
               {showMap ? (
                 <TmapViewer startAddress={startAddress} endAddress={endAddress} />
               ) : (
-                <>
+                <Stack spacing={2}>
                   <Typography>기본 요금: {baseCost.toLocaleString()}원</Typography>
                   <Typography>거리 요금: {distanceCost.toLocaleString()}원</Typography>
                   <Typography>추가 요금: {specialNoteCost.toLocaleString()}원</Typography>
-                  <Typography fontWeight="bold" mt={2}>
+                  <Typography fontWeight="bold" mt={2} sx={{ fontSize: 30}}>
                     총 금액: {totalCost.toLocaleString()}원
                   </Typography>
-                </>
+                </Stack>
               )}
             </Box>
           </Stack>
@@ -255,16 +274,17 @@ export default function EstimateForm() {
         mt={5}
         alignItems="center"
       >
-        <Button variant="outlined" fullWidth>
+        <Button variant="contained" fullWidth>
           임시 저장
         </Button>
         <Button variant="contained" fullWidth>
           견적서 제출
         </Button>
-        <Button variant="text" fullWidth>
+        <Button variant="contained" fullWidth>
           취소
         </Button>
       </Stack>
     </Box>
   );
 }
+export default OrderComponent;
