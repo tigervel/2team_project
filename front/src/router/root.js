@@ -7,6 +7,7 @@ import servicecenterRouter from "./servicecenterRouter"
 
 
 import adminRouter from "./adminRouter";
+import SignUpPage from "../pages/SignUpPage";
 
 
 
@@ -63,9 +64,10 @@ const root = createBrowserRouter([
     , {
         path: 'adminpage',
         element: <Admin />,
-        
-        
-
+    },
+    {
+        path: 'signup',
+        element: <SignUpPage />,
     }
 ]);
 
