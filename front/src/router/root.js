@@ -58,12 +58,12 @@ const root = createBrowserRouter([
     {
         path: "mypage",
         element: <Suspense fallback={Loading}><MyPageLayout /></Suspense>,
-        children: mypageRouter
+      
     }
     , {
         path: 'adminpage',
         element: <Admin />,
-        children:adminRouter
+        
         
 
     }
