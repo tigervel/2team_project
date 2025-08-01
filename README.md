@@ -14,6 +14,15 @@
 - Redux Install
 - yarn add @reduxjs/toolkit react-redux 
 
+- DATETIME 
+- yarn add @mui/x-date-pickers@6.13.0 dayjs
+
+- toolpad/core
+- yarn add @toolpad/core
+
+-axios
+- yarn add axios
+
 # 🚚 화물 운송 시스템 플랫폼 (Freight Logistics System)
 
 > 화물주(고객)와 차주(운송업체)를 연결해주는 통합 운송 관리 플랫폼입니다.
