@@ -17,12 +17,11 @@ const Home = lazy(() => import("../pages/HomePage"))
 const Admin = lazy(() => import("../pages/AdminPage"));
 const Order = lazy(() => import("../pages/OrderPage"));
 const ServiceCenter =lazy(() => import("../pages/ServiceCenterPage"));
+const MyPageLayout = lazy(() => import("../layout/MyPageLayout"));
+
 const root = createBrowserRouter([
-    //내부에는 객체 형태로 요청에 따른 페이지 설정을 잡아줍니다
-    //
     {
         path: "",
-        //지연 로딩을 수행하는 컴포넌트 suspense
         element: <Suspense fallback={Loading}><MainLayout /></Suspense>,
         children: [
             {
@@ -30,41 +29,28 @@ const root = createBrowserRouter([
                 element: <Suspense fallback={Loading}><Home /></Suspense>
             },
             {
-                path:"mypage",
-                element: <Suspense fallback={Loading}><My /></Suspense>
-            },
-            {
                 path: "login",
                 element: <Suspense fallback={Loading}><Login /></Suspense>
             },
-       
             {
                 path: "adminpage",
                 element: <Suspense fallback={Loading}><Admin /></Suspense>,
-                //children: adminRouter()
             },
             {
                 path: "orderpage",
                 element: <Suspense fallback={Loading}><Order /></Suspense>,
-                //children: orderRouter()
             },
             {
                 path: "servicecenterpage",
                 element: <Suspense fallback={Loading}><ServiceCenter /></Suspense>,
-                //children: servicecenterRouter()
             }
-
-
         ]
-
+    },
+    {
+        path: "mypage",
+        element: <Suspense fallback={Loading}><MyPageLayout /></Suspense>,
+        children: mypageRouter
     }
-
-
-
-
-
-
-
 ]);
 
 export default root;

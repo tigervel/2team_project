@@ -6,9 +6,12 @@ import {
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow
 } from '@mui/material';
 
+<<<<<<< HEAD
 //import Sidebar from '../common/Sidebar'; // 사이드바 추가
 import ResponsiveAppBar from '../common/ResponsiveAppBar'; // 상단 앱바 추가
 
+=======
+>>>>>>> 15e1f0c7b2ea4c36eaa7f1c9ecd25e43827ce0bc
 const MyPage = () => {
   const chartRef = useRef(null);
   const chartInstanceRef = useRef(null);
@@ -35,7 +38,7 @@ const MyPage = () => {
           y: {
             beginAtZero: true,
             ticks: {
-              callback: (value) => `${value}`,
+              callback: (value) => `${value} 만`,
             },
           },
         },
@@ -52,10 +55,9 @@ const MyPage = () => {
   return (
     <Box sx={{ display: 'flex' }}>
         
-      <Sidebar ownerId={ownerId} /> {/* 좌측 사이드바 */}
-      <Box sx={{ flexGrow: 1 }}>
+      <Box sx={{ flexGrow: 1 , px : 0}}>
 
-        <Box component="main" sx={{ p: 4, bgcolor: '#f3f4f6' }}>
+        <Box sx={{ p: 4, bgcolor: '#f3f4f6' }}>
           <Typography variant="h5" fontWeight="bold" gutterBottom>
             배송 정보 관리
           </Typography>
@@ -69,7 +71,7 @@ const MyPage = () => {
               ['취소/중단', '0건'],
             ].map(([label, value], idx) => (
               <Grid item xs={6} md={3} key={idx}>
-                <Paper sx={{ p: 2, textAlign: 'center' }}>
+                <Paper sx={{ p: 2, width: 300, textAlign: 'center' }}>
                   <Typography variant="body2" color="text.secondary">{label}</Typography>
                   <Typography variant="h6" fontWeight="bold">{value}</Typography>
                 </Paper>
@@ -82,7 +84,7 @@ const MyPage = () => {
             <Grid item xs={12} md={6}>
               <Paper sx={{ p: 2 }}>
                 <Typography variant="body2" color="text.secondary" mb={2}>월별 수익률</Typography>
-                <Box display="flex" alignItems="center" mb={1}>
+                <Box display="flex" width={648} alignItems="center" mb={1}>
                   <Box sx={{ width: 12, height: 12, bgcolor: 'purple', borderRadius: '50%', mr: 1 }} />
                   <Typography variant="caption" color="purple">수익</Typography>
                 </Box>
@@ -91,10 +93,10 @@ const MyPage = () => {
             </Grid>
 
             <Grid item xs={12} md={6}>
-              <Paper sx={{ p: 2 }}>
+              <Paper sx={{ p: 2, width:648, height:390}}>
                 <Typography variant="body2" color="text.secondary" align="center" mb={2}>내 문의 내역</Typography>
                 <TableContainer>
-                  <Table size="small">
+                  <Table size="small" >
                     <TableHead>
                       <TableRow>
                         <TableCell align="center">문의내용</TableCell>
