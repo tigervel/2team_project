@@ -50,7 +50,6 @@ const LoginComponent = () => {
     window.location.href = url;
   };
 
-  // 공통 버튼 스타일 정의
   const ButtonStyle = {
     mb: 1,
     display: 'flex',
@@ -58,89 +57,100 @@ const LoginComponent = () => {
     gap: 1.5,
     fontFamily: 'SUIT, sans-serif',
     fontSize: '13px',
-    textTransform: 'none', // 대문자 방지
+    textTransform: 'none',
   };
 
   return (
     <AppProvider theme={theme}>
+      {/* 화면 중앙 정렬 컨테이너 */}
       <Box
         sx={{
-          maxWidth: 400,
-          margin: 'auto',
-          marginTop: 10,
-          padding: 4,
-          border: '1px solid #ddd',
-          borderRadius: 2,
-          boxShadow: 3,
-          backgroundColor: 'white',
-          fontFamily: 'SUIT, sans-serif', // 폰트 전체 적용
-          marginBottom: 10,
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          minHeight: '90vh',
+          backgroundColor: '#f5f5f5',
+          px: 2,
         }}
       >
-        <Typography variant="h5" align="center" gutterBottom>
-          Sign in
-        </Typography>
-
-        {/* 이메일/비밀번호 입력 */}
-        <TextField
-          label="id"
-          name="id"
-          value={loginParam.id}
-          onChange={handleChange}
-          fullWidth
-          margin="normal"
-        />
-        <TextField
-          label="Password"
-          name="pw"
-          type="password"
-          value={loginParam.pw}
-          onChange={handleChange}
-          fullWidth
-          margin="normal"
-        />
-        <Button
-          fullWidth
-          variant="contained"
-          color="primary"
-          sx={ButtonStyle}
-          onClick={handleClickLogin}
+        {/* 로그인 박스 */}
+        <Box
+          sx={{
+            width: '100%',
+            maxWidth: 400,
+            p: 4,
+            border: '1px solid #ddd',
+            borderRadius: 2,
+            boxShadow: 3,
+            backgroundColor: 'white',
+            fontFamily: 'SUIT, sans-serif',
+          }}
         >
-          로그인
-        </Button>
+          <Typography variant="h5" align="center" gutterBottom>
+            Sign in
+          </Typography>
 
-        <Divider sx={{ my: 3 }}>OR</Divider>
+          {/* ID/PW 입력 */}
+          <TextField
+            label="id"
+            name="id"
+            value={loginParam.id}
+            onChange={handleChange}
+            fullWidth
+            margin="normal"
+          />
+          <TextField
+            label="Password"
+            name="pw"
+            type="password"
+            value={loginParam.pw}
+            onChange={handleChange}
+            fullWidth
+            margin="normal"
+          />
+          <Button
+            fullWidth
+            variant="contained"
+            color="primary"
+            sx={ButtonStyle}
+            onClick={handleClickLogin}
+          >
+            로그인
+          </Button>
 
-        {/* 소셜 로그인 버튼들 */}
-        <Button
-          fullWidth
-          variant="outlined"
-          sx={ButtonStyle}
-          onClick={() => socialSignIn('naver')}
-        >
-          <img src="/assets/naver-icon.png" alt="Naver" style={{ width: 20, height: 20 }} />
-          <span>Sign in with Naver</span>
-        </Button>
+          <Divider sx={{ my: 3 }}>OR</Divider>
 
-        <Button
-          fullWidth
-          variant="outlined"
-          sx={ButtonStyle}
-          onClick={() => socialSignIn('google')}
-        >
-          <img src="/assets/google-icon.png" alt="Google" style={{ width: 20, height: 20 }} />
-          <span>Sign in with Google</span>
-        </Button>
+          {/* 소셜 로그인 버튼들 */}
+          <Button
+            fullWidth
+            variant="outlined"
+            sx={ButtonStyle}
+            onClick={() => socialSignIn('naver')}
+          >
+            <img src="/assets/naver-icon.png" alt="Naver" style={{ width: 20, height: 20 }} />
+            <span>Sign in with Naver</span>
+          </Button>
 
-        <Button
-          fullWidth
-          variant="outlined"
-          sx={ButtonStyle}
-          onClick={() => socialSignIn('kakao')}
-        >
-          <img src="/assets/kakao-icon.png" alt="Kakao" style={{ width: 20, height: 20 }} />
-          <span>Sign in with Kakao</span>
-        </Button>
+          <Button
+            fullWidth
+            variant="outlined"
+            sx={ButtonStyle}
+            onClick={() => socialSignIn('google')}
+          >
+            <img src="/assets/google-icon.png" alt="Google" style={{ width: 20, height: 20 }} />
+            <span>Sign in with Google</span>
+          </Button>
+
+          <Button
+            fullWidth
+            variant="outlined"
+            sx={ButtonStyle}
+            onClick={() => socialSignIn('kakao')}
+          >
+            <img src="/assets/kakao-icon.png" alt="Kakao" style={{ width: 20, height: 20 }} />
+            <span>Sign in with Kakao</span>
+          </Button>
+        </Box>
       </Box>
     </AppProvider>
   );
