@@ -49,7 +49,7 @@ function ResponsiveAppBar() {
   const id = true;
 
   return (
-    <AppBar position="static" sx={{ bgcolor: '#299AF0' }}>
+    <AppBar position="fixed" sx={{ zIndex: (theme) => theme.zIndex.drawer + 1, bgcolor: '#299AF0' }}>
       <Container maxWidth="xl">
         <Toolbar disableGutters>
           {/* <AdbIcon sx={{ display: { xs: 'none', md: 'flex' }, mr: 1 }} /> */}

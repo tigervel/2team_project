@@ -8,7 +8,7 @@ const MainPageLayout = () => {
     return (
         <>
             <ResponsiveAppBar/>
-        
+         
              <Outlet />
             <Footer/>
         </>

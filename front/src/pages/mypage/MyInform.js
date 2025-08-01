@@ -5,7 +5,7 @@ import {
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow
 } from '@mui/material';
 
-const MyPage = () => {
+const MyInform = () => {
   const chartRef = useRef(null);
   const chartInstanceRef = useRef(null);
 
@@ -146,4 +146,4 @@ const MyPage = () => {
   );
 };
 
-export default MyPage;
+export default MyInform;
