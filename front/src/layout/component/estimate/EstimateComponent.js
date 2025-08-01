@@ -5,10 +5,11 @@ import {
   Box, IconButton, InputAdornment, Grid, useMediaQuery, useTheme,
 } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
-import TmapViewer from "./TmapViewer";
+import TmapViewer from "./KakaoMapViewer";
 import { DateTimePicker, LocalizationProvider } from "@mui/x-date-pickers";
 import { AdapterDayjs  } from '@mui/x-date-pickers/AdapterDayjs'
 import dayjs from "dayjs";
+import KakaoMapViewer from "./KakaoMapViewer";
 
 
 
@@ -251,7 +252,7 @@ const EstimateComponent = () => {
               }}
             >
               {showMap ? (
-                <TmapViewer startAddress={startAddress} endAddress={endAddress} />
+                <KakaoMapViewer startAddress={startAddress} endAddress={endAddress} />
               ) : (
                 <Stack spacing={2}>
                   <Typography>기본 요금: {baseCost.toLocaleString()}원</Typography>
