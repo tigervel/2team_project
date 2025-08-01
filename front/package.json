@@ -13,8 +13,13 @@
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.3.0",
     "@testing-library/user-event": "^13.5.0",
+<<<<<<< HEAD
     "chart.js": "^4.5.0",
     "dayjs": "^1.11.13",
+=======
+    "@toolpad/core": "^0.16.0",
+    "axios": "^1.11.0",
+>>>>>>> 9211e5ab1440b4ce5bbbad5d7d47f2015cc0dcf8
     "react": "^19.1.0",
     "react-chartjs-2": "^5.3.0",
     "react-dom": "^19.1.0",
