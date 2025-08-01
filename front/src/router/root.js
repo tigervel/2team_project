@@ -4,6 +4,9 @@ import orderRouter from "./orderRouter"
 import adminRouter from "./adminRouter"
 import mypageRouter from "./mypageRouter"
 import servicecenterRouter from "./servicecenterRouter"
+import AdminLayout from "../layout/AdminLayout";
+import AdminNoticeList from "../pages/AdminNoticeList";
+import AdminInquiryList from "../pages/AdminInquiryList";
 
 
 
@@ -16,9 +19,13 @@ const My = lazy(() => import("../pages/MyPage"));
 const Home = lazy(() => import("../pages/HomePage"))
 const Admin = lazy(() => import("../pages/AdminPage"));
 const Order = lazy(() => import("../pages/OrderPage"));
+<<<<<<< HEAD
 const ServiceCenter =lazy(() => import("../pages/ServiceCenterPage"));
 const MyPageLayout = lazy(() => import("../layout/MyPageLayout"));
 
+=======
+const ServiceCenter = lazy(() => import("../pages/ServiceCenterPage"));
+>>>>>>> 2bcb5e9d3bf608f2535a2b89ae6d8ef87139376c
 const root = createBrowserRouter([
     {
         path: "",
@@ -29,9 +36,20 @@ const root = createBrowserRouter([
                 element: <Suspense fallback={Loading}><Home /></Suspense>
             },
             {
+<<<<<<< HEAD
                 path: "login",
                 element: <Suspense fallback={Loading}><Login /></Suspense>
             },
+=======
+                path: "mypage",
+                element: <Suspense fallback={Loading}><My /></Suspense>
+            },
+            {
+                path: "login",
+                element: <Suspense fallback={Loading}><Login /></Suspense>
+            },
+
+>>>>>>> 2bcb5e9d3bf608f2535a2b89ae6d8ef87139376c
             {
                 path: "adminpage",
                 element: <Suspense fallback={Loading}><Admin /></Suspense>,
@@ -43,6 +61,18 @@ const root = createBrowserRouter([
             {
                 path: "servicecenterpage",
                 element: <Suspense fallback={Loading}><ServiceCenter /></Suspense>,
+<<<<<<< HEAD
+=======
+                //children: servicecenterRouter()
+            },
+            {
+                path: '/admin',
+                element: <AdminLayout />,
+                children: [
+                    { path: 'notice', element: <AdminNoticeList /> },
+                    { path: 'inquiry', element: <AdminInquiryList /> },
+                ]
+>>>>>>> 2bcb5e9d3bf608f2535a2b89ae6d8ef87139376c
             }
         ]
     },
