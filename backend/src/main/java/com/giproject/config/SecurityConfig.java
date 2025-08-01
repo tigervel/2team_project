@@ -1,4 +1,4 @@
-package com.example.demo.config;
+package com.giproject.config;
 
 import java.util.List;
 

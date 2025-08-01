@@ -1,0 +1,57 @@
+package com.giproject.entity.estimate;
+
+import java.util.Date;
+
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.ToString;
+
+@Entity
+@Table(name = "Estimate")
+@Getter
+@ToString
+@Builder
+@AllArgsConstructor
+@NoArgsConstructor
+public class Estimate {
+	
+	@Id
+	@GeneratedValue(strategy = GenerationType.IDENTITY)
+	private Long eno;
+	
+	private String startAddress;
+	private String endAddress;
+	private int cargoWeight;
+	private String cargoType;
+	private Date startTime;
+	private int totalCost;
+	
+	public void changeStartAddress(String startAddress) {
+		this.startAddress = startAddress;
+	}
+	public void changeEndAddress(String endAddress) {
+		this.endAddress = endAddress;
+	}
+	public void changeCargoWeight(int cargoWeight) {
+		this.cargoWeight = cargoWeight;
+	}
+	public void changeCargoType(String cargoType) {
+		this.cargoType = cargoType;
+	}
+	
+	public void changeStartTime(Date startTime) {
+		this.startTime = startTime;
+	}
+	public void changeTotalCost(int totalCost) {
+		this.totalCost = totalCost;
+	}
+	
+
+}
