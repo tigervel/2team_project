@@ -48,9 +48,9 @@ const MyPage = () => {
   return (
     <Box sx={{ display: 'flex' }}>
         
-      <Box sx={{ flexGrow: 1 , px : 0}}>
+      <Box sx={{ flexGrow: 1 , px : 7}}>
 
-        <Box sx={{ p: 4, bgcolor: '#f3f4f6' }}>
+        <Box sx={{ p: 7, bgcolor: '#f3f4f6' }}>
           <Typography variant="h5" fontWeight="bold" gutterBottom>
             배송 정보 관리
           </Typography>

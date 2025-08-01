@@ -53,7 +53,7 @@ const EditVehicleInform = () => {
   };
 
   return (
-    <Box sx={{ p: 4, bgcolor: '#f3f4f6', minHeight: '100vh' }}>
+    <Box sx={{ p: 7, bgcolor: '#f3f4f6', minHeight: '100vh' }}>
       <Typography variant="h5" fontWeight="bold" mb={4}>내 차량 관리</Typography>
 
       <Box mb={4}>
@@ -69,8 +69,8 @@ const EditVehicleInform = () => {
     <Grid item key={idx}>
       <Paper
         sx={{
-          width: 300,
-          height: 300,
+          width: 400,
+          height: 400,
           display: 'flex',
           flexDirection: 'column',
           justifyContent: 'space-between',
@@ -84,7 +84,7 @@ const EditVehicleInform = () => {
         <Box
           sx={{
             width: '100%',
-            height: 200,
+            height: 250,
             bgcolor: '#e5e7eb',
             borderRadius: 1,
             display: 'flex',
@@ -131,8 +131,8 @@ const EditVehicleInform = () => {
     <Paper
       onClick={() => handleOpen()}
       sx={{
-        width: 300,
-        height: 300,
+        width: 430,
+        height: 430,
         border: '2px dashed #ccc',
         borderRadius: 2,
         display: 'flex',
