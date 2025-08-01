@@ -20,7 +20,7 @@ const SPECIAL_NOTE_OPTIONS = [
   { label: "파손주의", cost: 150000 },
 ];
 
-const OrderComponent = () => {
+const EstimateComponent = () => {
   const [startAddress, setStartAddress] = useState("");
   const [endAddress, setEndAddress] = useState("");
   const [distanceKm, setDistanceKm] = useState("");
@@ -287,4 +287,4 @@ const OrderComponent = () => {
     </Box>
   );
 }
-export default OrderComponent;
+export default EstimateComponent;

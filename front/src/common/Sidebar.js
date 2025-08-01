@@ -1,3 +1,4 @@
+//Sidebar.js
 import React from 'react';
 import {
   Drawer,
@@ -32,14 +33,19 @@ const Sidebar = ({ ownerId }) => {
 
   return (
     <Drawer
-      variant="permanent"
-      sx={{
-        width: drawerWidth,
-        flexShrink: 0,
-        [`& .MuiDrawer-paper`]: { width: drawerWidth, boxSizing: 'border-box', pt: 4 },
-      }}
-    >
-      <Toolbar />
+  variant="permanent"
+  sx={{
+    width: drawerWidth,
+    flexShrink: 0,
+    [`& .MuiDrawer-paper`]: {
+      width: drawerWidth,
+      boxSizing: 'border-box',
+      top: '79px', // AppBar 높이
+      height: 'calc(100% - 64px)',
+      position: 'fixed'
+    }
+  }}
+>
       <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', p: 2 }}>
         <Typography variant="h6" fontWeight="bold" gutterBottom>
           마이페이지

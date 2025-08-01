@@ -1,7 +1,8 @@
 import { Box } from "@mui/material"
-import OrderComponent from "../layout/component/OrderComponent"
+import EstimateComponent from "../layout/component/estimate/EstimateComponent";
 
-const OrderPage = ()=>{
+
+const EstimatePage = ()=>{
     return(
             <Box
       sx={{
@@ -14,11 +15,11 @@ const OrderPage = ()=>{
       }}
     >
       <Box sx={{ width: "100%", maxWidth: 1200, px: 2 }}>
-        <OrderComponent />
+        <EstimateComponent />
       </Box>
     </Box>
   );
 };
     
 
-export default OrderPage
+export default EstimatePage
