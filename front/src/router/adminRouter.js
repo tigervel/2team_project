@@ -1,4 +1,8 @@
-const adminRouter = [
-
-]
+const adminRouter = () =>{
+    return[
+        {
+            path:"/"
+        }
+    ]
+}
 export default adminRouter

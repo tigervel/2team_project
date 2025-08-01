@@ -1,8 +1,6 @@
-import AdminLayout from "../layout/AdminLayout"
-
-const AdminPage = () =>{
+const AdminPage = ()=>{
     return(
-        <AdminLayout></AdminLayout>
+        <div>어드민페이지입니다</div>
     )
 }
 export default AdminPage

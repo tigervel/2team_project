@@ -1,8 +1,9 @@
-const mypageRouter = () =>{
+
+const orderRouter = () =>{
     return[
         {
             path:"/"
         }
     ]
 }
-export default mypageRouter
+export default orderRouter
