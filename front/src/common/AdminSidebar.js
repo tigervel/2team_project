@@ -123,6 +123,13 @@ export default function AdminSidebar() {
                 </ListItemButton>
               )}
             </NavLink>
+            <NavLink to="/admin/addCost" style={navLinkStyle}>
+              {({ isActive }) => (
+                <ListItemButton sx={{ pl: 4 }} selected={isActive}>
+                  <ListItemText primary="추가요금" />
+                </ListItemButton>
+              )}
+            </NavLink>
           </List>
         </Collapse>
       </List>
