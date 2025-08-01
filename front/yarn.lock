@@ -1778,7 +1778,6 @@
   dependencies:
     "@babel/runtime" "^7.27.6"
 
-<<<<<<< HEAD
 "@mui/types@~7.2.15", "@mui/types@~7.2.24":
   version "7.2.24"
   resolved "https://registry.yarnpkg.com/@mui/types/-/types-7.2.24.tgz#5eff63129d9c29d80bbf2d2e561bd0690314dec2"
@@ -1808,10 +1807,7 @@
     prop-types "^15.8.1"
     react-is "^19.0.0"
 
-"@mui/utils@^7.2.0":
-=======
 "@mui/utils@^7.1.1", "@mui/utils@^7.2.0":
->>>>>>> 9211e5ab1440b4ce5bbbad5d7d47f2015cc0dcf8
   version "7.2.0"
   resolved "https://registry.yarnpkg.com/@mui/utils/-/utils-7.2.0.tgz#31062697b41aa8ea8ef04e3d3fadca1dec3e1de1"
   integrity sha512-O0i1GQL6MDzhKdy9iAu5Yr0Sz1wZjROH1o3aoztuivdCXqEeQYnEjTDiRLGuFxI9zrUbTHBwobMyQH5sNtyacw==
@@ -1823,7 +1819,18 @@
     prop-types "^15.8.1"
     react-is "^19.1.0"
 
-<<<<<<< HEAD
+"@mui/x-data-grid@^8.5.0":
+  version "8.9.1"
+  resolved "https://registry.yarnpkg.com/@mui/x-data-grid/-/x-data-grid-8.9.1.tgz#750266625c56c5655649c9ead5c8b2263ae7e286"
+  integrity sha512-N1R3bcxaIpiXqZl7E9nu2b3zp1DC9w5cyaeSJiGhkPpgjKcuogJlL5tMp7UMyUE2h+c0i+1ANMUzD+chHZ6lhg==
+  dependencies:
+    "@babel/runtime" "^7.27.6"
+    "@mui/utils" "^7.2.0"
+    "@mui/x-internals" "8.8.0"
+    clsx "^2.1.1"
+    prop-types "^15.8.1"
+    use-sync-external-store "^1.5.0"
+
 "@mui/x-date-pickers@6.13.0":
   version "6.13.0"
   resolved "https://registry.yarnpkg.com/@mui/x-date-pickers/-/x-date-pickers-6.13.0.tgz#de9acfbc7697aed2bcbea6996173b45e3f0ee0d5"
@@ -1836,19 +1843,6 @@
     clsx "^2.0.0"
     prop-types "^15.8.1"
     react-transition-group "^4.4.5"
-
-=======
-"@mui/x-data-grid@^8.5.0":
-  version "8.9.1"
-  resolved "https://registry.yarnpkg.com/@mui/x-data-grid/-/x-data-grid-8.9.1.tgz#750266625c56c5655649c9ead5c8b2263ae7e286"
-  integrity sha512-N1R3bcxaIpiXqZl7E9nu2b3zp1DC9w5cyaeSJiGhkPpgjKcuogJlL5tMp7UMyUE2h+c0i+1ANMUzD+chHZ6lhg==
-  dependencies:
-    "@babel/runtime" "^7.27.6"
-    "@mui/utils" "^7.2.0"
-    "@mui/x-internals" "8.8.0"
-    clsx "^2.1.1"
-    prop-types "^15.8.1"
-    use-sync-external-store "^1.5.0"
 
 "@mui/x-date-pickers@^8.5.0":
   version "8.9.0"
@@ -1872,7 +1866,6 @@
     "@mui/utils" "^7.2.0"
     reselect "^5.1.1"
 
->>>>>>> 9211e5ab1440b4ce5bbbad5d7d47f2015cc0dcf8
 "@nicolo-ribaudo/eslint-scope-5-internals@5.1.1-v1":
   version "5.1.1-v1"
   resolved "https://registry.npmjs.org/@nicolo-ribaudo/eslint-scope-5-internals/-/eslint-scope-5-internals-5.1.1-v1.tgz"
@@ -4045,11 +4038,7 @@ data-view-byte-offset@^1.0.1:
     es-errors "^1.3.0"
     is-data-view "^1.0.1"
 
-<<<<<<< HEAD
-dayjs@^1.11.13:
-=======
-dayjs@1.11.13:
->>>>>>> 9211e5ab1440b4ce5bbbad5d7d47f2015cc0dcf8
+dayjs@1.11.13, dayjs@^1.11.13:
   version "1.11.13"
   resolved "https://registry.yarnpkg.com/dayjs/-/dayjs-1.11.13.tgz#92430b0139055c3ebb60150aa13e860a4b5a366c"
   integrity sha512-oaMBel6gjolK862uaPQOVTA7q3TZhuSvuMQAAglQDOWYO9A91IrAOUJEyKVlqJlHE0vq5p5UXxzdPfMH/x6xNg==
@@ -9219,7 +9208,16 @@ string-natural-compare@^3.0.1:
   resolved "https://registry.npmjs.org/string-natural-compare/-/string-natural-compare-3.0.1.tgz"
   integrity sha512-n3sPwynL1nwKi3WJ6AIsClwBMa0zTi54fn2oLU6ndfTSIO05xaznjSf15PcBZU6FNWbmN5Q6cxT4V5hGvB4taw==
 
-"string-width-cjs@npm:string-width@^4.2.0", string-width@^4.1.0, string-width@^4.2.0:
+"string-width-cjs@npm:string-width@^4.2.0":
+  version "4.2.3"
+  resolved "https://registry.npmjs.org/string-width/-/string-width-4.2.3.tgz"
+  integrity sha512-wKyQRQpjJ0sIp62ErSZdGsjMJWsap5oRNihHhu6G7JVO/9jIB6UyevL+tXuOqrng8j/cxKTWyWUwvSTriiZz/g==
+  dependencies:
+    emoji-regex "^8.0.0"
+    is-fullwidth-code-point "^3.0.0"
+    strip-ansi "^6.0.1"
+
+string-width@^4.1.0, string-width@^4.2.0:
   version "4.2.3"
   resolved "https://registry.npmjs.org/string-width/-/string-width-4.2.3.tgz"
   integrity sha512-wKyQRQpjJ0sIp62ErSZdGsjMJWsap5oRNihHhu6G7JVO/9jIB6UyevL+tXuOqrng8j/cxKTWyWUwvSTriiZz/g==
@@ -9328,7 +9326,14 @@ stringify-object@^3.3.0:
     is-obj "^1.0.1"
     is-regexp "^1.0.0"
 
-"strip-ansi-cjs@npm:strip-ansi@^6.0.1", strip-ansi@^6.0.0, strip-ansi@^6.0.1:
+"strip-ansi-cjs@npm:strip-ansi@^6.0.1":
+  version "6.0.1"
+  resolved "https://registry.npmjs.org/strip-ansi/-/strip-ansi-6.0.1.tgz"
+  integrity sha512-Y38VPSHcqkFrCpFnQ9vuSXmquuv5oXOKpGeT6aGrr3o3Gc9AlVa6JBfUSOCnbxGGZF+/0ooI7KrPuUSztUdU5A==
+  dependencies:
+    ansi-regex "^5.0.1"
+
+strip-ansi@^6.0.0, strip-ansi@^6.0.1:
   version "6.0.1"
   resolved "https://registry.npmjs.org/strip-ansi/-/strip-ansi-6.0.1.tgz"
   integrity sha512-Y38VPSHcqkFrCpFnQ9vuSXmquuv5oXOKpGeT6aGrr3o3Gc9AlVa6JBfUSOCnbxGGZF+/0ooI7KrPuUSztUdU5A==
@@ -10392,7 +10397,16 @@ workbox-window@6.6.0:
     "@types/trusted-types" "^2.0.2"
     workbox-core "6.6.0"
 
-"wrap-ansi-cjs@npm:wrap-ansi@^7.0.0", wrap-ansi@^7.0.0:
+"wrap-ansi-cjs@npm:wrap-ansi@^7.0.0":
+  version "7.0.0"
+  resolved "https://registry.npmjs.org/wrap-ansi/-/wrap-ansi-7.0.0.tgz"
+  integrity sha512-YVGIj2kamLSTxw6NsZjoBxfSwsn0ycdesmc4p+Q21c5zPuZ1pl+NfxVdxPtdHvmNVOQ6XSYG4AUtyt/Fi7D16Q==
+  dependencies:
+    ansi-styles "^4.0.0"
+    string-width "^4.1.0"
+    strip-ansi "^6.0.0"
+
+wrap-ansi@^7.0.0:
   version "7.0.0"
   resolved "https://registry.npmjs.org/wrap-ansi/-/wrap-ansi-7.0.0.tgz"
   integrity sha512-YVGIj2kamLSTxw6NsZjoBxfSwsn0ycdesmc4p+Q21c5zPuZ1pl+NfxVdxPtdHvmNVOQ6XSYG4AUtyt/Fi7D16Q==
