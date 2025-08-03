@@ -1,2 +1,13 @@
 /.metadata/
 README.md
+.DS_Store
+backend/.DS_Store
+backend/src/.DS_Store
+backend/src/main/.DS_Store
+backend/src/main/java/.DS_Store
+backend/src/main/java/com/.DS_Store
+backend/src/main/java/com/giproject/.DS_Store
+backend/src/main/java/com/giproject/dto/.DS_Store
+backend/src/main/java/com/giproject/entity/.DS_Store
+backend/src/main/java/com/giproject/repository/.DS_Store
+backend/src/main/java/com/giproject/service/.DS_Store
