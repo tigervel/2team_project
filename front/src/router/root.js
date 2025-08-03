@@ -26,6 +26,7 @@ const MyPageLayout = lazy(() => import("../layout/MyPageLayout"));
 
 
 const ServiceCenter = lazy(() => import("../pages/ServiceCenterPage"));
+const QABoard = lazy(() => import("../pages/qaboard/qaboardPage"));
 
 const root = createBrowserRouter([
     {
@@ -52,6 +53,10 @@ const root = createBrowserRouter([
                 element: <Suspense fallback={Loading}><ServiceCenter /></Suspense>,
 
                 //children: servicecenterRouter()
+            },
+            {
+                path: "qaboard",
+                element: <Suspense fallback={Loading}><QABoard /></Suspense>,
             },
 
         ]

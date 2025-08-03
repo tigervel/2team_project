@@ -1,9 +1,9 @@
-import QABoard from "@/components/QABoard";
+import QABoardMUI from "../../layout/component/qaboard/QABoardMUI";
 
 const Index = () => {
   return (
-    <div className="min-h-screen bg-background">
-      <QABoard />
+    <div>
+      <QABoardMUI />
     </div>
   );
 };
