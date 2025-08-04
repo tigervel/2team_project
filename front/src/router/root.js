@@ -64,8 +64,9 @@ const root = createBrowserRouter([
         children: mypageRouter
     }
     , {
-        path: 'adminpage',
+        path: 'admin',
         element: <Admin />,
+        children: adminRouter
     },
     {
         path: 'signup',
