@@ -36,7 +36,7 @@ public class EstimateController {
 		dto.setMemberId("user");
 		
 		
-		Long eno=estimateService.requestEstimate(dto);
+		Long eno=estimateService.sendEstimate(dto);
 		log.info("Received DTO: {}", eno);
 		return Map.of("RESULT",eno);
 		

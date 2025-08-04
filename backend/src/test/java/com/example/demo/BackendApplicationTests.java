@@ -1,14 +1,12 @@
 package com.example.demo;
 
 import java.time.LocalDateTime;
-import java.util.Date;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 
 import com.giproject.dto.estimate.EstimateDTO;
-import com.giproject.entity.estimate.Estimate;
 import com.giproject.service.estimate.EstimateService;
 
 import jakarta.transaction.Transactional;
@@ -34,7 +32,7 @@ class BackendApplicationTests {
 			
 	
 		
-		estimateService.requestEstimate(dto);
+		estimateService.sendEstimate(dto);
 				
 				
 	}

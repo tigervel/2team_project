@@ -37,5 +37,7 @@ public interface EstimateService {
 		return estimate;
 	}
 	
-	Long requestEstimate(EstimateDTO dto);
+	Long sendEstimate(EstimateDTO dto);
+	
+	Long saveDraft(EstimateDTO dto);
 }

@@ -9,6 +9,7 @@ import com.giproject.entity.estimate.Estimate;
 import com.giproject.entity.matching.Matching;
 import com.giproject.entity.member.Member;
 import com.giproject.repository.estimate.EsmateRepository;
+import com.giproject.repository.estimate.TempEstimateRepository;
 import com.giproject.repository.matching.MatchingRepository;
 import com.giproject.service.estimate.matching.MatchingService;
 
@@ -21,9 +22,11 @@ import lombok.extern.log4j.Log4j2;
 public class EstimateServiceImpl implements EstimateService{
 	private final EsmateRepository esmateRepository;
 	private final MatchingRepository matchingRepository;
+	private final TempEstimateRepository estimateRepository;
+	
 	
 	@Override
-	public Long requestEstimate(EstimateDTO dto) {
+	public Long sendEstimate(EstimateDTO dto) {
 		Member member= esmateRepository.getMemId(dto.getMemberId()).orElseThrow();
 		Estimate estimate= DTOToEntity(dto,member);
 		esmateRepository.save(estimate);
@@ -34,6 +37,12 @@ public class EstimateServiceImpl implements EstimateService{
 				.build();
 		matchingRepository.save(matching);
 				return estimate.getEno();
+	}
+
+	@Override
+	public Long saveDraft(EstimateDTO dto) {
+		
+		return null;
 	}
 	
 
