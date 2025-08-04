@@ -97,7 +97,7 @@ const LoginComponent = () => {
             value={loginParam.id}
             onChange={handleChange}
             fullWidth
-            margin="normal"
+            sx={{ mb: 1 }} // margin-bottom 1단위 (8px)
           />
           <TextField
             label="Password"
@@ -106,8 +106,9 @@ const LoginComponent = () => {
             value={loginParam.pw}
             onChange={handleChange}
             fullWidth
-            margin="normal"
+            sx={{ mb: 1 }}
           />
+
           <Button
             fullWidth
             variant="contained"
