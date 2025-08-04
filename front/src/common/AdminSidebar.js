@@ -1,41 +1,72 @@
-// components/admin/AdminSidebar.js
-import React, { useState } from 'react';
+import { useState } from "react";
+import { Link, useLocation } from "react-router-dom";
 import {
   Drawer,
   List,
   ListItemButton,
   ListItemText,
-  ListItemIcon,
   Collapse,
-  Box,
   Typography,
-} from '@mui/material';
+  Box,
+  ListItemIcon,
+  Avatar,
+} from "@mui/material";
 import {
   ExpandLess,
   ExpandMore,
-  Group as GroupIcon,
+  Dashboard as DashboardIcon,
+  People as PeopleIcon,
   Notifications as NotificationsIcon,
-  HelpOutline as HelpIcon,
-  LocalShipping as ShippingIcon,
-} from '@mui/icons-material';
+  AttachMoney as MoneyIcon,
+} from "@mui/icons-material";
 
-import { NavLink } from 'react-router-dom';
+import PersonIcon from '@mui/icons-material/Person';
 
-const drawerWidth = 240;
+const drawerWidth = 260;
 
-const navLinkStyle = {
-  textDecoration: 'none',
-  color: 'inherit',
-};
+const AdminSidebar = () => {
+  const location = useLocation();
+  const [openGroups, setOpenGroups] = useState({});
 
-const activeStyle = {
-  backgroundColor: '#e0e0e0',
-};
+  const handleToggle = (group) => {
+    setOpenGroups((prev) => ({ ...prev, [group]: !prev[group] }));
+  };
 
-export default function AdminSidebar() {
-  const [openMember, setOpenMember] = useState(false);
-  const [openNotice, setOpenNotice] = useState(false);
-  const [openShipping, setOpenShipping] = useState(false);
+  const groups = [
+    {
+      title: "이용 통계",
+      icon: <DashboardIcon />,
+      path: "/admin"
+    },
+    { title: "배송 조회", icon: <DashboardIcon />, path: "/admin/deliveryPage" },
+    {
+      title: "회원 관리",
+      icon: <PeopleIcon />,
+      items: [
+        { label: "전체 회원", path: "/admin/memberAll" },
+        { label: "물주", path: "/admin/memberOwner" },
+        { label: "차주", path: "/admin/memberCowner" },
+        { label: "신고내역", path: "/admin/memberReport" },
+        { label: "관리자", path: "/admin/memberAdmin" },
+      ],
+    },
+    {
+      title: "공지/문의",
+      icon: <NotificationsIcon />,
+      items: [
+        { label: "공지사항", path: "/admin/notice" },
+        { label: "문의사항", path: "/admin/inquirie" },
+      ],
+    },
+    {
+      title: "운송료",
+      icon: <MoneyIcon />,
+      items: [
+        { label: "기본요금", path: "/admin/feesBasic" },
+        { label: "추가요금", path: "/admin/feesExtra" },
+      ],
+    },
+  ];
 
   return (
     <Drawer
@@ -43,96 +74,85 @@ export default function AdminSidebar() {
       sx={{
         width: drawerWidth,
         flexShrink: 0,
-        '& .MuiDrawer-paper': {
+        "& .MuiDrawer-paper": {
           width: drawerWidth,
-          boxSizing: 'border-box',
-          backgroundColor: '#f5f5f5',
-          paddingTop: '64px', // AppBar 높이 고려
+          boxSizing: "border-box",
+          backgroundColor: "#f9fafb",
         },
       }}
     >
-      <List>
-        {/* 회원관리 */}
-        <ListItemButton onClick={() => setOpenMember(!openMember)}>
-          <ListItemIcon>
-            <GroupIcon />
-          </ListItemIcon>
-          <ListItemText primary="회원관리" />
-          {openMember ? <ExpandLess /> : <ExpandMore />}
-        </ListItemButton>
-        <Collapse in={openMember} timeout="auto" unmountOnExit>
-          <List component="div" disablePadding>
-            <NavLink to="/admin/members" style={navLinkStyle}>
-              {({ isActive }) => (
-                <ListItemButton sx={{ pl: 4 }} selected={isActive}>
-                  <ListItemText primary="전체 회원" />
-                </ListItemButton>
-              )}
-            </NavLink>
-          </List>
-        </Collapse>
+      <Box sx={{ p: 2, textAlign: "center" }}>
+        <Typography variant="h6" fontWeight="bold" gutterBottom>
+          관리자 페이지
+        </Typography>
+        <Avatar
+          sx={{
+            bgcolor: "#e5e7eb",
+            width: 56,
+            height: 56,
+            margin: "0 auto",
+            mb: 2,
+          }}
+        >
+          <PersonIcon sx={{ color: "#9ca3af", fontSize: 32 }} />
+        </Avatar>
+      </Box>
 
-        {/* 공지/문의 */}
-        <ListItemButton onClick={() => setOpenNotice(!openNotice)}>
-          <ListItemIcon>
-            <NotificationsIcon />
-          </ListItemIcon>
-          <ListItemText primary="공지 / 문의" />
-          {openNotice ? <ExpandLess /> : <ExpandMore />}
-        </ListItemButton>
-        <Collapse in={openNotice} timeout="auto" unmountOnExit>
-          <List component="div" disablePadding>
-            <NavLink to="/admin/notice" style={navLinkStyle}>
-              {({ isActive }) => (
-                <ListItemButton sx={{ pl: 4 }} selected={isActive}>
-                  <ListItemText primary="공지사항" />
-                </ListItemButton>
-              )}
-            </NavLink>
-            <NavLink to="/admin/inquiry" style={navLinkStyle}>
-              {({ isActive }) => (
-                <ListItemButton sx={{ pl: 4 }} selected={isActive}>
-                  <ListItemText primary="문의사항" />
-                </ListItemButton>
-              )}
-            </NavLink>
-          </List>
-        </Collapse>
-
-        {/* 운송료 설정 */}
-        <ListItemButton onClick={() => setOpenShipping(!openShipping)}>
-          <ListItemIcon>
-            <ShippingIcon />
-          </ListItemIcon>
-          <ListItemText primary="운송료 설정" />
-          {openShipping ? <ExpandLess /> : <ExpandMore />}
-        </ListItemButton>
-        <Collapse in={openShipping} timeout="auto" unmountOnExit>
-          <List component="div" disablePadding>
-            <NavLink to="/admin/defaultCost" style={navLinkStyle}>
-              {({ isActive }) => (
-                <ListItemButton sx={{ pl: 4 }} selected={isActive}>
-                  <ListItemText primary="기본요금" />
-                </ListItemButton>
-              )}
-            </NavLink>
-            <NavLink to="/admin/addCost" style={navLinkStyle}>
-              {({ isActive }) => (
-                <ListItemButton sx={{ pl: 4 }} selected={isActive}>
-                  <ListItemText primary="추가요금" />
-                </ListItemButton>
-              )}
-            </NavLink>
-            <NavLink to="/admin/addCost" style={navLinkStyle}>
-              {({ isActive }) => (
-                <ListItemButton sx={{ pl: 4 }} selected={isActive}>
-                  <ListItemText primary="추가요금" />
-                </ListItemButton>
-              )}
-            </NavLink>
-          </List>
-        </Collapse>
+      <List disablePadding>
+        {groups.map((group) =>
+          group.items ? (
+            <Box key={group.title}>
+              <ListItemButton onClick={() => handleToggle(group.title)}>
+                {group.icon && <ListItemIcon>{group.icon}</ListItemIcon>}
+                <ListItemText primary={group.title} />
+                {openGroups[group.title] ? <ExpandLess /> : <ExpandMore />}
+              </ListItemButton>
+              <Collapse in={openGroups[group.title]} timeout="auto" unmountOnExit>
+                <List component="div" disablePadding>
+                  {group.items.map((item) => {
+                    const active = location.pathname === item.path;
+                    return (
+                      <ListItemButton
+                        key={item.label}
+                        component={Link}
+                        to={item.path}
+                        selected={active}
+                        sx={{ pl: 4 }}
+                      >
+                        <ListItemText
+                          primary={item.label}
+                          primaryTypographyProps={{
+                            fontWeight: active ? 700 : 400,
+                            color: active ? "primary.main" : "text.primary",
+                          }}
+                        />
+                      </ListItemButton>
+                    );
+                  })}
+                </List>
+              </Collapse>
+            </Box>
+          ) : (
+            <ListItemButton
+              key={group.title}
+              component={Link}
+              to={group.path}
+              selected={location.pathname === group.path}
+            >
+              {group.icon && <ListItemIcon>{group.icon}</ListItemIcon>}
+              <ListItemText
+                primary={group.title}
+                primaryTypographyProps={{
+                  fontWeight: location.pathname === group.path ? 700 : 400,
+                  color: location.pathname === group.path ? "primary.main" : "text.primary",
+                }}
+              />
+            </ListItemButton>
+          )
+        )}
       </List>
     </Drawer>
   );
-}
+};
+
+export default AdminSidebar;
