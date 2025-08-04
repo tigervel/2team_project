@@ -1,6 +1,7 @@
 import { Box } from "@mui/material"
 import EstimateComponent from "../layout/component/estimate/EstimateComponent";
-
+import { Outlet } from "react-router-dom";
+ //<EstimateComponent />
 
 const EstimatePage = ()=>{
     return(
@@ -15,7 +16,7 @@ const EstimatePage = ()=>{
       }}
     >
       <Box sx={{ width: "100%", maxWidth: 1200, px: 2 }}>
-        <EstimateComponent />
+       <Outlet/>
       </Box>
     </Box>
   );

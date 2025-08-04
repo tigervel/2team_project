@@ -8,6 +8,7 @@ import servicecenterRouter from "./servicecenterRouter"
 
 import adminRouter from "./adminRouter";
 import SignUpPage from "../pages/SignUpPage";
+import estimateRouter from "./estimateRouter";
 
 
 
@@ -46,6 +47,7 @@ const root = createBrowserRouter([
             {
                 path: "estimatepage",
                 element: <Suspense fallback={Loading}><Estimate /></Suspense>,
+                children:estimateRouter.children
             },
             {
                 path: "servicecenterpage",

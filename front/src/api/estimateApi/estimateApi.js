@@ -12,3 +12,8 @@ export const postAdd = async (estimateDTO)=>{
 
     return res.data;
 }
+export const getEstimateList = async (pageParam) =>{
+    const {page,size} = pageParam;
+    const res = await axios.get(`${prefix}/list`,{params:{page:page,size:size}})
+    return res.data;
+}
