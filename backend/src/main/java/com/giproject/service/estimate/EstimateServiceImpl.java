@@ -1,9 +1,12 @@
 package com.giproject.service.estimate;
 
+import java.util.Optional;
+
 import org.springframework.stereotype.Service;
 
 import com.giproject.dto.estimate.EstimateDTO;
 import com.giproject.entity.estimate.Estimate;
+import com.giproject.entity.member.Member;
 import com.giproject.repository.estimate.EsmateRepository;
 
 import lombok.RequiredArgsConstructor;
@@ -17,7 +20,10 @@ public class EstimateServiceImpl implements EstimateService{
 	
 	@Override
 	public void requestEstimate(EstimateDTO dto) {
-		Estimate estimate= DTOToEntity(dto);
+		Member member= esmateRepository.getMemId(dto.getMemberId()).orElseThrow();
+		Estimate estimate= DTOToEntity(dto,member);
 		esmateRepository.save(estimate);
 	}
+	
+
 }

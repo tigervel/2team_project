@@ -3,10 +3,14 @@ package com.giproject.entity.estimate;
 import java.time.LocalDateTime;
 import java.util.Date;
 
+import com.giproject.entity.member.Member;
+
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -33,6 +37,10 @@ public class Estimate {
 	private String cargoType;
 	private LocalDateTime  startTime;
 	private int totalCost;
+	
+	@ManyToOne
+	@JoinColumn(name = "memId")
+	private Member member;
 	
 	public void changeStartAddress(String startAddress) {
 		this.startAddress = startAddress;

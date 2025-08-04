@@ -1,16 +1,13 @@
 package com.giproject.dto.estimate;
 
 import java.time.LocalDateTime;
-import java.util.Date;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
-import lombok.Data;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-@Data
 @Getter
 @Setter
 @Builder
@@ -25,4 +22,6 @@ public class EstimateDTO {
 	private String cargoType;
 	private LocalDateTime  startTime;
 	private int totalCost;
+	
+	private String memberId;
 }
