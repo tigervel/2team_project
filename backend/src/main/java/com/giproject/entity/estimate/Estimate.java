@@ -33,6 +33,7 @@ public class Estimate {
 	
 	private String startAddress;
 	private String endAddress;
+	private double distanceKm;
 	private int cargoWeight;
 	private String cargoType;
 	private LocalDateTime  startTime;

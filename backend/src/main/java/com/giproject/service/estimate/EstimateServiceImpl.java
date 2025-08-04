@@ -19,10 +19,11 @@ public class EstimateServiceImpl implements EstimateService{
 	private final EsmateRepository esmateRepository;
 	
 	@Override
-	public void requestEstimate(EstimateDTO dto) {
+	public Long requestEstimate(EstimateDTO dto) {
 		Member member= esmateRepository.getMemId(dto.getMemberId()).orElseThrow();
 		Estimate estimate= DTOToEntity(dto,member);
 		esmateRepository.save(estimate);
+		return estimate.getEno();
 	}
 	
 

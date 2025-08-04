@@ -18,6 +18,7 @@ public class EstimateDTO {
 	
 	private String startAddress;
 	private String endAddress;
+	private double distanceKm;
 	private int cargoWeight;
 	private String cargoType;
 	private LocalDateTime  startTime;
