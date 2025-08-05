@@ -94,17 +94,20 @@ public class CargoController {
      * 이미지 업로드
      */
     @PostMapping("/upload/{cargoNo}")
-    public ResponseEntity<?> uploadImage(@PathVariable Integer cargoNo, @RequestParam("image") MultipartFile file) {
+    public ResponseEntity<?> uploadImage(
+            @PathVariable("cargoNo") Integer cargoNo,
+            @RequestParam("image") MultipartFile file) {
         try {
+            // 저장 경로 수정
             String fileName = UUID.randomUUID() + "_" + file.getOriginalFilename();
-            Path uploadPath = Paths.get("src/main/resources/static/uploads/" + fileName);
+            Path uploadPath = Paths.get("src/main/resources/static/g2i4/uploads/" + fileName);
 
             Files.createDirectories(uploadPath.getParent());
             Files.write(uploadPath, file.getBytes());
 
-            // DB에 상대 경로 저장
+            // DB에 저장되는 경로도 /g2i4/uploads/ 로 설정
             Cargo cargo = cargoRepository.findById(cargoNo).orElseThrow();
-            cargo.setCargoImage("/uploads/" + fileName);
+            cargo.setCargoImage("/g2i4/uploads/" + fileName);
             cargoRepository.save(cargo);
 
             return ResponseEntity.ok("업로드 성공");
