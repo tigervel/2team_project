@@ -20,7 +20,7 @@ const EditVehicleInform = () => {
     preview: null
   });
 
-  // 🚚 차량 목록 불러오기
+  // 차량 목록 불러오기
   const fetchVehicles = async () => {
     try {
       const res = await axios.get(`http://localhost:8080/g2i4/cargo/list/${cargoId}`);
