@@ -66,7 +66,7 @@ const root = createBrowserRouter([
     , {
         path: 'admin',
         element: <Admin />,
-        children: adminRouter
+        children: adminRouter()
     },
     {
         path: 'signup',

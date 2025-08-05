@@ -2,10 +2,10 @@ import { lazy, Suspense } from "react";
 
 const Loading = <div>Loading 중....</div>;
 
-const MyInform = lazy(() => import("../pages/mypage/MyInform"));
-const EditMyInform = lazy(() => import("../pages/mypage/EditMyInform"));
-const EditVehicleInform = lazy(() => import("../pages/mypage/EditVehicleInform"));
-const DeliveryInform = lazy(() => import("../pages/mypage/DeliveryInform"));
+const MyInform = lazy(() => import("../layout/component/mypage/MyInform"));
+const EditMyInform = lazy(() => import("../layout/component/mypage/EditMyInform"));
+const EditVehicleInform = lazy(() => import("../layout/component/mypage/EditVehicleInform"));
+const DeliveryInform = lazy(() => import("../layout/component/mypage/DeliveryInform"));
 
 const mypageRouter = [
   {

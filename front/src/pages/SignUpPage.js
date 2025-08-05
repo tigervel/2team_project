@@ -1,10 +1,12 @@
-import * as React from 'react';
-import ToggleButton from '@mui/material/ToggleButton';
-import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
+import SignUpComponent from '../layout/component/users/SignUPComponent';
 
 const SignUpPage  = ()=>{
     return(
-        <div>SignUpPage</div>
+        <div className="fixed top-0 left-0 z-[1055] flex flex-col h-full w-full">
+            <div className="flex flex-wrap w-full h-full justify-center items-center border-2">
+                <SignUpComponent />
+            </div>
+        </div>
     )
 }
 
