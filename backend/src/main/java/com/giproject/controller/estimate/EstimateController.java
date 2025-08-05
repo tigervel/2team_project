@@ -3,14 +3,10 @@ package com.giproject.controller.estimate;
 import java.util.Map;
 
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.giproject.dto.estimate.EstimateDTO;
@@ -18,7 +14,6 @@ import com.giproject.dto.matching.MatchingDTO;
 import com.giproject.dto.matching.PageRequestDTO;
 import com.giproject.dto.matching.PageResponseDTO;
 import com.giproject.entity.cargo.CargoOwner;
-import com.giproject.entity.matching.RejectedMatching;
 import com.giproject.repository.cargo.CargoOwnerRepository;
 import com.giproject.service.estimate.EstimateService;
 import com.giproject.service.estimate.matching.MatchingService;
@@ -54,11 +49,24 @@ public class EstimateController {
 	}
 	
 	@PostMapping("/rejected")
-	public ResponseEntity<Map<String, String>> reject(@RequestParam("estimateNo") Long estimateNo) {
+	public ResponseEntity<Map<String, String>> reject(@RequestBody Map<String, Long> eno)  {
+		Long estimateNo = eno.get("estimateNo");
+		
 		CargoOwner cargoOwner = cargoOwnerRepository.findById("cargo123").get();
 		
 		matchingService.rejectMatching(estimateNo, cargoOwner);
 		
 		return ResponseEntity.ok().body(Map.of("result", "reject"));
+	}
+	
+	@PostMapping("/accepted")
+	public ResponseEntity<Map<String,String>> accepted(@RequestBody Map<String, Long> eno){
+		Long estimateNo = eno.get("estimateNo");
+		CargoOwner cargoOwner = cargoOwnerRepository.findById("cargo123").get();
+		
+		matchingService.acceptMatching(estimateNo, cargoOwner);
+		
+		
+		return ResponseEntity.ok().body(Map.of("result", "accepted"));
 	}
 }

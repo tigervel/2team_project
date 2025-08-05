@@ -19,6 +19,10 @@ export const getEstimateList = async (pageParam) =>{
 }
 
 export const postRejected = async (estimateParam) =>{
-    const res = await axios.post(`${prefix}/rejected`,{params:estimateParam})
-    return res.data
+    const res = await axios.post(`${prefix}/rejected`,{estimateNo:estimateParam})
+    return res.data;
+}
+export const postAccepted = async (estimateParam) =>{
+     const res = await axios.post(`${prefix}/accepted`,{estimateNo:estimateParam})
+    return res.data;
 }

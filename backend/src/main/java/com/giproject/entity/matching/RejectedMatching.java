@@ -2,10 +2,12 @@ package com.giproject.entity.matching;
 
 import java.time.LocalDateTime;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.giproject.entity.cargo.CargoOwner;
 import com.giproject.entity.estimate.Estimate;
 
 import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -31,12 +33,14 @@ public class RejectedMatching {
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Long rmno;//매칭 거절 리스트
 	
-	@ManyToOne
+	@ManyToOne(fetch = FetchType.LAZY)
 	@JoinColumn(name = "cargo_owner_id")
+	@JsonIgnore
 	private CargoOwner cargoOwner;
 	
-	@ManyToOne
+	@ManyToOne(fetch =  FetchType.LAZY)
 	@JoinColumn(name = "estimate_no")
+	@JsonIgnore
 	private Estimate estimate;
 	
 	private LocalDateTime rejectedTime;

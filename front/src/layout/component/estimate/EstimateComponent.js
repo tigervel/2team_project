@@ -169,6 +169,7 @@ const EstimateComponent = () => {
             value={estimate.endAddress}
 
             InputProps={{
+              readOnly:true,
               endAdornment: (
                 <InputAdornment position="end">
                   <IconButton onClick={() => handleAddressSearch(addr=>(

@@ -8,8 +8,6 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import com.giproject.dto.matching.MatchingDTO;
@@ -60,8 +58,7 @@ public class MatchingServiceImpl implements MatchingService{
 				.totalCount(totalCount)
 				.build();
 	}
-
-
+	
 	@Override
 	public void rejectMatching(Long estimateNo, CargoOwner cargoOwner) {
 		Estimate estimate = esmateRepository.findById(estimateNo)
@@ -75,6 +72,25 @@ public class MatchingServiceImpl implements MatchingService{
 				.rejectedTime(LocalDateTime.now())
 				.build();
 		rejectedMatchingRepository.save(rejected);
+	}
+
+	@Override
+	public void acceptMatching(Long estimateNo, CargoOwner cargoOwner) {
+		Estimate estimate = esmateRepository.findById(estimateNo)
+				.orElseThrow(() -> new RuntimeException("해당 견적이 존재하지 않습니다"));
+		
+		Matching matching = matchingRepository.findByEstimate(estimate).orElseThrow(() -> new RuntimeException("해당 매칭이 없습니다"));
+		
+		if(matchingRepository.checkMached(estimateNo)) {
+			throw new RuntimeException("이미 다른 기사님이 수락하셨습니다");
+		}
+		estimate.changeMatched(true);
+		matching.changeCargoOwner(cargoOwner);
+		matching.changeIsAccepted(true);
+		matching.changeAcceptedTime(LocalDateTime.now());
+		esmateRepository.save(estimate);
+		matchingRepository.save(matching);
+	
 	}
 
 }

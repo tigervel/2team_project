@@ -67,5 +67,6 @@ public interface MatchingService {
 	PageResponseDTO<MatchingDTO> getList(PageRequestDTO requestDTO);
 	
 	void rejectMatching(Long estimateNo, CargoOwner cargoOwner);
+	void acceptMatching(Long estimateNo, CargoOwner cargoOwner);
 	
 }
