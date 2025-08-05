@@ -6,6 +6,7 @@ import java.time.LocalDateTime;
 import com.giproject.dto.matching.MatchingDTO;
 import com.giproject.dto.matching.PageRequestDTO;
 import com.giproject.dto.matching.PageResponseDTO;
+import com.giproject.entity.cargo.CargoOwner;
 import com.giproject.entity.estimate.Estimate;
 import com.giproject.entity.matching.Matching;
 
@@ -65,5 +66,6 @@ public interface MatchingService {
 	
 	PageResponseDTO<MatchingDTO> getList(PageRequestDTO requestDTO);
 	
+	void rejectMatching(Long estimateNo, CargoOwner cargoOwner);
 	
 }

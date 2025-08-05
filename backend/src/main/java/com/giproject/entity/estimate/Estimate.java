@@ -41,6 +41,9 @@ public class Estimate {
 	private int totalCost;
 	
 	@Column(nullable = false)
+	private boolean matched;
+	
+	@Column(nullable = false)
 	private boolean isTemp;//true 면 임시저장
 	
 	@ManyToOne
@@ -66,6 +69,8 @@ public class Estimate {
 	public void changeTotalCost(int totalCost) {
 		this.totalCost = totalCost;
 	}
-	
+	public void changeMatched(boolean matched) {
+		this.matched = matched;
+	}
 
 }

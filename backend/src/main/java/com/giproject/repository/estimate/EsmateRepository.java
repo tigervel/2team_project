@@ -1,5 +1,6 @@
 package com.giproject.repository.estimate;
 
+import java.util.List;
 import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -14,4 +15,7 @@ public interface EsmateRepository extends JpaRepository<Estimate, Long>{
 	
 	@Query("Select m From Member m where m.memId =:memId")
 	public Optional<Member> getMemId(@Param("memId") String memId) ;
+	
+	@Query("SELECT e FROM Estimate e WHERE e.isTemp = false")
+	List<Estimate> findValidEstimates();
 }

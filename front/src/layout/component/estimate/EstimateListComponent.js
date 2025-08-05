@@ -1,7 +1,7 @@
 import { Box, Button, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow } from "@mui/material";
 import useCustomMove from "../../../hooks/useCustomMove";
 import { useEffect, useState } from "react";
-import { getEstimateList } from "../../../api/estimateApi/estimateApi";
+import { getEstimateList, postRejected } from "../../../api/estimateApi/estimateApi";
 import PageComponent from "../common/PageComponent";
 
 const initState = {
@@ -27,6 +27,12 @@ const EstimateListComponent = () => {
             setServerData(data)
         })
     },[page,size,refresh]);
+
+    const clickRejected = (esNo) =>{
+      postRejected(esNo).then(data=>{
+        console.log(data)
+      })
+    }
  
 
   return (
@@ -61,7 +67,7 @@ const EstimateListComponent = () => {
                 <Button variant="contained" color="success">수락</Button>
               </TableCell>
               <TableCell align="center">
-                <Button variant="outlined" color="error">거절</Button>
+                <Button variant="outlined" color="error" onClick={clickRejected(est.eno)}>거절</Button>
               </TableCell>
             </TableRow>
           ))}

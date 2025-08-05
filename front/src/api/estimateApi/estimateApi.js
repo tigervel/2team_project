@@ -17,3 +17,8 @@ export const getEstimateList = async (pageParam) =>{
     const res = await axios.get(`${prefix}/list`,{params:{page:page,size:size}})
     return res.data;
 }
+
+export const postRejected = async (estimateParam) =>{
+    const res = await axios.post(`${prefix}/rejected`,{params:estimateParam})
+    return res.data
+}

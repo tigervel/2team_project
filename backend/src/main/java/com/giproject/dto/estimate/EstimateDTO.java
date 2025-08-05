@@ -23,6 +23,6 @@ public class EstimateDTO {
 	private String cargoType;
 	private LocalDateTime  startTime;
 	private int totalCost;
-	
+	private boolean matched;
 	private String memberId;
 }
