@@ -1,19 +1,19 @@
 import { lazy, Suspense } from "react";
-import MemberOwner from "../pages/admin/MemberOwner";
-import MemberCowner from "../pages/admin/MemberCowner";
-import MemberReport from "../pages/admin/MemberReport";
-import MemberAdmin from "../pages/admin/MemberAdmin";
-import Notice from "../pages/admin/Notice";
-import Inquirie from "../pages/admin/Inquirie";
-import FeesBasic from "../pages/admin/FeesBasic";
-import FeesExtra from "../pages/admin/FeesExtra";
+import MemberOwner from "../layout/component/admin/MemberOwner";
+import MemberCowner from "../layout/component/admin/MemberCowner";
+import MemberReport from "../layout/component/admin/MemberReport";
+import MemberAdmin from "../layout/component/admin/MemberAdmin";
+import Notice from "../layout/component/admin/Notice";
+import Inquirie from "../layout/component/admin/Inquirie";
+import FeesBasic from "../layout/component/admin/FeesBasic";
+import FeesExtra from "../layout/component/admin/FeesExtra";
 
-const AdminLayout = lazy(() => import("../layout/AdminLayout"));
-const AdminPage = lazy(() => import("../pages/admin/AdminPage"));
-const DeliveryPage = lazy(() => import("../pages/admin/DeliveryPage"));
-const MemberAll = lazy(() => import("../pages/admin/MemberAll"));
+const AdminLayout = lazy(() => import("../layout/component/admin/AdminLayout"));
+const AdminPage = lazy(() => import("../layout/component/admin/AdminPage"));
+const DeliveryPage = lazy(() => import("../layout/component/admin/DeliveryPage"));
+const MemberAll = lazy(() => import("../layout/component/admin/MemberAll"));
 
-const loading = <div>로딩중입니다.....</div>;
+const loading = <div>로딩중입니다.....</div>
 
 const adminRouter = () => {
     return [
