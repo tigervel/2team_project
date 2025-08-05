@@ -32,16 +32,14 @@ public class Member {
 	void changeMemPw(String memPw) {
 		this.memPw = memPw;
 	}
-	void changeMemAddress(String memAddress) {
+	
+	public void changeMemAddress(String memAddress) {
 		this.memAddress = memAddress;
 		
 	}
 	
-	void changeMemPhone (String memPhone) {
+	public void changeMemPhone (String memPhone) {
 		this.memPhone = memPhone;
 	}
-	
-	
-	
 	
 }
