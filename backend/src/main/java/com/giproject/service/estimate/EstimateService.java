@@ -13,6 +13,7 @@ public interface EstimateService {
 		EstimateDTO dto =  EstimateDTO.builder()
 				.startAddress(estimate.getStartAddress())
 				.endAddress(estimate.getEndAddress())
+				.distanceKm(estimate.getDistanceKm())
 				.cargoWeight(estimate.getCargoWeight())
 				.cargoType(estimate.getCargoType())
 				.startTime(estimate.getStartTime())
@@ -27,6 +28,7 @@ public interface EstimateService {
 				.startAddress(dto.getStartAddress())
 				.endAddress(dto.getEndAddress())
 				.cargoWeight(dto.getCargoWeight())
+				.distanceKm(dto.getDistanceKm())
 				.cargoType(dto.getCargoType())
 				.startTime(dto.getStartTime())
 				.totalCost(dto.getTotalCost())
@@ -35,5 +37,7 @@ public interface EstimateService {
 		return estimate;
 	}
 	
-	void requestEstimate(EstimateDTO dto);
+	Long sendEstimate(EstimateDTO dto);
+	
+	Long saveDraft(EstimateDTO dto);
 }

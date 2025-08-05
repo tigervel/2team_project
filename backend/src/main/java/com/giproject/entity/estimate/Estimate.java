@@ -5,6 +5,7 @@ import java.util.Date;
 
 import com.giproject.entity.member.Member;
 
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -33,10 +34,14 @@ public class Estimate {
 	
 	private String startAddress;
 	private String endAddress;
+	private double distanceKm;
 	private int cargoWeight;
 	private String cargoType;
 	private LocalDateTime  startTime;
 	private int totalCost;
+	
+	@Column(nullable = false)
+	private boolean isTemp;//true 면 임시저장
 	
 	@ManyToOne
 	@JoinColumn(name = "memId")
