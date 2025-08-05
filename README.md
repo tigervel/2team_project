@@ -23,6 +23,9 @@
 -axios
 - yarn add axios
 
+- Muterial Carousel
+- yarn add react-material-ui-carousel@latest
+
 # 🚚 화물 운송 시스템 플랫폼 (Freight Logistics System)
 
 > 화물주(고객)와 차주(운송업체)를 연결해주는 통합 운송 관리 플랫폼입니다.

@@ -7,10 +7,11 @@ import {
 import SearchIcon from "@mui/icons-material/Search";
 import TmapViewer from "./KakaoMapViewer";
 import { DateTimePicker, LocalizationProvider } from "@mui/x-date-pickers";
-import { AdapterDayjs  } from '@mui/x-date-pickers/AdapterDayjs'
+import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs'
 import dayjs from "dayjs";
 import KakaoMapViewer from "./KakaoMapViewer";
 import { postAdd } from "../../../api/estimateApi/estimateApi";
+import useCustomMove from "../../../hooks/useCustomMove";
 
 
 
@@ -21,27 +22,27 @@ const SPECIAL_NOTE_OPTIONS = [
   { label: "위험물", cost: 500000 },
   { label: "파손주의", cost: 150000 },
 ];
-  const initState ={
-    startAddress: '',
-    endAddress:'',
-    cargoType:'',
-    cargoWeight:'',
-    startTime:dayjs(),
-    totalCost:0,
-    distanceKm:''
+const initState = {
+  startAddress: '',
+  endAddress: '',
+  cargoType: '',
+  cargoWeight: '',
+  startTime: dayjs(),
+  totalCost: 0,
+  distanceKm: ''
 
-  }
+}
 
 const EstimateComponent = () => {
 
-  const [estimate,setEstimate] = useState(initState);
+  const [estimate, setEstimate] = useState(initState);
 
   const [specialNotes, setSpecialNotes] = useState([]);
   const [specialNoteCost, setSpecialNoteCost] = useState(0);
   const [baseCost, setBaseCost] = useState(0);
   const [distanceCost, setDistanceCost] = useState(0);
   const [showMap, setShowMap] = useState(false);
-
+const {moveToHome} = useCustomMove();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
 
@@ -52,12 +53,12 @@ const EstimateComponent = () => {
     setBaseCost(base);
     setDistanceCost(distCost);
     setSpecialNoteCost(extra);
-    setEstimate(prev =>({
+    setEstimate(prev => ({
       ...prev,
-      totalCost:base + distCost + extra
+      totalCost: base + distCost + extra
     }))
- 
-    
+
+
   }, [estimate.cargoWeight, estimate.distanceKm, specialNotes]);
 
   const handleSpecialNoteChange = (e) => {
@@ -101,24 +102,41 @@ const EstimateComponent = () => {
       const meters = data.routes[0].summary.distance;
       const km = (meters / 1000).toFixed(1)
 
-      setEstimate(prev =>({
+      setEstimate(prev => ({
         ...prev,
-        distanceKm:km
+        distanceKm: km
       }))
     } catch (e) {
       console.error("거리 계산 오류", e);
     }
   };
 
-  const handleClickAdd=()=>{
-    postAdd(estimate)
-    .then(result=>{
-      console.log(result)
-    })
+  const handleClickAdd = () => {
+    if ((estimate.distanceKm !== '')) {
+      if (estimate.cargoType !== '') {
+        if (estimate.cargoWeight !== '') {
+          postAdd(estimate)
+            .then(result => {
+              
+              alert('견적서 제출이 완료되었습니다.')
+              moveToHome();
+            })
+        } else {
+          alert('화물무게를 입력해주세요')
+        }
+
+      } else {
+        alert('화물종류를 입력해주세요')
+      }
+
+    } else {
+      alert('예상거리를 입력헤주세요')
+        
+    }
   }
-  const handleChangeEstimate =(e)=>{
+  const handleChangeEstimate = (e) => {
     estimate[e.target.name] = e.target.value
-    setEstimate({...estimate})
+    setEstimate({ ...estimate })
   }
 
   return (
@@ -148,12 +166,13 @@ const EstimateComponent = () => {
             value={estimate.startAddress}
 
             InputProps={{
-              readOnly:true,
+              readOnly: true,
               endAdornment: (
                 <InputAdornment position="end">
-                  <IconButton onClick={() => handleAddressSearch(addr=>(
+                  <IconButton onClick={() => handleAddressSearch(addr => (
                     setEstimate(prev => ({
-                      ...prev,startAddress:addr}))
+                      ...prev, startAddress: addr
+                    }))
                   ))}>
                     <SearchIcon />
                   </IconButton>
@@ -169,12 +188,12 @@ const EstimateComponent = () => {
             value={estimate.endAddress}
 
             InputProps={{
-              readOnly:true,
+              readOnly: true,
               endAdornment: (
                 <InputAdornment position="end">
-                  <IconButton onClick={() => handleAddressSearch(addr=>(
-                    setEstimate(prev=>({
-                      ...prev,endAddress:addr
+                  <IconButton onClick={() => handleAddressSearch(addr => (
+                    setEstimate(prev => ({
+                      ...prev, endAddress: addr
                     }))
                   ))}>
                     <SearchIcon />
@@ -209,9 +228,9 @@ const EstimateComponent = () => {
               value={estimate.cargoWeight}
               onChange={(e) => {
                 const value = Number(e.target.value);
-                setEstimate((prev)=>({
+                setEstimate((prev) => ({
                   ...prev,
-                  cargoWeight: value>=0?value:'',
+                  cargoWeight: value >= 0 ? value : '',
                 }))
               }}
               fullWidth
@@ -221,8 +240,8 @@ const EstimateComponent = () => {
                 label="예약 시간"
                 name='startTime'
                 value={estimate.startTime}
-                onChange={newTime =>{
-                  setEstimate(prev =>({...prev,startTime:newTime}))
+                onChange={newTime => {
+                  setEstimate(prev => ({ ...prev, startTime: newTime }))
                 }}
                 format="YYYY년 MM월 DD일 A hh:mm"
                 renderInput={(params) => <TextField {...params} fullWidth />}
@@ -303,7 +322,7 @@ const EstimateComponent = () => {
                   <Typography>기본 요금: {baseCost.toLocaleString()}원</Typography>
                   <Typography>거리 요금: {distanceCost.toLocaleString()}원</Typography>
                   <Typography>추가 요금: {specialNoteCost.toLocaleString()}원</Typography>
-                  <Typography fontWeight="bold" mt={2} sx={{ fontSize: 30}}>
+                  <Typography fontWeight="bold" mt={2} sx={{ fontSize: 30 }}>
                     총 금액: {estimate.totalCost.toLocaleString()}원
                   </Typography>
                 </Stack>
