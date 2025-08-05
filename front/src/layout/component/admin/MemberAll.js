@@ -114,6 +114,7 @@ const MemberAll = () => {
                             <TableCell>등록일</TableCell>
                             <TableCell>거래수</TableCell>
                             <TableCell>신고내역</TableCell>
+                            <TableCell>⋯</TableCell>
                         </TableRow>
                     </TableHead>
                     <TableBody>
@@ -130,6 +131,7 @@ const MemberAll = () => {
                                 <TableCell>
                                     <Chip label={`${user.reports}`} color={user.reports ? "warning" : "default"} size="small" />
                                 </TableCell>
+                                <TableCell>⋯</TableCell>
                             </TableRow>
                         ))}
                     </TableBody>
