@@ -6,8 +6,7 @@ import {
 } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
 import TmapViewer from "./KakaoMapViewer";
-import { DateTimePicker, LocalizationProvider } from "@mui/x-date-pickers";
-import { AdapterDayjs  } from '@mui/x-date-pickers/AdapterDayjs'
+// Date picker imports removed - using regular TextField for date input
 import dayjs from "dayjs";
 import KakaoMapViewer from "./KakaoMapViewer";
 
@@ -174,16 +173,16 @@ const EstimateComponent = () => {
               }}
               fullWidth
             />
-            <LocalizationProvider dateAdapter={AdapterDayjs}>
-              <DateTimePicker
-                label="예약 시간"
-                value={dateTime}
-                onChange={(newValue) => setDateTime(newValue)}
-                format="YYYY년 MM월 DD일 A hh:mm"
-                renderInput={(params) => <TextField {...params} fullWidth />}
-              />
-
-            </LocalizationProvider>
+            <TextField
+              label="예약 시간"
+              type="datetime-local"
+              value={dateTime ? dayjs(dateTime).format('YYYY-MM-DDTHH:mm') : ''}
+              onChange={(e) => setDateTime(dayjs(e.target.value).toDate())}
+              fullWidth
+              InputLabelProps={{
+                shrink: true,
+              }}
+            />
 
             <FormControl fullWidth>
               <InputLabel>특이사항 선택</InputLabel>
