@@ -19,11 +19,11 @@ import lombok.extern.log4j.Log4j2;
 @Service
 @RequiredArgsConstructor
 @Log4j2
+
 public class EstimateServiceImpl implements EstimateService{
 	private final EsmateRepository esmateRepository;
 	private final MatchingRepository matchingRepository;
 	private final TempEstimateRepository estimateRepository;
-	
 	
 	@Override
 	public Long sendEstimate(EstimateDTO dto) {
@@ -38,12 +38,8 @@ public class EstimateServiceImpl implements EstimateService{
 		matchingRepository.save(matching);
 				return estimate.getEno();
 	}
-
 	@Override
-	public Long saveDraft(EstimateDTO dto) {
-		
+	public Long saveDraft(EstimateDTO dto) {		
 		return null;
 	}
-	
-
 }

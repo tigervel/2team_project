@@ -15,13 +15,23 @@ import {
 
 const columns = [
   '화물명',
+  '무게',
   '출발지',
   '도착지',
   '배송 시작일',
-  '예상 도착일',
   '운전 기사',
   '배송 상태',
 ];
+
+const progcolumns = [
+  '화물명',
+  '무게',
+  '출발지',
+  '도착지',
+  '배송 시작일',
+  '운전 기사',
+  '승인 여부'
+]
 
 const emptyRow = {
   화물명: '-',
@@ -31,6 +41,7 @@ const emptyRow = {
   '예상 도착일': '-',
   '운전 기사': '-',
   '배송 상태': '-',
+  '승인 여부' : '미승인'
 };
 
 const DeliveryInfoPage = () => {
@@ -40,6 +51,39 @@ const DeliveryInfoPage = () => {
         <Typography variant="h5" fontWeight="bold" gutterBottom textAlign="center">
           배송 정보 관리
         </Typography>
+
+        {/* 현재 운반 중인 화물 */}
+        <Box mt={6}>
+          <Typography variant="h6" fontWeight="bold" gutterBottom>
+            견적 의뢰 진행 상황
+          </Typography>
+          <TableContainer component={Paper} elevation={1}>
+            <Table>
+              <TableHead>
+                <TableRow>
+                  {progcolumns.map((col) => (
+                    <TableCell key={col} align="center">
+                      {col}
+                    </TableCell>
+                  ))}
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                <TableRow>
+                  {progcolumns.map((col) => (
+                    <TableCell key={col} align="center">
+                      {emptyRow[col]}
+                    </TableCell>
+                  ))}
+                </TableRow>
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </Box>
+
+        {/* 구분선 */}
+        <Divider sx={{ my: 8 }} />
+       
 
         {/* 현재 운반 중인 화물 */}
         <Box mt={6}>

@@ -98,16 +98,28 @@ public class CargoController {
             @PathVariable("cargoNo") Integer cargoNo,
             @RequestParam("image") MultipartFile file) {
         try {
-            // 저장 경로 수정
+            // DB에서 해당 cargo 조회
+            Cargo cargo = cargoRepository.findById(cargoNo)
+                    .orElseThrow(() -> new RuntimeException("차량 없음: " + cargoNo));
+
+            // 기존 이미지 파일 삭제
+            if (cargo.getCargoImage() != null) {
+                String existingImagePath = "src/main/resources/static" + cargo.getCargoImage();
+                Path existingPath = Paths.get(existingImagePath);
+                if (Files.exists(existingPath)) {
+                    Files.delete(existingPath); // 파일 존재하면 삭제
+                }
+            }
+
+            // 새 파일 저장
             String fileName = UUID.randomUUID() + "_" + file.getOriginalFilename();
-            Path uploadPath = Paths.get("src/main/resources/static/g2i4/uploads/" + fileName);
+            Path uploadPath = Paths.get("src/main/resources/static/uploads/" + fileName);
 
             Files.createDirectories(uploadPath.getParent());
             Files.write(uploadPath, file.getBytes());
 
-            // DB에 저장되는 경로도 /g2i4/uploads/ 로 설정
-            Cargo cargo = cargoRepository.findById(cargoNo).orElseThrow();
-            cargo.setCargoImage("/g2i4/uploads/" + fileName);
+            // DB에 새 경로 저장
+            cargo.setCargoImage("/uploads/" + fileName);
             cargoRepository.save(cargo);
 
             return ResponseEntity.ok("업로드 성공");
