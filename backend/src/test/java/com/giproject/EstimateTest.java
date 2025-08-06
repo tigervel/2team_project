@@ -1,6 +1,7 @@
 package com.giproject;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -42,14 +43,14 @@ public class EstimateTest {
 	void contextLoads() {
 		System.out.println("1수정");
 	}
-
-	// @Test
+	@Transactional
+	@Test
 	void test() {
-		EstimateDTO dto = EstimateDTO.builder().startAddress("서울시").endAddress("김포시").cargoWeight(9999).cargoType("물류")
-				.startTime(LocalDateTime.of(2025, 11, 1, 15, 30)).totalCost(1000000).build();
-
-		estimateService.sendEstimate(dto);
-
+		String user = "user";
+		List<EstimateDTO> dtolist = estimateService.getSaveEstimate(user);
+		for(int i = 0 ; i<dtolist.size();i++) {
+			System.out.println(dtolist.get(i).getEno());
+		}
 	}
 
 	 @Transactional
@@ -74,7 +75,7 @@ public class EstimateTest {
 		
 
 	@Transactional
-	@Test
+	//@Test
 	void list() {
 		  PageRequestDTO requestDTO = PageRequestDTO.builder()
 		            .page(1)

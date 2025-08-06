@@ -25,4 +25,5 @@ public class EstimateDTO {
 	private int totalCost;
 	private boolean matched;
 	private String memberId;
+	private boolean isTemp;
 }

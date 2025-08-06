@@ -3,6 +3,10 @@ import {
   TextField, Button, Stack, Typography, Select, MenuItem,
   FormControl, InputLabel, OutlinedInput, Checkbox, ListItemText,
   Box, IconButton, InputAdornment, Grid, useMediaQuery, useTheme,
+  Dialog,
+  DialogTitle,
+  DialogActions,
+  DialogContent,
 } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
 import TmapViewer from "./KakaoMapViewer";
@@ -10,7 +14,7 @@ import { DateTimePicker, LocalizationProvider } from "@mui/x-date-pickers";
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs'
 import dayjs from "dayjs";
 import KakaoMapViewer from "./KakaoMapViewer";
-import { postAdd } from "../../../api/estimateApi/estimateApi";
+import { postAdd, postSaveEs } from "../../../api/estimateApi/estimateApi";
 import useCustomMove from "../../../hooks/useCustomMove";
 
 
@@ -42,7 +46,8 @@ const EstimateComponent = () => {
   const [baseCost, setBaseCost] = useState(0);
   const [distanceCost, setDistanceCost] = useState(0);
   const [showMap, setShowMap] = useState(false);
-const {moveToHome} = useCustomMove();
+  const [openCancelDialog, setOpenCancelDialog] = useState(false);
+  const { moveToHome } = useCustomMove();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
 
@@ -117,28 +122,55 @@ const {moveToHome} = useCustomMove();
         if (estimate.cargoWeight !== '') {
           postAdd(estimate)
             .then(result => {
-              
               alert('견적서 제출이 완료되었습니다.')
               moveToHome();
             })
         } else {
           alert('화물무게를 입력해주세요')
         }
-
       } else {
         alert('화물종류를 입력해주세요')
       }
-
     } else {
       alert('예상거리를 입력헤주세요')
-        
     }
   }
   const handleChangeEstimate = (e) => {
     estimate[e.target.name] = e.target.value
     setEstimate({ ...estimate })
   }
+  const handleClickSave = () => {
+    postSaveEs(estimate)
+      .then(data => {
+        console.log(data)
+        alert('임시저장이 완료되었습니다')
+        moveToHome();
+      }).catch(error => {
+        const msg = error.response?.data?.message || error.response?.data?.error || "임시저장 중 오류가 발생했습니다.";
+        alert(msg);
+      })
+  }
 
+  const handleClickCancel = () => {
+    setOpenCancelDialog(true);
+  };
+
+  const handleCancelConfirm = () => {
+    setOpenCancelDialog(false);
+    moveToHome();  // 실제 이동 처리
+  };
+
+  const handleCancelClose = () => {
+    setOpenCancelDialog(false);  // 모달만 닫기
+  };
+
+  const tomorrow = dayjs().add(24, 'hour')
+
+  const isInvalidHour = (data) => data.hour() < 9 || data.hour() > 16;
+
+  const isBeforeMinDateTime = (date) => {
+    return date.isBefore(tomorrow.startOf('day'));
+  };
   return (
     <Box sx={{ px: 2, py: 4 }}>
       <Typography variant="h5" fontWeight="bold" align="center" mb={5}>
@@ -240,6 +272,16 @@ const {moveToHome} = useCustomMove();
                 label="예약 시간"
                 name='startTime'
                 value={estimate.startTime}
+                minDateTime={tomorrow}
+                shouldDisableDate={(data) => {
+                  return isBeforeMinDateTime(data.hour(9))
+                }}
+                shouldDisableTime={(value, clockType) => {
+                  if (clockType === 'hours') {
+                    return isInvalidHour(value)
+                  }
+                  return false;
+                }}
                 onChange={newTime => {
                   setEstimate(prev => ({ ...prev, startTime: newTime }))
                 }}
@@ -312,7 +354,7 @@ const {moveToHome} = useCustomMove();
                 border: "1px solid #ccc",
                 borderRadius: 2,
                 p: 2,
-                bgcolor: "#fff",
+                bgcolor: "#ffffff",
               }}
             >
               {showMap ? (
@@ -339,16 +381,45 @@ const {moveToHome} = useCustomMove();
         mt={5}
         alignItems="center"
       >
-        <Button variant="contained" fullWidth>
+        <Button variant="contained" fullWidth onClick={handleClickSave}>
           임시 저장
         </Button>
         <Button variant="contained" fullWidth onClick={handleClickAdd}>
           견적서 제출
         </Button>
-        <Button variant="contained" fullWidth>
+        <Button variant="contained" fullWidth onClick={handleClickCancel}>
           취소
         </Button>
       </Stack>
+
+      <Dialog
+        open={openCancelDialog}
+        onClose={handleCancelClose}
+        PaperProps={{
+          sx: {
+            width: 400,
+            height: 150,
+            borderRadius: 2,
+            p: 2,
+
+
+          },
+        }}
+      >
+
+        <DialogContent >
+          <Typography fontSize={20} fontWeight='bold'>작성을 취소하시겠습니까?</Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCancelConfirm} color="error">
+            확인
+          </Button>
+          <Button onClick={handleCancelClose} color="inherit">
+            아니요
+          </Button>
+
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 }

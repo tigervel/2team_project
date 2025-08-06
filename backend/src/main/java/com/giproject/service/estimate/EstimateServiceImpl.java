@@ -1,6 +1,8 @@
 package com.giproject.service.estimate;
 
+import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
 
@@ -39,10 +41,39 @@ public class EstimateServiceImpl implements EstimateService{
 	}
 
 	@Override
-	public Long saveDraft(EstimateDTO dto) {
+	public Long saveDraft(EstimateDTO estimateDTO) {
 		
-		return null;
+		Member member = esmateRepository.getMemId(estimateDTO.getMemberId()).orElseThrow();
+		int count = esmateRepository.estimateCount(member.getMemId()); //임시저장 갯수 확인
+		
+		if(count>=3) {
+			throw new IllegalStateException("임시저장은 최대 3개까지 가능합니다.");
+		}
+		estimateDTO.setTemp(true);
+		Estimate estimate= DTOToEntity(estimateDTO, member);
+		
+		esmateRepository.save(estimate);
+		return estimate.getEno();
 	}
+
+
+	@Override
+	public List<EstimateDTO> getSaveEstimate(String memberId) {
+		List<Estimate> tempEstimate = esmateRepository.saveEstimateList(memberId);
+		
+		return tempEstimate.stream()
+				.map(this::entityToDTO)
+				.collect(Collectors.toList());
+	}
+
+	@Override
+	public EstimateDTO exportEstimate(String mameberId, Long eno) {
+		Estimate estimate = esmateRepository.exportEs(mameberId, eno);
+		EstimateDTO dto = entityToDTO(estimate);
+		return dto;
+		
+	}
+	
 	
 
 }

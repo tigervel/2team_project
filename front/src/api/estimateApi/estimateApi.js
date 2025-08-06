@@ -26,3 +26,8 @@ export const postAccepted = async (estimateParam) =>{
      const res = await axios.post(`${prefix}/accepted`,{estimateNo:estimateParam})
     return res.data;
 }
+
+export const postSaveEs = async (estimateDTO)=>{
+    const res = await axios.post(`${prefix}/savedreft`,estimateDTO,)
+    return res;
+}

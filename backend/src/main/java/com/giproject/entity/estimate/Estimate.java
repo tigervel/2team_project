@@ -72,6 +72,9 @@ public class Estimate {
 	public void changeMatched(boolean matched) {
 		this.matched = matched;
 	}
+	public void changeIsTemp(boolean isTemp) {
+		this.isTemp = isTemp;
+	}
 
 
 }
