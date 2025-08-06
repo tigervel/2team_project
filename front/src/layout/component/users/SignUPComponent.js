@@ -1,43 +1,37 @@
 import * as React from 'react';
 import ToggleButton from '@mui/material/ToggleButton';
 import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
-import { Container, FormControl, IconButton, InputAdornment, InputLabel, OutlinedInput, Paper, Typography, TextField,
-    Dialog, DialogTitle, DialogContent, DialogActions, Button, FormHelperText } from '@mui/material';
+import { Container, FormControl, IconButton, InputAdornment, InputLabel, OutlinedInput, Paper, Typography, TextField, FormHelperText, MenuItem, Box, Autocomplete, Button, Select } from '@mui/material';
 import Visibility from '@mui/icons-material/Visibility';
 import VisibilityOff from '@mui/icons-material/VisibilityOff';
 import SearchIcon from '@mui/icons-material/Search';
 
 import useIdForm from '../../../hooks/useIdForm';
 import usePasswordForm from '../../../hooks/usePasswordForm';
-import useAddressSearch from '../../../hooks/useAddressSearch';
-
-const REST_API_KEY = "d381d00137ba5677a3ee0355c4c95abf";
 
 const SignUpComponent = () => {
 
+    // 기본 선택값 -> 화주
+    const [alignment, setAlignment] = React.useState('user');
+    const handleAlignment = (event, newAlignment) => {
+        setAlignment(newAlignment);
+    };
 
+    // ID
     const { id, isDuplicate, handleChange, isIdValid } = useIdForm();
     const {
         password,
         isPwValid,
         showPassword1,
         showPassword2,
-        handleChangePassword,
+        handleChangePassword1,
         toggleShowPassword1,
         toggleShowPassword2,
     } = usePasswordForm();
-    const {
-        openDialog,
-        searchQuery,
-        setSearchQuery,
-        searchResults,
-        selectedAddress,
-        handleOpenDialog,
-        handleCloseDialog,
-        handleSearch,
-        handleSelectAddress,
-    } = useAddressSearch(REST_API_KEY);
 
+    const [selected, setSelected] = React.useState(false);
+
+    // password
     const [password2, setPassword2] = React.useState('');
     const [isPwMatch, setIsPwMatch] = React.useState(null);
 
@@ -48,14 +42,33 @@ const SignUpComponent = () => {
         setIsPwMatch(value === password);
     };
 
-    const [alignment, setAlignment] = React.useState('user');
-    const handleAlignment = (event, newAlignment) => {
-        setAlignment(newAlignment);
+    // 이메일
+    const domainOptions = [
+        'gmail.com',
+        'naver.com',
+        'daum.net',
+    ];
+
+    // 휴대폰
+    const [phone, setPhone] = React.useState('');
+    const handlePhoneNumChange = (event) => {
+        setPhone(event.target.value);
+    };
+
+    // 주소
+    const [selectedAddress, setSelectedAddress] = React.useState('');
+
+    const handleAddressSearch = () => {
+        new window.daum.Postcode({
+            oncomplete: (data) => {
+                setSelectedAddress(data.address); // 선택된 주소를 상태에 저장
+            },
+        }).open();
     };
 
     return (
         <>
-            <Container maxWidth="sm" sx={{ mt: 8,  }}>
+            <Container maxWidth="sm" sx={{ mt: 8, mb: 8 }}>
                 <Paper elevation={3} sx={{ p: 4, maxWidth: '80%', minWidth:'50%'}}>
                     <Typography variant="h5" align="center" gutterBottom sx={{ mb: 2 }}>
                         회원가입
@@ -77,33 +90,41 @@ const SignUpComponent = () => {
                         </ToggleButton>
                     </ToggleButtonGroup>
 
-                    <TextField
-                        id="outlined-id"
-                        name="id"
-                        label="ID"
-                        value={id}
-                        onChange={handleChange}
-                        error={id !== '' && (!isIdValid || isDuplicate)}
-                        helperText={
-                            id === ''
-                            ? ''
-                            : !isIdValid
-                                ? '8~15자, 영문 대소문자와 숫자만 허용됩니다.'
-                                : isDuplicate
-                                ? '이미 사용 중인 ID입니다.'
-                                : '사용 가능한 ID입니다.'
-                        }
-                        sx={{ mb: 1, width: '75%' }}
-                    />
+                    <Box display="flex" alignItems="felx-start" gap={1} sx={{ mb: 1.5 }}>
 
+                            <TextField
+                                id="outlined-id"
+                                name="id"
+                                label="ID"
+                                value={id}
+                                onChange={handleChange}
+                                error={id !== '' && (!isIdValid || isDuplicate)}
+                                helperText={
+                                    id === ''
+                                    ? ''
+                                    : !isIdValid
+                                        ? '8~15자, 영문 대소문자와 숫자만 허용됩니다.'
+                                        : isDuplicate
+                                        ? '이미 사용 중인 ID입니다.'
+                                        : '사용 가능한 ID입니다.'
+                                }
+                                sx={{ width: '99% '}}
+                            />
+                            
+                        <Box sx={{ width: '30%', display: 'flex', alignItems: 'flex-start' }}>
+                            <Button variant="outlined" size="large" sx={{height: '55px', display: 'flex', alignSelf:'stretch' }}>
+                                중복확인
+                            </Button>
+                        </Box>                        
+                    </Box>
 
-                    <FormControl sx={{ width: '100%', mb: 1 }} variant="outlined" error={isPwValid === false}>
+                    <FormControl sx={{ width: '100%', mb: 1.5 }} variant="outlined" error={isPwValid === false}>
                         <InputLabel htmlFor="password1">Password</InputLabel>
                         <OutlinedInput
                             id="password1"
                             type={showPassword1 ? 'text' : 'password'}
                             value={password}
-                            onChange={handleChangePassword}
+                            onChange={handleChangePassword1}
                             label="Password"
                             endAdornment={
                                 <InputAdornment position="end">
@@ -123,7 +144,7 @@ const SignUpComponent = () => {
                         </FormHelperText>
                     </FormControl>
 
-                    <FormControl sx={{ width: '100%', mb: 1 }} variant="outlined">
+                    <FormControl sx={{ width: '100%', mb: 1.5 }} variant="outlined">
                         <InputLabel htmlFor="password2">Password 재입력</InputLabel>
                         <OutlinedInput
                             id="password2"
@@ -142,61 +163,94 @@ const SignUpComponent = () => {
                             }
                         label="Password reinput"
                         />
+                        {/* 불일치 메시지는 password2가 비어있지 않을 때만 표시 */}
+                        {isPwMatch === false && password2 !== '' && (
+                            <Typography color="error" variant="caption"> 비밀번호가 일치하지 않습니다.</Typography>
+                        )}
                     </FormControl>
 
-                    {/* 불일치 메시지는 password2가 비어있지 않을 때만 표시 */}
-                    {isPwMatch === false && password2 !== '' && (
-                        <Typography color="error" variant="caption"> 비밀번호가 일치하지 않습니다.</Typography>
-                    )}
+                    
 
-                    <TextField id="outlined-basic" label="이름" variant="outlined" sx={{ width: '100%', mb: 1 }} />
+                    <Box display="flex" alignItems="center" gap={1} sx={{ mb: 1.5 }}>
+                        <TextField id="outlined-basic" label="Email" variant="outlined" sx={{ width: '45%', mr: 1.3}} /> 
+                        <Typography sx={{ width: '7%' }}> @</Typography>
+                        <Autocomplete
+                            freeSolo
+                            options={domainOptions}
+                            renderInput={(params) => (
+                                <TextField
+                                    {...params}
+                                    label="선택"
+                                    variant="outlined"
+                                />
+                            )}
+                            sx={{ width: '45%'}}
+                        />
+                    </Box>
+                    
+
+                    <TextField id="outlined-basic" label="이름" variant="outlined" sx={{ width: '100%', mb: 1.5 }} />
+
+                    <Box display="flex" alignItems="felx-start" gap={1} sx={{ mb: 1.5 }}>
+
+                            <TextField id="outlined-basic" label="전화번호" variant="outlined" sx={{ width: '99%' }} />
+                            
+                        <Box sx={{ width: '30%', display: 'flex', alignItems: 'flex-start' }}>
+                            <Button variant="outlined" size="large" sx={{height: '55px', display: 'flex', alignSelf:'stretch' }}>
+                                인증하기
+                            </Button>
+                        </Box>                        
+                    </Box>
+                    
 
                     <TextField
-                        label="주소 선택"
+                        disabled
+                        label="주소"
                         value={selectedAddress}
                         fullWidth
                         InputProps={{
-                        readOnly: true,
-                        endAdornment: (
-                            <InputAdornment position="end">
-                            <IconButton onClick={handleOpenDialog}>
-                                <SearchIcon />
-                            </IconButton>
-                            </InputAdornment>
-                        ),
+                            input:{readOnly: true},
+                            endAdornment: (
+                                <InputAdornment position="end">
+                                    <IconButton onClick={handleAddressSearch}>
+                                        <SearchIcon />
+                                    </IconButton>
+                                </InputAdornment>
+                            ),
                         }}
-                        sx={{ mb: 0 }}
+                        sx={{ width: '100%', mb: 1.5 }}
                     />
+
+                    <TextField id="outlined-basic" label="상세 주소" variant="outlined" sx={{ width: '100%', mb: 1.5 }} />
+                    
+
+                    {alignment === 'car' && (
+                    <Box>
+                        <Box display="flex" alignItems="center" gap={1} sx={{ mb: 2 }}>
+                            <Typography sx={{ width: '20%', ml: 1 }}>화물차 무게</Typography>
+                            <Autocomplete
+                                disablePortal
+                                options={['1톤', '1.4톤', '2.5톤', '5톤', '8톤', '11톤', '25톤', '25톤 이상']}
+                                renderInput={(params) => (
+                                    <TextField
+                                        {...params}
+                                        label="톤수 선택"
+                                        variant="outlined"
+                                    />
+                                )}
+                                sx={{ width: '80%' }}
+                            />
+                        </Box>
+                    </Box>
+                    )}
+
+                    <Box sx={{ width: '100%', display: 'flex', alignItems: 'flex-start' }}>
+                        <Button variant="outlined" size="large" sx={{ width: '100%', height: '55px', display: 'flex', alignSelf:'stretch' }}>
+                            회원가입
+                        </Button>
+                    </Box> 
                 </Paper>
             </Container>
-
-            <Dialog open={openDialog} onClose={handleCloseDialog} fullWidth maxWidth="sm">
-                <DialogTitle>주소 검색</DialogTitle>
-                <DialogContent>
-                    <TextField
-                        autoFocus
-                        margin="dense"
-                        label="주소 입력"
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-                        fullWidth
-                        variant="outlined"
-                        sx={{ mb: 2 }}
-                    />{searchResults.map((item, index) => (
-                        <Button
-                            key={index}
-                            fullWidth
-                            onClick={() => handleSelectAddress(item)}
-                            sx={{ justifyContent: 'flex-start', mb: 1 }}
-                        > {item.address_name} </Button>
-                    ))}
-                </DialogContent>
-                <DialogActions>
-                    <Button onClick={handleCloseDialog}>닫기</Button>
-                    <Button onClick={handleSearch}>검색</Button>
-                </DialogActions>
-            </Dialog>
 
         </>
     );

@@ -40,12 +40,6 @@ public class EstimateServiceImpl implements EstimateService{
 				return estimate.getEno();
 	}
 	@Override
-<<<<<<< HEAD
-	public Long saveDraft(EstimateDTO dto) {		
-		return null;
-	}
-}
-=======
 	public Long saveDraft(EstimateDTO estimateDTO) {
 		
 		Member member = esmateRepository.getMemId(estimateDTO.getMemberId()).orElseThrow();
@@ -78,8 +72,16 @@ public class EstimateServiceImpl implements EstimateService{
 		return dto;
 		
 	}
+
+	@Override
+	public List<EstimateDTO> myEstimateList(String memberId) {
+		List<Estimate> esList = esmateRepository.getMyEstimate(memberId);
+		
+		return esList.stream()
+				.map(this::entityToDTO)
+				.collect(Collectors.toList());
+	}
 	
 	
 
 }
->>>>>>> f85b60899a3fec69c02af719d56108ed43a754bd
