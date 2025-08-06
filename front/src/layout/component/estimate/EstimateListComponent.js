@@ -1,7 +1,7 @@
 import { Box, Button, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow } from "@mui/material";
 import useCustomMove from "../../../hooks/useCustomMove";
 import { useEffect, useState } from "react";
-import { getEstimateList } from "../../../api/estimateApi/estimateApi";
+import { getEstimateList, postAccepted, postRejected } from "../../../api/estimateApi/estimateApi";
 import PageComponent from "../common/PageComponent";
 
 const initState = {
@@ -23,10 +23,22 @@ const EstimateListComponent = () => {
 
     useEffect(()=>{
         getEstimateList({page,size}).then(data=>{
-            console.log(data)
             setServerData(data)
         })
     },[page,size,refresh]);
+
+    const clickRejected = (esNo) =>{
+      postRejected(esNo).then(data=>{
+        console.log(data)
+        setRefresh(!refresh)
+      })
+    }
+    const clickAccepted =(esNo) =>{
+      postAccepted(esNo).then((data)=>{
+        console.log(data)
+         setRefresh(!refresh)
+      })
+    }
  
 
   return (
@@ -58,10 +70,10 @@ const EstimateListComponent = () => {
               <TableCell align="center">{est.cargoType}</TableCell>
               <TableCell align="center">{est.totalCost}</TableCell>
               <TableCell align="center">
-                <Button variant="contained" color="success">수락</Button>
+                <Button variant="contained" color="success" onClick={()=>clickAccepted(est.eno)}>수락</Button>
               </TableCell>
               <TableCell align="center">
-                <Button variant="outlined" color="error">거절</Button>
+                <Button variant="outlined" color="error" onClick={()=>clickRejected(est.eno)}>거절</Button>
               </TableCell>
             </TableRow>
           ))}

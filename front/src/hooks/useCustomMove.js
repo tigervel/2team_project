@@ -64,7 +64,9 @@ const useCustomMove = () => {
         console.log("로그인페이지")
         navigate({pathname:`../g2i4/login`})
     }
-
-    return { moveToList, moveToModify, page, size, refresh, setRefresh, moveToRead ,moveToLogin };
+    const moveToHome = () =>{
+        navigate({pathname:`../`})
+    }
+    return { moveToList, moveToModify, page, size, refresh, setRefresh, moveToRead ,moveToLogin ,moveToHome};
 }
 export default useCustomMove;

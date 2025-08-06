@@ -1,7 +1,15 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 
 const KakaoMapViewer = ({ startAddress, endAddress }) => {
   const mapRef = useRef(null);
+  const pathRef = useRef([]);
+  const markerRef = useRef(null);
+  const intervalRef = useRef(null);
+
+  const [ready, setReady] = useState(false);
+  const [isMoving, setIsMoving] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
+  const [currentIdx, setCurrentIdx] = useState(0);
 
   const REST_API_KEY = "d381d00137ba5677a3ee0355c4c95abf";
 
@@ -27,19 +35,18 @@ const KakaoMapViewer = ({ startAddress, endAddress }) => {
       const mapContainer = document.getElementById("kakao-map");
       const mapOption = {
         center: new window.kakao.maps.LatLng(start.lat, start.lng),
-        level: 10,
+        level: 7,
       };
 
       const map = new window.kakao.maps.Map(mapContainer, mapOption);
       mapRef.current = map;
 
-      // 출발지/도착지 마커
+      // 출발/도착 마커
       new window.kakao.maps.Marker({
         map,
         position: new window.kakao.maps.LatLng(start.lat, start.lng),
         title: "출발지",
       });
-
       new window.kakao.maps.Marker({
         map,
         position: new window.kakao.maps.LatLng(end.lat, end.lng),
@@ -54,13 +61,11 @@ const KakaoMapViewer = ({ startAddress, endAddress }) => {
         }
       );
       const data = await res.json();
+
       const path = data.routes[0].sections[0].roads.flatMap((road) =>
         road.vertexes.reduce((acc, val, idx) => {
           if (idx % 2 === 0) {
-            acc.push([
-              road.vertexes[idx + 1], // lat
-              road.vertexes[idx],     // lng
-            ]);
+            acc.push([road.vertexes[idx + 1], road.vertexes[idx]]);
           }
           return acc;
         }, [])
@@ -70,6 +75,9 @@ const KakaoMapViewer = ({ startAddress, endAddress }) => {
         ([lat, lng]) => new window.kakao.maps.LatLng(lat, lng)
       );
 
+      pathRef.current = linePath;
+
+      // 폴리라인 표시
       new window.kakao.maps.Polyline({
         map,
         path: linePath,
@@ -78,16 +86,95 @@ const KakaoMapViewer = ({ startAddress, endAddress }) => {
         strokeOpacity: 0.8,
         strokeStyle: "solid",
       });
+
+      // 이동 마커 초기 설정
+      const marker = new window.kakao.maps.Marker({
+        map,
+        position: linePath[0],
+        image: new window.kakao.maps.MarkerImage(
+          "https://t1.daumcdn.net/localimg/localimages/07/mapapidoc/red_b.png",
+          new window.kakao.maps.Size(40, 40)
+        ),
+      });
+
+      markerRef.current = marker;
+      setCurrentIdx(0);
+      setReady(true);
     };
 
     drawRoute();
   }, [startAddress, endAddress]);
 
+  const handleStartPause = () => {
+    const path = pathRef.current;
+    const marker = markerRef.current;
+
+    if (!isMoving) {
+      // 최초 출발
+      setIsMoving(true);
+      setIsPaused(false);
+      intervalRef.current = setInterval(() => {
+        setCurrentIdx((prevIdx) => {
+          const nextIdx = prevIdx + 1;
+          if (nextIdx < path.length) {
+            marker.setPosition(path[nextIdx]);
+            return nextIdx;
+          } else {
+            clearInterval(intervalRef.current);
+            return prevIdx;
+          }
+        });
+      }, 200);
+    } else if (!isPaused) {
+      // 정지
+      clearInterval(intervalRef.current);
+      setIsPaused(true);
+    } else {
+      // 재시작
+      setIsPaused(false);
+      intervalRef.current = setInterval(() => {
+        setCurrentIdx((prevIdx) => {
+          const nextIdx = prevIdx + 1;
+          if (nextIdx < path.length) {
+            marker.setPosition(path[nextIdx]);
+            return nextIdx;
+          } else {
+            clearInterval(intervalRef.current);
+            return prevIdx;
+          }
+        });
+      }, 200);
+    }
+  };
+
+  const getButtonLabel = () => {
+    if (!isMoving) return "🚚 출발";
+    if (isPaused) return "▶️ 재시작";
+    return "⏸ 정지";
+  };
+
   return (
-    <div
-      id="kakao-map"
-      style={{ width: "100%", height: "400px", borderRadius: "10px" }}
-    />
+    <div>
+      <div
+        id="kakao-map"
+        style={{ width: "100%", height: "400px", borderRadius: "10px" }}
+      />
+      {ready && (
+        <button
+          onClick={handleStartPause}
+          style={{
+            marginTop: "10px",
+            padding: "8px 16px",
+            backgroundColor: "#299AF0",
+            color: "white",
+            border: "none",
+            borderRadius: "5px",
+          }}
+        >
+          {getButtonLabel()}
+        </button>
+      )}
+    </div>
   );
 };
 

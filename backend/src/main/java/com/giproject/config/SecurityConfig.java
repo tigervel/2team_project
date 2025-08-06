@@ -24,9 +24,8 @@ public class SecurityConfig {
         .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
         .authorizeHttpRequests(auth -> auth
 
-            .requestMatchers("/g2i4/**").permitAll()
+            .requestMatchers("/g2i4/**").permitAll() 
             .requestMatchers("/uploads/**").permitAll() 
-
             .anyRequest().authenticated()
         );
         return http.build();

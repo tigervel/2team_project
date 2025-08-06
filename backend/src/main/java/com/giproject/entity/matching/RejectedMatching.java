@@ -2,10 +2,12 @@ package com.giproject.entity.matching;
 
 import java.time.LocalDateTime;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.giproject.entity.cargo.CargoOwner;
 import com.giproject.entity.estimate.Estimate;
 
 import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -16,44 +18,30 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import lombok.ToString;
+import lombok.Setter;
 
 @Entity
-@Table(name = "Matching")
+@Table(name = "RejectedMatching")
 @Getter
-@ToString
+@Setter
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
-public class Matching {
+public class RejectedMatching {
 	
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
-	private Long matchingNo;
+	private Long rmno;//매칭 거절 리스트
 	
-	@ManyToOne
-	@JoinColumn(name="eno")
-	private Estimate estimate;
-	
-	@ManyToOne
-	@JoinColumn(name = "cargo_id")
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "cargo_owner_id")
+	@JsonIgnore
 	private CargoOwner cargoOwner;
 	
+	@ManyToOne(fetch =  FetchType.LAZY)
+	@JoinColumn(name = "estimate_no")
+	@JsonIgnore
+	private Estimate estimate;
 	
-	private boolean isAccepted;
-	private LocalDateTime acceptedTime;
-	
-	public void changeIsAccepted (boolean isAccepted) {
-		this.isAccepted = isAccepted;
-	}
-	
-	public void changeAcceptedTime(LocalDateTime acceptedTime) {
-		this.acceptedTime = acceptedTime;
-	}
-	public void changeCargoOwner(CargoOwner cargoOwner) {
-		this.cargoOwner = cargoOwner;
-	}
-	
-	
-	
+	private LocalDateTime rejectedTime;
 }
