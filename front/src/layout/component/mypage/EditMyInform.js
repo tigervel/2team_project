@@ -4,37 +4,40 @@ import {
   Avatar, Box, Button, Divider, Grid, IconButton, InputAdornment,
   TextField, Typography
 } from '@mui/material';
-import PhotoCameraIcon from '@mui/icons-material/PhotoCamera';
 import Visibility from '@mui/icons-material/Visibility';
 import VisibilityOff from '@mui/icons-material/VisibilityOff';
 
 const MemberEditPage = () => {
-  const [showPassword, setShowPassword] = useState(false);
+  const [showPassword, setShowPassword] = useState({
+    current: false,
+    new: false,
+    confirm: false,
+  });
 
-  const togglePasswordVisibility = () => {
-    setShowPassword((prev) => !prev);
+  const togglePasswordVisibility = (field) => {
+    setShowPassword((prev) => ({ ...prev, [field]: !prev[field] }));
   };
 
-  const [member, setMember] = useState({
-    memId: '',
-    memPw: '',
-    memEmail: '',
-    memName: '',
-    memPhone: '',
-    memAddress: '',
-    memCreateIdDateTime: ''
+  const [userType, setUserType] = useState(null); // 'MEMBER' or 'CARGO_OWNER'
+  const [user, setUser] = useState({
+    id: 'cargo123',
+    name: '',
+    email: '',
+    phone: '',
+    address: '',
+    createdDate: '',
   });
-  
+
   useEffect(() => {
-    axios.get('/api/member/info')
+    axios.get('/g2i4/user/info')
       .then(res => {
-        setMember(res.data);
+        setUserType(res.data.userType);
+        setUser(res.data.data); // 서버에서 내려온 user DTO 형태로 세팅
       })
       .catch(err => {
         console.error('회원 정보 불러오기 실패:', err);
       });
   }, []);
-
 
   return (
     <Box sx={{ p: 7, paddingLeft: 50, paddingRight: 50, bgcolor: '#f3f4f6', minHeight: '100vh' }}>
@@ -42,9 +45,7 @@ const MemberEditPage = () => {
 
       {/* Profile Section */}
       <Grid container spacing={4} alignItems="center">
-        {/* Profile Photo Section */}
         <Grid item xs={12} md={6}>
-          <Typography fontWeight="bold" mb={2}>Profile Photo</Typography>
           <Box display="flex" alignItems="center" gap={2}>
             <Avatar sx={{ width: 80, height: 80, bgcolor: 'grey.200' }} />
             <Box>
@@ -54,97 +55,98 @@ const MemberEditPage = () => {
           </Box>
         </Grid>
 
-        {/* Divider line between sections */}
+        {/* Divider */}
         <Grid item md={0.1} sx={{
           display: { xs: 'none', md: 'block' },
           height: '100%',
           borderLeft: '1px solid #666666'
         }} />
 
-        {/* User Info Section */}
+        {/* Info */}
         <Grid item xs={12} md={5.9}>
           <Box sx={{ pl: { md: 4 } }}>
             <Typography fontWeight="bold" mb={2}>회원 정보</Typography>
-            <Typography>이 름 : {member.memName}</Typography><br />
-            <Typography>아이디 : {member.memId}</Typography><br />
-            <Typography>이메일 : {member.memEmail}</Typography>
+            <Typography>이 름 : {user.name}</Typography><br />
+            <Typography>아이디 : {user.id}</Typography><br />
+            <Typography>이메일 : {user.email}</Typography>
           </Box>
         </Grid>
       </Grid>
 
       <Divider sx={{ my: 4 }} />
 
-      {/* User Details Section */}
-      <Typography fontWeight="bold" mb={2}>User Details</Typography>
+      {/* 기본 정보 변경 */}
+      <Typography fontWeight="bold" mb={2}>기본 정보 변경</Typography>
       <Box display="flex" flexDirection="column" gap={2}>
-        <TextField label="닉네임" fullWidth defaultValue="current_nickname" InputProps={{ sx: { bgcolor: '#f3f4f6' } }} />
-
-
+        <TextField label="닉네임" fullWidth defaultValue={user.name} InputProps={{ sx: { bgcolor: '#f3f4f6' } }} />
 
         <Box display="flex" gap={2}>
           <TextField
             label="주소"
             fullWidth
-            value={member.memAddress}
+            value={user.address}
             InputProps={{ sx: { bgcolor: '#f3f4f6' } }}
-            onChange={(e) => setMember(prev => ({ ...prev, memAddress: e.target.value }))}
+            onChange={(e) => setUser(prev => ({ ...prev, address: e.target.value }))}
           />
           <Button variant="outlined" sx={{ width: 200, whiteSpace: 'nowrap' }}>주소 찾기</Button>
         </Box>
+
         <TextField label="상세 주소" fullWidth defaultValue="current_address" InputProps={{ sx: { bgcolor: '#f3f4f6' } }} />
+
         <Box textAlign="right">
-          <Button variant="contained" sx={{ width: 175, height: 50, bgcolor: '#6b46c1', '&:hover': { bgcolor: '#553c9a' } }}>변경하기</Button>
+          <Button variant="contained" sx={{ width: 175, height: 50, bgcolor: '#6b46c1', '&:hover': { bgcolor: '#553c9a' } }}>
+            변경하기
+          </Button>
         </Box>
       </Box>
 
       <Divider sx={{ my: 4 }} />
 
-      {/* Password Section */}
+      {/* 비밀번호 변경 */}
       <Typography fontWeight="bold" mb={2}>비밀번호 변경</Typography>
       <Box display="flex" flexDirection="column" gap={2}>
         <TextField
           label="현재 비밀번호"
           fullWidth
-          type={showPassword ? 'text' : 'password'}
-          placeholder="Placeholder"
+          type={showPassword.current ? 'text' : 'password'}
           InputProps={{
             sx: { bgcolor: '#f3f4f6' },
             endAdornment: (
               <InputAdornment position="end">
-                <IconButton onClick={togglePasswordVisibility} edge="end">
-                  {showPassword ? <Visibility /> : <VisibilityOff />}
+                <IconButton onClick={() => togglePasswordVisibility('current')} edge="end">
+                  {showPassword.current ? <Visibility /> : <VisibilityOff />}
                 </IconButton>
               </InputAdornment>
             )
           }}
         />
+
         <TextField
           label="새로운 비밀번호"
           fullWidth
-          type={showPassword ? 'text' : 'password'}
-          placeholder="Placeholder"
+          type={showPassword.new ? 'text' : 'password'}
           InputProps={{
             sx: { bgcolor: '#f3f4f6' },
             endAdornment: (
               <InputAdornment position="end">
-                <IconButton onClick={togglePasswordVisibility} edge="end">
-                  {showPassword ? <Visibility /> : <VisibilityOff />}
+                <IconButton onClick={() => togglePasswordVisibility('new')} edge="end">
+                  {showPassword.new ? <Visibility /> : <VisibilityOff />}
                 </IconButton>
               </InputAdornment>
             )
           }}
         />
+
         <TextField
           label="새로운 비밀번호 확인"
           fullWidth
-          type={showPassword ? 'text' : 'password'}
-          placeholder="Placeholder"
+          type={showPassword.confirm ? 'text' : 'password'}
           InputProps={{
             sx: { bgcolor: '#f3f4f6' },
             endAdornment: (
               <InputAdornment position="end">
-                <IconButton onClick={togglePasswordVisibility} edge="end">
-                  {showPassword ? <Visibility /> : <VisibilityOff />}
+                <IconButton onClick={() => togglePasswordVisibility('confirm')} edge="end">
+                  {showPassword.confirm ? <Visibility /> : <VisibilityOff />}
                 </IconButton>
               </InputAdornment>
             )
@@ -152,7 +154,9 @@ const MemberEditPage = () => {
         />
 
         <Box textAlign="right">
-          <Button variant="contained" sx={{ width: 175, height: 50, bgcolor: '#6b46c1', '&:hover': { bgcolor: '#553c9a' } }}>변경하기</Button>
+          <Button variant="contained" sx={{ width: 175, height: 50, bgcolor: '#6b46c1', '&:hover': { bgcolor: '#553c9a' } }}>
+            변경하기
+          </Button>
         </Box>
       </Box>
     </Box>

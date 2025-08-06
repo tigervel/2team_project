@@ -16,7 +16,7 @@ public class MemberController {
 
     private final MemberRepository memberRepository;
 
-    // ✅ 1. 로그인된 사용자 정보 조회
+    //로그인된 사용자 정보 조회
     @GetMapping("/info")
     public MemberDTO getMemberInfo(HttpSession session) {
         String memId = (String) session.getAttribute("loginId"); // 세션에서 로그인한 아이디 가져오기
@@ -33,7 +33,7 @@ public class MemberController {
                 .build();
     }
 
-    // ✅ 2. 회원 정보 수정
+    // 회원 정보 수정
     @PostMapping("/update")
     public String updateMember(@RequestBody MemberDTO dto, HttpSession session) {
         String memId = (String) session.getAttribute("loginId");
