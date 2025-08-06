@@ -51,4 +51,6 @@ public interface EstimateService {
 	EstimateDTO exportEstimate(String mameberId,Long eno);
 	
 	List<EstimateDTO> getSaveEstimate(String memberId);
+	
+	List<EstimateDTO> myEstimateList(String memberId);
 }

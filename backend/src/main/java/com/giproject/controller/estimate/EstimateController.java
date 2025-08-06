@@ -112,5 +112,14 @@ public class EstimateController {
 		}
 
 	}
+	
+	@PostMapping("myestimate")
+	public ResponseEntity<List<EstimateDTO>> getMyEs(@RequestBody Map<String, String> body){
+		//String memberId = body.get("memberId");
+		String user = "user";
+		List<EstimateDTO> dtoList = estimateService.myEstimateList(user);
+		
+		return ResponseEntity.ok(dtoList);
+	}
 
 }

@@ -73,6 +73,15 @@ public class EstimateServiceImpl implements EstimateService{
 		return dto;
 		
 	}
+
+	@Override
+	public List<EstimateDTO> myEstimateList(String memberId) {
+		List<Estimate> esList = esmateRepository.getMyEstimate(memberId);
+		
+		return esList.stream()
+				.map(this::entityToDTO)
+				.collect(Collectors.toList());
+	}
 	
 	
 
