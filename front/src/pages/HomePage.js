@@ -47,7 +47,7 @@ const HomePage = () => {
     }
   };
 
-  const price = (estimate.distanceKm * 1000) +((estimate.cargoWeight)>1000? 350000:250000)
+  const price = (estimate.distanceKm * 1000) +(estimate.cargoWeight != ''?((estimate.cargoWeight)>1000? 350000:250000):0)
   return (
     <Box>
       <Carousel animation="fade" indicators={false} >
