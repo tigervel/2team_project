@@ -3,8 +3,10 @@ package com.giproject.repository.qaboard;
 import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.giproject.entity.qaboard.AdminResponse;
 
@@ -41,6 +43,8 @@ public interface AdminResponseRepository extends JpaRepository<AdminResponse, Lo
      * 게시글 ID로 답변 삭제
      * 게시글 삭제 시 연관된 답변도 함께 삭제하기 위함
      */
+    @Modifying
+    @Transactional
     void deleteByQaPostPostId(@Param("postId") Long postId);
 
     /**

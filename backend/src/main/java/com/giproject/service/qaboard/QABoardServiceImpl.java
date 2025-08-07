@@ -6,6 +6,7 @@ import java.util.stream.Collectors;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.giproject.dto.qaboard.AdminResponseDTO;
 import com.giproject.dto.qaboard.PageResponseDTO;
@@ -194,6 +195,7 @@ public class QABoardServiceImpl implements QABoardService {
     }
 
     @Override
+    @Transactional
     public void deletePost(Long postId, String currentUserId, boolean isAdmin) {
         log.info("Deleting post - postId: {}, userId: {}, isAdmin: {}", postId, currentUserId, isAdmin);
         
@@ -206,12 +208,19 @@ public class QABoardServiceImpl implements QABoardService {
             throw new SecurityException("게시글 삭제 권한이 없습니다.");
         }
         
-        // 관련 답변 먼저 삭제
-        adminResponseRepository.deleteByQaPostPostId(postId);
-        
-        // 게시글 삭제
-        qaPostRepository.delete(qaPost);
-        log.info("Post deleted successfully: {}", postId);
+        try {
+            // 관련 답변 먼저 삭제
+            adminResponseRepository.deleteByQaPostPostId(postId);
+            log.info("Admin responses deleted for post: {}", postId);
+            
+            // 게시글 삭제
+            qaPostRepository.delete(qaPost);
+            log.info("Post deleted successfully: {}", postId);
+            
+        } catch (Exception e) {
+            log.error("Error deleting post {}: {}", postId, e.getMessage());
+            throw new RuntimeException("게시글 삭제 중 오류가 발생했습니다: " + e.getMessage(), e);
+        }
     }
 
     @Override
