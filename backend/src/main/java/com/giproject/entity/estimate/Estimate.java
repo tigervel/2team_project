@@ -39,8 +39,15 @@ public class Estimate {
 	private String cargoType;
 	private LocalDateTime  startTime;
 	private int totalCost;
+	private int baseCost;
+	private int distanceCost;
+	private int specialOption;
 	
-	@Column(nullable = false)
+	@Column(nullable = false)//true 시 주문서 작성완료
+	private boolean isOrdered;
+	
+	
+	@Column(nullable = false) //true 시 매칭완료
 	private boolean matched;
 	
 	@Column(nullable = false)
@@ -75,6 +82,8 @@ public class Estimate {
 	public void changeIsTemp(boolean isTemp) {
 		this.isTemp = isTemp;
 	}
-
+	public void changeIsOrdered(boolean isOrdered) {
+		this.isOrdered = isOrdered;
+	}
 
 }

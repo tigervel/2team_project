@@ -34,8 +34,10 @@ const initState = {
   cargoWeight: '',
   startTime: dayjs(),
   totalCost: 0,
-  distanceKm: ''
-
+  distanceKm: '',
+  baseCost:0,
+  distanceCost:0,
+  specialOption:0
 }
 
 const EstimateComponent = () => {
@@ -61,7 +63,10 @@ const EstimateComponent = () => {
     setSpecialNoteCost(extra);
     setEstimate(prev => ({
       ...prev,
-      totalCost: base + distCost + extra
+      totalCost: base + distCost + extra,
+      baseCost:base,
+      distanceCost:distCost,
+      specialOption:extra
     }))
 
 
