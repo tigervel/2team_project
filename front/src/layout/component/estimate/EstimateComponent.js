@@ -16,6 +16,7 @@ import dayjs from "dayjs";
 import KakaoMapViewer from "./KakaoMapViewer";
 import { postAdd, postSaveEs } from "../../../api/estimateApi/estimateApi";
 import useCustomMove from "../../../hooks/useCustomMove";
+import { calculateDistanceBetweenAddresses } from "../common/calculateDistanceBetweenAddresses";
 
 
 
@@ -83,36 +84,14 @@ const EstimateComponent = () => {
   };
 
   const calculateDistance = async () => {
-    const REST_API_KEY = "d381d00137ba5677a3ee0355c4c95abf";
-    const url = `https://dapi.kakao.com/v2/local/search/address.json?query=`;
-
-    const fetchCoords = async (address) => {
-      const res = await fetch(url + encodeURIComponent(address), {
-        headers: { Authorization: `KakaoAK ${REST_API_KEY}` },
-      });
-      const data = await res.json();
-      const loc = data.documents[0];
-      return { lat: loc.y, lng: loc.x };
-    };
-
     try {
-      const start = await fetchCoords(estimate.startAddress);
-      const end = await fetchCoords(estimate.endAddress);
-
-      const routeUrl = `https://apis-navi.kakaomobility.com/v1/directions?origin=${start.lng},${start.lat}&destination=${end.lng},${end.lat}`;
-      const res = await fetch(routeUrl, {
-        headers: { Authorization: `KakaoAK ${REST_API_KEY}` },
-      });
-      const data = await res.json();
-      const meters = data.routes[0].summary.distance;
-      const km = (meters / 1000).toFixed(1)
-
-      setEstimate(prev => ({
-        ...prev,
-        distanceKm: km
-      }))
-    } catch (e) {
-      console.error("거리 계산 오류", e);
+      const km = await calculateDistanceBetweenAddresses(
+        estimate.startAddress,
+        estimate.endAddress
+      );
+      setEstimate(prev => ({ ...prev, distanceKm: km }));
+    } catch (err) {
+      alert("거리 계산 중 문제가 발생했습니다. 주소를 다시 확인해주세요.");
     }
   };
 

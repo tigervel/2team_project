@@ -1,8 +1,19 @@
-import React from "react";
-import { Box, Typography, Grid, Button, TextField, Card, CardContent, CardMedia } from "@mui/material";
+import React, { useState } from "react";
+import { Box, Typography, Grid, Button, TextField, Card, CardContent, CardMedia, InputAdornment, IconButton } from "@mui/material";
 import Carousel from "react-material-ui-carousel";
+import SearchIcon from "@mui/icons-material/Search";
+import { calculateDistanceBetweenAddresses } from "../layout/component/common/calculateDistanceBetweenAddresses";
+const initState = {
+  startAddress: '',
+  endAddress: '',
+  cargoType: '',
+  cargoWeight: '',
+  totalCost: 0,
+  distanceKm: ''
 
+}
 const HomePage = () => {
+  const [estimate, setEstimate] = useState(initState);
   const vehicleTypes = [
     { id: 1, name: "소형", image: "/images/small-truck.png" },
     { id: 2, name: "중형", image: "/images/medium-truck.png" },
@@ -14,10 +25,32 @@ const HomePage = () => {
     { id: 2, title: "긴급 점검 안내" },
     { id: 3, title: "서비스 이용 가이드 업데이트" }
   ];
+  const handleAddressSearch = (setter) => {
+    new window.daum.Postcode({
+      oncomplete: function (data) {
+        setter(data.address);
+      },
+    }).open();
 
+
+  }
+
+  const calculateDistance = async () => {
+    try {
+      const km = await calculateDistanceBetweenAddresses(
+        estimate.startAddress,
+        estimate.endAddress
+      );
+      setEstimate(prev => ({ ...prev, distanceKm: km }));
+    } catch (err) {
+      alert("거리 계산 중 문제가 발생했습니다. 주소를 다시 확인해주세요.");
+    }
+  };
+
+  const price = (estimate.distanceKm * 1000) +(estimate.cargoWeight != ''?((estimate.cargoWeight)>1000? 350000:250000):0)
   return (
     <Box>
-            <Carousel animation="fade" indicators={false} >
+      <Carousel animation="fade" indicators={false} >
         <Box sx={{
           height: 400,
           backgroundColor: "#90a8f0",
@@ -74,24 +107,75 @@ const HomePage = () => {
                 <Typography variant="h6" fontWeight="bold" gutterBottom>간편조회</Typography>
                 <Grid container spacing={2}>
                   <Grid item xs={6}>
-                    <TextField label="출발지" fullWidth />
+                    <TextField
+                      placeholder="출발지 주소"
+                      name="startAddress"
+                      value={estimate.startAddress}
+
+                      InputProps={{
+                        readOnly: true,
+                        endAdornment: (
+                          <InputAdornment position="end">
+                            <IconButton onClick={() => handleAddressSearch(addr => (
+                              setEstimate(prev => ({
+                                ...prev, startAddress: addr
+                              }))
+                            ))}>
+                              <SearchIcon />
+                            </IconButton>
+                          </InputAdornment>
+                        ),
+                      }}
+
+                    />
                   </Grid>
                   <Grid item xs={6}>
-                    <TextField label="도착지" fullWidth />
+                    <TextField
+                      placeholder="도착지 주소"
+                      name="endAddress"
+                      value={estimate.endAddress}
+
+                      InputProps={{
+                        readOnly: true,
+                        endAdornment: (
+                          <InputAdornment position="end">
+                            <IconButton onClick={() => handleAddressSearch(addr => (
+                              setEstimate(prev => ({
+                                ...prev, endAddress: addr
+                              }))
+                            ))}>
+                              <SearchIcon />
+                            </IconButton>
+                          </InputAdornment>
+                        ),
+                      }}
+
+                    />
                   </Grid>
                 </Grid>
-                <TextField label="화물종류" fullWidth sx={{ mt: 2 }} />
+                <TextField label="화물무게(KG)" name="cargoWeight"
+                  value={estimate.cargoWeight}
+                  onChange={(e) => {
+                    const value = Number(e.target.value);
+                    setEstimate((prev) => ({
+                      ...prev,
+                      cargoWeight: value >= 0 ? value : '',
+                    }))
+                  }}
+                  fullWidth sx={{ mt: 2 }} />
                 <TextField label="화물특수" fullWidth sx={{ mt: 2 }} />
-                <Typography variant="caption" sx={{ mt: 1, mb: 2 }}>*예상단가표</Typography>
+                <Typography variant="caption" sx={{ mt: 1, mb: 2 }}>*예상단가표 {price}원</Typography>
                 <Box sx={{ mt: 'auto', display: 'flex', justifyContent: 'flex-end' }}>
-                  <Button variant="contained">조회하기</Button>
+                  <Button variant="contained" onClick={calculateDistance} >
+                    조회하기
+                  </Button>
                 </Box>
               </Box>
             </Grid>
 
             {/* 공지사항 */}
             <Grid item xs={12} >
-                     <Typography variant="h6" fontWeight="bold" gutterBottom>공지사항</Typography>
+              <Typography variant="h6" fontWeight="bold" gutterBottom>공지사항</Typography>
 
               <Grid container spacing={0.5}>
                 {notices.map((notice, index) => (
@@ -118,10 +202,10 @@ const HomePage = () => {
                   </Grid>
                 ))}
               </Grid>
-       </Grid>
-
             </Grid>
-          
+
+          </Grid>
+
         </Box >
       </Box >
 
