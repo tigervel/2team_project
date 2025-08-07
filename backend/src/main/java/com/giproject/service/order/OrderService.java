@@ -7,28 +7,28 @@ import java.util.UUID;
 import com.giproject.dto.order.OrderDTO;
 import com.giproject.dto.order.OrderFormDTO;
 import com.giproject.entity.matching.Matching;
-import com.giproject.entity.order.Order;
+import com.giproject.entity.order.OrderSheet;
 
 public interface OrderService {
 	
-	default OrderDTO entityToDTO(Order order) {
+	default OrderDTO entityToDTO(OrderSheet orderSheet) {
 		OrderDTO dto = OrderDTO.builder()
-				.orderNo(order.getOrderNo())
-				.matchingNo(order.getMatching().getMatchingNo())
-				.startRestAddress(order.getStartRestAddress())
-				.endRestAddress(order.getEndRestAdrress())
-				.orderUuid(order.getOrderUuid())
-				.orderTime(order.getOrderTime())
-				.Addressee(order.getAddressee())
-				.phone(order.getPhone())
-				.AddresseeEmail(order.getAddresseeEmail())
+				.orderNo(orderSheet.getOrderNo())
+				.matchingNo(orderSheet.getMatching().getMatchingNo())
+				.startRestAddress(orderSheet.getStartRestAddress())
+				.endRestAddress(orderSheet.getEndRestAdrress())
+				.orderUuid(orderSheet.getOrderUuid())
+				.orderTime(orderSheet.getOrderTime())
+				.Addressee(orderSheet.getAddressee())
+				.phone(orderSheet.getPhone())
+				.AddresseeEmail(orderSheet.getAddresseeEmail())
 				.build();
 		return dto;
 	}
-	default Order dtoToEntity(OrderDTO dto , Matching matching) {
+	default OrderSheet dtoToEntity(OrderDTO dto , Matching matching) {
 		String orderCord = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmm")) 
 				+UUID.randomUUID().toString().substring(0, 6);
-		Order order = Order.builder()
+		OrderSheet order = OrderSheet.builder()
 				.matching(matching)
 				.orderUuid(orderCord)
 				.startRestAddress(dto.getStartRestAddress())

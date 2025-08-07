@@ -20,13 +20,13 @@ import lombok.NoArgsConstructor;
 import lombok.ToString;
 
 @Entity
-@Table(name = "Order")
+@Table(name = "OrderSheet")
 @Getter
 @Builder
 @ToString
 @AllArgsConstructor
 @NoArgsConstructor
-public class Order {
+public class OrderSheet {
 	
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
