@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useDispatch } from 'react-redux';
 import { login } from '../../../slice/loginSlice';
+import * as qaboardApi from '../../../api/qaboardApi';
 import {
   Box,
   Container,
@@ -78,6 +79,9 @@ const QABoardMUI = () => {
   const [replyingToId, setReplyingToId] = useState(null);
   const [editingResponseId, setEditingResponseId] = useState(null);
   const [qaData, setQaData] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [totalPages, setTotalPages] = useState(0);
+  const [totalElements, setTotalElements] = useState(0);
 
   const ITEMS_PER_PAGE = 4;
   const FAQ_ITEMS_PER_PAGE = 5;
@@ -91,116 +95,64 @@ const QABoardMUI = () => {
     { id: 'etc', name: '기타' }
   ];
 
-  // 초기 데이터 설정
+  // API로부터 게시글 목록 조회
+  const fetchPostList = async () => {
+    setLoading(true);
+    try {
+      const params = {
+        category: activeCategory,
+        keyword: searchTerm,
+        page: currentPage - 1, // 백엔드는 0부터 시작
+        size: ITEMS_PER_PAGE
+      };
+      
+      // 현재 로그인한 사용자 정보 생성
+      const userInfo = {
+        userId: currentUserId || loginState.memberId || null,
+        userName: loginState.nickname || null
+      };
+      
+      const response = await qaboardApi.getPostList(params, userInfo);
+      
+      // Backend API 응답 형태에 맞게 데이터 변환 (사용자명 디코딩 포함)
+      const transformedData = response.content.map(item => ({
+        id: item.postId,
+        title: item.title,
+        content: item.content || '',
+        author: item.authorName ? decodeURIComponent(item.authorName) : item.authorName, // 사용자명 디코딩
+        authorId: item.authorId || '',
+        authorType: item.authorType,
+        category: item.category,
+        date: item.createdAt ? item.createdAt.split('T')[0] : '',
+        status: item.hasResponse ? 'answered' : 'pending',
+        views: item.viewCount || 0,
+        isPrivate: item.isPrivate,
+        adminResponse: item.adminResponse ? {
+          content: item.adminResponse.content,
+          author: item.adminResponse.adminName ? decodeURIComponent(item.adminResponse.adminName) : item.adminResponse.adminName, // 관리자명 디코딩
+          date: item.adminResponse.createdAt ? item.adminResponse.createdAt.split('T')[0] : ''
+        } : null
+      }));
+      
+      setQaData(transformedData);
+      setTotalPages(response.totalPages);
+      setTotalElements(response.totalElements);
+    } catch (error) {
+      console.error('Failed to fetch post list:', error);
+      // 에러 발생 시 빈 배열로 설정
+      setQaData([]);
+      setTotalPages(0);
+      setTotalElements(0);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 컴포넌트 마운트 시 데이터 로드
   useEffect(() => {
-    const initialQaItems = [
-      {
-        id: 1,
-        title: '서비스 이용 중 로그인 문제가 발생합니다',
-        content: '로그인을 시도하면 오류 메시지가 표시됩니다. 해결 방법을 알려주세요.',
-        author: '김철수',
-        authorId: 'user1',
-        category: 'technical',
-        date: '2024-01-15',
-        status: 'answered',
-        views: 156,
-        adminResponse: {
-          content: '안녕하세요. 로그인 문제는 브라우저 쿠키 설정과 관련이 있을 수 있습니다. 브라우저의 쿠키와 캐시를 삭제하신 후 다시 시도해보시기 바랍니다. 문제가 지속되면 개발팀으로 연락 주세요.',
-          author: '고객지원팀',
-          date: '2024-01-15'
-        }
-      },
-      {
-        id: 2,
-        title: '월 이용료 결제 방법을 변경하고 싶습니다',
-        content: '신용카드에서 계좌이체로 결제 방법을 변경할 수 있나요?',
-        author: '이영희',
-        authorId: 'user2',
-        category: 'billing',
-        date: '2024-01-14',
-        status: 'resolved',
-        views: 89,
-        isPrivate: true,
-        adminResponse: {
-          content: '네, 결제 방법 변경이 가능합니다. 마이페이지 > 결제 설정에서 변경하실 수 있습니다. 추가 문의사항이 있으시면 언제든 연락주세요.',
-          author: '결제지원팀',
-          date: '2024-01-14'
-        }
-      },
-      {
-        id: 3,
-        title: '새로운 기능 요청사항이 있습니다',
-        content: '모바일 앱에서도 이용 가능한 기능을 추가해주세요.',
-        author: '박민수',
-        authorId: 'user3',
-        category: 'service',
-        date: '2024-01-13',
-        status: 'pending',
-        views: 234
-      },
-      {
-        id: 4,
-        title: '개인정보 처리방침 관련 문의',
-        content: '개인정보가 어떻게 처리되는지 자세히 알고 싶습니다.',
-        author: '정지영',
-        authorId: 'user4',
-        category: 'general',
-        date: '2024-01-12',
-        status: 'answered',
-        views: 178,
-        isPrivate: true,
-        adminResponse: {
-          content: '개인정보 처리방침은 홈페이지 하단에서 확인하실 수 있습니다. 추가적인 문의사항이 있으시면 privacy@company.com으로 연락주세요.',
-          author: '개인정보보호팀',
-          date: '2024-01-12'
-        }
-      },
-      {
-        id: 5,
-        title: 'API 연동 관련 기술 지원',
-        content: 'API 연동 시 발생하는 오류에 대한 지원이 필요합니다.',
-        author: '최웹개발',
-        authorId: 'user5',
-        category: 'technical',
-        date: '2024-01-11',
-        status: 'pending',
-        views: 97
-      },
-      {
-        id: 6,
-        title: '서비스 해지 절차가 궁금합니다',
-        content: '서비스를 해지하려면 어떤 절차를 따라야 하나요?',
-        author: '홍길동',
-        authorId: 'user6',
-        category: 'service',
-        date: '2024-01-10',
-        status: 'resolved',
-        views: 143,
-        adminResponse: {
-          content: '서비스 해지는 마이페이지에서 직접 처리하실 수 있습니다. 해지 시 데이터는 30일간 보관되며, 이후 완전 삭제됩니다.',
-          author: '고객지원팀',
-          date: '2024-01-10'
-        }
-      },
-      {
-        id: 7,
-        title: '요금제 변경 문의',
-        content: '현재 이용 중인 요금제를 다른 요금제로 변경할 수 있나요?',
-        author: '김비즈',
-        authorId: 'user7',
-        category: 'billing',
-        date: '2024-01-09',
-        status: 'answered',
-        views: 201,
-        adminResponse: {
-          content: '요금제 변경은 언제든 가능합니다. 단, 더 높은 등급으로 변경 시에는 즉시 적용되며, 낮은 등급으로 변경 시에는 다음 결제일부터 적용됩니다.',
-          author: '결제지원팀',
-          date: '2024-01-09'
-        }
-      }
-    ];
-    setQaData(initialQaItems);
-  }, []);
+    fetchPostList();
+  }, [activeCategory, searchTerm, currentPage]);
+
 
   const faqItems = [
     {
@@ -259,21 +211,9 @@ const QABoardMUI = () => {
     }
   };
 
-  const filteredItems = qaData.filter(item => {
-    const matchesCategory = activeCategory === 'all' || item.category === activeCategory;
-    const matchesSearch = item.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         item.content.toLowerCase().includes(searchTerm.toLowerCase());
-    return matchesCategory && matchesSearch;
-  });
-
   const filteredFaqItems = faqItems.filter(faq => {
     return activeFaqCategory === 'all' || faq.category === activeFaqCategory;
   });
-
-  // Pagination logic
-  const totalPages = Math.ceil(filteredItems.length / ITEMS_PER_PAGE);
-  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-  const paginatedItems = filteredItems.slice(startIndex, startIndex + ITEMS_PER_PAGE);
 
   // FAQ Pagination logic
   const totalFaqPages = Math.ceil(filteredFaqItems.length / FAQ_ITEMS_PER_PAGE);
@@ -305,23 +245,38 @@ const QABoardMUI = () => {
     setExpandedFaqs(new Set(faqItems.map(faq => faq.id)));
   }, []);
 
-  const handleSubmitInquiry = () => {
-    const newItem = {
-      id: qaData.length + 1,
-      title: newInquiry.title,
-      content: newInquiry.content,
-      category: newInquiry.category,
-      isPrivate: newInquiry.isPrivate,
-      author: '익명',
-      authorId: currentUserId || 'anonymous',
-      date: new Date().toISOString().split('T')[0],
-      status: 'pending',
-      views: 0
-    };
-    
-    setQaData([newItem, ...qaData]);
-    setIsNewInquiryOpen(false);
-    setNewInquiry({ title: '', content: '', category: '', isPrivate: false });
+  const handleSubmitInquiry = async () => {
+    try {
+      const postData = {
+        title: newInquiry.title,
+        content: newInquiry.content,
+        category: newInquiry.category,
+        isPrivate: newInquiry.isPrivate
+      };
+      
+      const userInfo = {
+        userId: currentUserId || loginState.memberId || 'anonymous',
+        userName: loginState.nickname || '익명'
+      };
+      
+      console.log('Creating post with data:', postData);
+      console.log('User info:', userInfo);
+      
+      // API 호출하여 게시글 생성
+      const response = await qaboardApi.createPost(postData, userInfo);
+      console.log('Post created successfully:', response);
+      
+      // 다이얼로그 닫기 및 폼 리셋
+      setIsNewInquiryOpen(false);
+      setNewInquiry({ title: '', content: '', category: '', isPrivate: false });
+      
+      // 게시글 목록 새로고침
+      fetchPostList();
+      
+    } catch (error) {
+      console.error('Failed to create post:', error);
+      alert('게시글 작성에 실패했습니다. 다시 시도해주세요.');
+    }
   };
 
   // 새로 추가된 핸들러 함수들
@@ -329,9 +284,25 @@ const QABoardMUI = () => {
     setEditingItemId(itemId);
   };
 
-  const handleDelete = (itemId) => {
+  const handleDelete = async (itemId) => {
     if (window.confirm('정말 삭제하시겠습니까?')) {
-      setQaData(qaData.filter(item => item.id !== itemId));
+      try {
+        const userInfo = {
+          userId: currentUserId || loginState.memberId || 'user',
+          userName: loginState.nickname || '사용자'
+        };
+        
+        // API 호출하여 게시글 삭제
+        const response = await qaboardApi.deletePost(itemId, userInfo);
+        console.log('Post deleted successfully:', response);
+        
+        // 게시글 목록 새로고침
+        fetchPostList();
+        
+      } catch (error) {
+        console.error('Failed to delete post:', error);
+        alert('게시글 삭제에 실패했습니다. 다시 시도해주세요.');
+      }
     }
   };
 
@@ -346,9 +317,25 @@ const QABoardMUI = () => {
     }
   };
 
-  const handleAdminDelete = (itemId) => {
+  const handleAdminDelete = async (itemId) => {
     if (window.confirm('관리자 권한으로 이 게시글을 삭제하시겠습니까?\n삭제된 게시글은 복구할 수 없습니다.')) {
-      setQaData(qaData.filter(item => item.id !== itemId));
+      try {
+        const userInfo = {
+          userId: currentUserId || loginState.memberId || 'admin',
+          userName: loginState.nickname || '관리자'
+        };
+        
+        // API 호출하여 게시글 삭제 (관리자 권한)
+        const response = await qaboardApi.deletePost(itemId, userInfo);
+        console.log('Post deleted by admin successfully:', response);
+        
+        // 게시글 목록 새로고침
+        fetchPostList();
+        
+      } catch (error) {
+        console.error('Failed to delete post by admin:', error);
+        alert('게시글 삭제에 실패했습니다. 다시 시도해주세요.');
+      }
     }
   };
 
@@ -356,37 +343,82 @@ const QABoardMUI = () => {
     setEditingResponseId(itemId);
   };
 
-  const handleSaveResponseEdit = (itemId, updatedResponse) => {
-    setQaData(qaData.map(item => 
-      item.id === itemId 
-        ? { ...item, adminResponse: updatedResponse }
-        : item
-    ));
-    setEditingResponseId(null);
+  const handleSaveResponseEdit = async (itemId, updatedResponse) => {
+    try {
+      const userInfo = {
+        userId: currentUserId || loginState.memberId || 'admin',
+        userName: loginState.nickname || '관리자'
+      };
+      
+      // API 호출하여 관리자 답변 수정
+      const response = await qaboardApi.updateAdminResponse(itemId, updatedResponse, userInfo);
+      console.log('Admin response updated successfully:', response);
+      
+      // 게시글 목록 새로고침
+      fetchPostList();
+      setEditingResponseId(null);
+      
+    } catch (error) {
+      console.error('Failed to update admin response:', error);
+      alert('답변 수정에 실패했습니다. 다시 시도해주세요.');
+    }
   };
 
   const handleCancelResponseEdit = () => {
     setEditingResponseId(null);
   };
 
-  const handleSaveEdit = (updatedItem) => {
-    setQaData(qaData.map(item => 
-      item.id === updatedItem.id ? updatedItem : item
-    ));
-    setEditingItemId(null);
+  const handleSaveEdit = async (updatedItem) => {
+    try {
+      const userInfo = {
+        userId: currentUserId || loginState.memberId || updatedItem.authorId,
+        userName: loginState.nickname || updatedItem.author
+      };
+      
+      const updateData = {
+        title: updatedItem.title,
+        content: updatedItem.content,
+        category: updatedItem.category,
+        isPrivate: updatedItem.isPrivate
+      };
+      
+      // API 호출하여 게시글 수정
+      const response = await qaboardApi.updatePost(updatedItem.id, updateData, userInfo);
+      console.log('Post updated successfully:', response);
+      
+      // 게시글 목록 새로고침
+      fetchPostList();
+      setEditingItemId(null);
+      
+    } catch (error) {
+      console.error('Failed to update post:', error);
+      alert('게시글 수정에 실패했습니다. 다시 시도해주세요.');
+    }
   };
 
   const handleCancelEdit = () => {
     setEditingItemId(null);
   };
 
-  const handleSubmitAdminResponse = (responseData) => {
-    setQaData(qaData.map(item => 
-      item.id === responseData.questionId 
-        ? { ...item, adminResponse: responseData, status: 'answered' }
-        : item
-    ));
-    setReplyingToId(null);
+  const handleSubmitAdminResponse = async (responseData) => {
+    try {
+      const userInfo = {
+        userId: currentUserId || loginState.memberId || 'admin',
+        userName: loginState.nickname || '관리자'
+      };
+      
+      // API 호출하여 관리자 답변 생성
+      const response = await qaboardApi.createAdminResponse(responseData.questionId, responseData, userInfo);
+      console.log('Admin response created successfully:', response);
+      
+      // 게시글 목록 새로고침
+      fetchPostList();
+      setReplyingToId(null);
+      
+    } catch (error) {
+      console.error('Failed to create admin response:', error);
+      alert('답변 작성에 실패했습니다. 다시 시도해주세요.');
+    }
   };
 
   const handleCancelAdminResponse = () => {
@@ -401,7 +433,7 @@ const QABoardMUI = () => {
   const handleTestLogin = (role, userId) => {
     const testLoginData = {
       email: role === 'ADMIN' ? 'admin@test.com' : `user${userId}@test.com`,
-      nickname: role === 'ADMIN' ? '관리자' : `사용자${userId}`,
+      nickname: role === 'ADMIN' ? 'Admin' : `User${userId}`, // 영어로 변경하여 HTTP 헤더 인코딩 문제 해결
       role: role,
       memberId: role === 'ADMIN' ? 'admin' : userId,
       pw: 'test123'
@@ -522,7 +554,11 @@ const QABoardMUI = () => {
 
           {/* Q&A List */}
           <Box mb={3}>
-            {paginatedItems.map((item) => {
+            {loading ? (
+              <Box textAlign="center" py={4}>
+                <Typography>로딩 중...</Typography>
+              </Box>
+            ) : qaData.map((item) => {
               const visibility = getPostVisibility(item, isAdmin, currentUserId);
               const permissions = getActionPermissions(item, isAdmin, currentUserId);
               const isExpanded = expandedPosts.has(item.id);
@@ -691,9 +727,9 @@ const QABoardMUI = () => {
             })}
           </Box>
 
-          {filteredItems.length === 0 && (
+          {!loading && qaData.length === 0 && (
             <Box textAlign="center" py={6}>
-              <Typography color="text.secondary">검색 결과가 없습니다.</Typography>
+              <Typography color="text.secondary">게시글이 없습니다.</Typography>
             </Box>
           )}
 

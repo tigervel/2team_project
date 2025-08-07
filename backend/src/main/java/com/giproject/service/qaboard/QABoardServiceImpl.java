@@ -11,6 +11,7 @@ import com.giproject.dto.qaboard.AdminResponseDTO;
 import com.giproject.dto.qaboard.PageResponseDTO;
 import com.giproject.dto.qaboard.QAPostDTO;
 import com.giproject.entity.qaboard.AdminResponse;
+import com.giproject.entity.qaboard.AuthorType;
 import com.giproject.entity.qaboard.QACategory;
 import com.giproject.entity.qaboard.QAPost;
 import com.giproject.repository.qaboard.AdminResponseRepository;
@@ -39,6 +40,13 @@ public class QABoardServiceImpl implements QABoardService {
     public QAPostDTO createPost(QAPostDTO.CreateRequest createRequest, String authorId, String authorName) {
         log.info("Creating new post by user: {}", authorId);
         
+        // URL 인코딩된 사용자명 디코딩 처리
+        try {
+            authorName = java.net.URLDecoder.decode(authorName, "UTF-8");
+        } catch (Exception e) {
+            log.warn("Failed to decode author name: {}", authorName);
+        }
+        
         // 카테고리 검증
         QACategory category;
         try {
@@ -46,6 +54,10 @@ public class QABoardServiceImpl implements QABoardService {
         } catch (IllegalArgumentException e) {
             throw new IllegalArgumentException("유효하지 않은 카테고리입니다: " + createRequest.getCategory());
         }
+        
+        // 사용자 유형 결정 (현재는 임시로 MEMBER로 설정)
+        // TODO: JWT 토큰에서 실제 사용자 정보(memId, cargoId, admin)를 가져와서 동적 설정
+        AuthorType authorType = determineAuthorType(authorId);
         
         // 엔티티 생성
         QAPost qaPost = QAPost.builder()
@@ -55,6 +67,7 @@ public class QABoardServiceImpl implements QABoardService {
                 .isPrivate(createRequest.getIsPrivate())
                 .authorId(authorId)
                 .authorName(authorName)
+                .authorType(authorType)
                 .build();
         
         // 저장
@@ -66,10 +79,11 @@ public class QABoardServiceImpl implements QABoardService {
 
     @Override
     public PageResponseDTO<QAPostDTO.ListResponse> getPostList(String category, String keyword, 
-                                                              Pageable pageable, boolean isAdmin) {
-        log.info("Getting post list - category: {}, keyword: {}, isAdmin: {}", category, keyword, isAdmin);
+                                                              Pageable pageable, boolean isAdmin, String currentUserId) {
+        log.info("Getting post list - category: {}, keyword: {}, isAdmin: {}, currentUserId: {}", 
+                 category, keyword, isAdmin, currentUserId);
         
-        QACategory qaCategory = convertCategory(category);
+        QACategory qaCategory = this.convertCategory(category);
         Page<QAPost> postPage;
         
         // 검색어와 카테고리 조합에 따른 쿼리 선택
@@ -77,27 +91,43 @@ public class QABoardServiceImpl implements QABoardService {
             // 검색어가 있는 경우
             if (qaCategory != null) {
                 // 카테고리 + 검색
-                postPage = isAdmin ? 
-                    qaPostRepository.searchAllPostsByCategory(qaCategory, keyword.trim(), pageable) :
-                    qaPostRepository.searchPublicPostsByCategory(qaCategory, keyword.trim(), pageable);
+                if (isAdmin) {
+                    postPage = qaPostRepository.searchAllPostsByCategory(qaCategory, keyword.trim(), pageable);
+                } else if (currentUserId != null && !currentUserId.trim().isEmpty()) {
+                    postPage = qaPostRepository.searchAccessiblePostsByCategory(qaCategory, keyword.trim(), currentUserId, pageable);
+                } else {
+                    postPage = qaPostRepository.searchPublicPostsByCategory(qaCategory, keyword.trim(), pageable);
+                }
             } else {
                 // 전체 검색
-                postPage = isAdmin ?
-                    qaPostRepository.searchAllPosts(keyword.trim(), pageable) :
-                    qaPostRepository.searchPublicPosts(keyword.trim(), pageable);
+                if (isAdmin) {
+                    postPage = qaPostRepository.searchAllPosts(keyword.trim(), pageable);
+                } else if (currentUserId != null && !currentUserId.trim().isEmpty()) {
+                    postPage = qaPostRepository.searchAccessiblePosts(keyword.trim(), currentUserId, pageable);
+                } else {
+                    postPage = qaPostRepository.searchPublicPosts(keyword.trim(), pageable);
+                }
             }
         } else {
             // 검색어가 없는 경우
             if (qaCategory != null) {
                 // 카테고리별 조회
-                postPage = isAdmin ?
-                    qaPostRepository.findByCategoryOrderByCreatedAtDesc(qaCategory, pageable) :
-                    qaPostRepository.findByCategoryAndIsPrivateFalseOrderByCreatedAtDesc(qaCategory, pageable);
+                if (isAdmin) {
+                    postPage = qaPostRepository.findByCategoryOrderByCreatedAtDesc(qaCategory, pageable);
+                } else if (currentUserId != null && !currentUserId.trim().isEmpty()) {
+                    postPage = qaPostRepository.findAccessiblePostsByCategory(qaCategory, currentUserId, pageable);
+                } else {
+                    postPage = qaPostRepository.findByCategoryAndIsPrivateFalseOrderByCreatedAtDesc(qaCategory, pageable);
+                }
             } else {
                 // 전체 조회
-                postPage = isAdmin ?
-                    qaPostRepository.findAllByOrderByCreatedAtDesc(pageable) :
-                    qaPostRepository.findByIsPrivateFalseOrderByCreatedAtDesc(pageable);
+                if (isAdmin) {
+                    postPage = qaPostRepository.findAllByOrderByCreatedAtDesc(pageable);
+                } else if (currentUserId != null && !currentUserId.trim().isEmpty()) {
+                    postPage = qaPostRepository.findAccessiblePosts(currentUserId, pageable);
+                } else {
+                    postPage = qaPostRepository.findByIsPrivateFalseOrderByCreatedAtDesc(pageable);
+                }
             }
         }
         
@@ -279,6 +309,7 @@ public class QABoardServiceImpl implements QABoardService {
                 .isPrivate(qaPost.getIsPrivate())
                 .authorId(qaPost.getAuthorId())
                 .authorName(qaPost.getAuthorName())
+                .authorType(qaPost.getAuthorType())
                 .createdAt(qaPost.getCreatedAt())
                 .updatedAt(qaPost.getUpdatedAt())
                 .viewCount(qaPost.getViewCount())
@@ -291,18 +322,66 @@ public class QABoardServiceImpl implements QABoardService {
      * QAPost 엔티티를 목록용 ListResponse로 변환
      */
     private QAPostDTO.ListResponse convertToListResponse(QAPost qaPost) {
-        // 답변 존재 여부 확인
-        boolean hasResponse = adminResponseRepository.existsByQaPostPostId(qaPost.getPostId());
+        // 관리자 답변 조회
+        AdminResponse adminResponse = adminResponseRepository.findByQaPostPostId(qaPost.getPostId()).orElse(null);
+        boolean hasResponse = adminResponse != null;
+        
+        // 관리자 답변 DTO 변환
+        AdminResponseDTO adminResponseDTO = null;
+        if (adminResponse != null) {
+            adminResponseDTO = AdminResponseDTO.builder()
+                    .responseId(adminResponse.getResponseId())
+                    .content(adminResponse.getContent())
+                    .adminId(adminResponse.getAdminId())
+                    .adminName(adminResponse.getAdminName())
+                    .createdAt(adminResponse.getCreatedAt())
+                    .updatedAt(adminResponse.getUpdatedAt())
+                    .build();
+        }
         
         return QAPostDTO.ListResponse.builder()
                 .postId(qaPost.getPostId())
                 .title(qaPost.getTitle())
+                .content(qaPost.getContent()) // 게시글 내용 포함
                 .category(qaPost.getCategory().getCode())
                 .isPrivate(qaPost.getIsPrivate())
+                .authorId(qaPost.getAuthorId()) // 작성자 ID 포함
                 .authorName(qaPost.getAuthorName())
+                .authorType(qaPost.getAuthorType())
                 .createdAt(qaPost.getCreatedAt())
                 .viewCount(qaPost.getViewCount())
                 .hasResponse(hasResponse)
+                .adminResponse(adminResponseDTO) // 관리자 답변 포함
                 .build();
+    }
+    
+    
+    /**
+     * 사용자 ID를 기반으로 AuthorType 결정
+     * 
+     * TODO: 실제 Member/Cargo/Admin 테이블과 연동하여 동적 판별
+     * 현재는 간단한 규칙으로 임시 구현
+     * 
+     * @param authorId 사용자 ID
+     * @return 결정된 AuthorType
+     */
+    private AuthorType determineAuthorType(String authorId) {
+        if (authorId == null || authorId.trim().isEmpty()) {
+            return AuthorType.MEMBER;
+        }
+        
+        // 임시 판별 로직 (실제 구현 시 데이터베이스 조회로 변경)
+        String lowerCaseId = authorId.toLowerCase();
+        
+        if (lowerCaseId.contains("admin") || lowerCaseId.startsWith("admin")) {
+            return AuthorType.ADMIN;
+        }
+        
+        if (lowerCaseId.contains("cargo") || lowerCaseId.startsWith("cargo")) {
+            return AuthorType.CARGO;
+        }
+        
+        // 기본값은 MEMBER
+        return AuthorType.MEMBER;
     }
 }

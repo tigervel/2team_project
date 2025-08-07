@@ -33,8 +33,13 @@ import lombok.ToString;
  * - ETC: 기타
  * 
  * 작성자 연동:
- * - authorId: Member 테이블의 memId(key)와 연동
- * - authorName: 표시용 작성자 이름 (Member에서 조회하여 설정)
+ * - authorId: 실제 사용자 ID (memId, cargoId, admin)
+ * - authorName: 표시용 작성자 이름 (Member/Cargo/Admin 테이블에서 조회)
+ * - authorType: 사용자 유형 구분 (MEMBER, CARGO, ADMIN)
+ * 
+ * 권한 체계:
+ * - MEMBER/CARGO: 본인 게시글만 수정/삭제 가능
+ * - ADMIN: 모든 게시글 수정/삭제, 답변 작성 가능
  */
 @Entity
 @Table(name = "qa_post")
@@ -70,6 +75,11 @@ public class QAPost {
     @Column(name = "author_name", nullable = false, length = 100)
     private String authorName; // 작성자 이름 (표시용)
     
+    @Enumerated(EnumType.STRING)
+    @Builder.Default
+    @Column(name = "author_type", nullable = false, length = 20)
+    private AuthorType authorType = AuthorType.MEMBER; // 작성자 유형 (MEMBER, CARGO, ADMIN)
+    
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt; // 작성일시
@@ -102,8 +112,56 @@ public class QAPost {
     /**
      * 작성자 여부 확인
      */
-    public boolean isAuthor(String memberId) {
-        return this.authorId.equals(memberId);
+    public boolean isAuthor(String userId) {
+        return this.authorId != null && this.authorId.equals(userId);
+    }
+    
+    /**
+     * 게시글 수정 권한 확인
+     * 
+     * @param currentUserId 현재 사용자 ID
+     * @param currentUserType 현재 사용자 유형
+     * @return 수정 권한 여부
+     */
+    public boolean canModify(String currentUserId, AuthorType currentUserType) {
+        return currentUserType.canModifyPost(this.authorId, currentUserId);
+    }
+    
+    /**
+     * 게시글 삭제 권한 확인
+     * 
+     * @param currentUserId 현재 사용자 ID
+     * @param currentUserType 현재 사용자 유형
+     * @return 삭제 권한 여부
+     */
+    public boolean canDelete(String currentUserId, AuthorType currentUserType) {
+        return currentUserType.canDeletePost(this.authorId, currentUserId);
+    }
+    
+    /**
+     * 비공개 게시글 조회 권한 확인
+     * 
+     * @param currentUserId 현재 사용자 ID
+     * @param currentUserType 현재 사용자 유형
+     * @return 조회 권한 여부
+     */
+    public boolean canView(String currentUserId, AuthorType currentUserType) {
+        // 공개 게시글은 모든 사용자 조회 가능
+        if (this.isPublic()) {
+            return true;
+        }
+        
+        // 비공개 게시글은 권한 체크
+        return currentUserType.canViewPrivatePost(this.authorId, currentUserId);
+    }
+    
+    /**
+     * 관리자 여부 확인
+     * 
+     * @return 작성자가 관리자인지 여부
+     */
+    public boolean isAuthorAdmin() {
+        return this.authorType.isAdmin();
     }
     
     // AdminResponse와의 1:1 관계 매핑

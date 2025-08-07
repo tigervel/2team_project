@@ -144,4 +144,36 @@ public interface QAPostRepository extends JpaRepository<QAPost, Long> {
      */
     @Query("SELECT p.authorId FROM QAPost p WHERE p.postId = :postId")
     Optional<String> findAuthorIdByPostId(@Param("postId") Long postId);
+
+    // 사용자별 접근 가능한 게시글 검색 (공개 게시글 + 본인 비공개 게시글)
+    @Query("SELECT p FROM QAPost p WHERE " +
+           "(LOWER(p.title) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
+           "OR LOWER(p.content) LIKE LOWER(CONCAT('%', :keyword, '%'))) " +
+           "AND (p.isPrivate = false OR p.authorId = :userId) " +
+           "ORDER BY p.createdAt DESC")
+    Page<QAPost> searchAccessiblePosts(@Param("keyword") String keyword, @Param("userId") String userId, Pageable pageable);
+    
+    // 카테고리별 사용자 접근 가능한 게시글 검색
+    @Query("SELECT p FROM QAPost p WHERE p.category = :category " +
+           "AND (LOWER(p.title) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
+           "OR LOWER(p.content) LIKE LOWER(CONCAT('%', :keyword, '%'))) " +
+           "AND (p.isPrivate = false OR p.authorId = :userId) " +
+           "ORDER BY p.createdAt DESC")
+    Page<QAPost> searchAccessiblePostsByCategory(@Param("category") QACategory category, 
+                                                 @Param("keyword") String keyword, 
+                                                 @Param("userId") String userId, 
+                                                 Pageable pageable);
+    
+    // 사용자별 접근 가능한 게시글 목록 (카테고리별)
+    @Query("SELECT p FROM QAPost p WHERE p.category = :category " +
+           "AND (p.isPrivate = false OR p.authorId = :userId) " +
+           "ORDER BY p.createdAt DESC")
+    Page<QAPost> findAccessiblePostsByCategory(@Param("category") QACategory category, 
+                                              @Param("userId") String userId, 
+                                              Pageable pageable);
+    
+    // 사용자별 접근 가능한 전체 게시글 목록
+    @Query("SELECT p FROM QAPost p WHERE (p.isPrivate = false OR p.authorId = :userId) " +
+           "ORDER BY p.createdAt DESC")
+    Page<QAPost> findAccessiblePosts(@Param("userId") String userId, Pageable pageable);
 }

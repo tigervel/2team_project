@@ -35,10 +35,11 @@ public interface QABoardService {
      * @param keyword 검색어 (null이면 검색 안함)
      * @param pageable 페이지네이션 정보
      * @param isAdmin 관리자 여부
+     * @param currentUserId 현재 사용자 ID (비공개 게시글 조회용)
      * @return 페이지네이션된 게시글 목록
      */
     PageResponseDTO<QAPostDTO.ListResponse> getPostList(
-        String category, String keyword, Pageable pageable, boolean isAdmin
+        String category, String keyword, Pageable pageable, boolean isAdmin, String currentUserId
     );
 
     /**

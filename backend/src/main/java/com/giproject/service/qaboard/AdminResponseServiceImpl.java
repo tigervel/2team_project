@@ -32,13 +32,21 @@ public class AdminResponseServiceImpl implements AdminResponseService {
                                           String adminId, String adminName) {
         log.info("Creating admin response for post: {} by admin: {}", postId, adminId);
         
+        // URL 인코딩된 관리자명 디코딩 처리
+        try {
+            adminName = java.net.URLDecoder.decode(adminName, "UTF-8");
+        } catch (Exception e) {
+            log.warn("Failed to decode admin name: {}", adminName);
+        }
+        
         // 게시글 존재 확인
         QAPost qaPost = qaPostRepository.findById(postId)
                 .orElseThrow(() -> new IllegalArgumentException("게시글을 찾을 수 없습니다: " + postId));
         
-        // 이미 답변이 있는지 확인
+        // 이미 답변이 있는지 확인 - 더 구체적인 에러 메시지와 함께
         if (adminResponseRepository.existsByQaPostPostId(postId)) {
-            throw new IllegalStateException("이미 답변이 존재합니다.");
+            log.warn("Attempt to create duplicate response for post: {} by admin: {}", postId, adminId);
+            throw new IllegalStateException("해당 게시글에는 이미 답변이 존재합니다. 기존 답변을 수정하거나 삭제 후 다시 작성해주세요.");
         }
         
         // 답변 엔티티 생성

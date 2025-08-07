@@ -2,6 +2,8 @@ package com.giproject.dto.qaboard;
 
 import java.time.LocalDateTime;
 
+import com.giproject.entity.qaboard.AuthorType;
+
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -40,6 +42,7 @@ public class QAPostDTO {
     
     private String authorId; // 작성자 ID (응답 시에만 포함)
     private String authorName; // 작성자 이름 (응답 시에만 포함)
+    private AuthorType authorType; // 작성자 유형 (MEMBER, CARGO, ADMIN)
     private LocalDateTime createdAt; // 작성일시 (응답 시에만 포함)
     private LocalDateTime updatedAt; // 수정일시 (응답 시에만 포함)
     private Integer viewCount; // 조회수 (응답 시에만 포함)
@@ -105,11 +108,15 @@ public class QAPostDTO {
         
         private Long postId;
         private String title;
+        private String content; // 게시글 내용 추가 (프론트엔드 렌더링용)
         private String category;
         private Boolean isPrivate;
+        private String authorId; // 작성자 ID 추가 (권한 체크용)
         private String authorName;
+        private AuthorType authorType; // 작성자 유형 (UI 제어용)
         private LocalDateTime createdAt;
         private Integer viewCount;
         private Boolean hasResponse; // 답변 존재 여부만 표시
+        private AdminResponseDTO adminResponse; // 관리자 답변 정보도 포함
     }
 }
