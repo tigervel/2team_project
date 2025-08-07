@@ -1,9 +1,9 @@
 import { Box, Grid, Paper, Typography } from "@mui/material";
-import { BarElement, CategoryScale, Chart, Legend, LinearScale, scales, Title, Tooltip } from "chart.js";
+import { ArcElement, BarElement, CategoryScale, Chart, Legend, LinearScale, scales, Title, Tooltip } from "chart.js";
 import { useEffect, useRef } from "react";
 import { Bar, Doughnut } from "react-chartjs-2";
 
-Chart.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
+Chart.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, ArcElement);
 
 const AdminPage = () => {
 
@@ -33,6 +33,20 @@ const AdminPage = () => {
         beginAtZero: true,
       },
     },
+    plugins: {
+      title: {
+        display: true,
+        text: '월별 배송 내역',
+        font: {
+          size: 18,
+          weight: 'bold',
+        },
+      },
+      legend: {
+        display: true,
+        position: 'top',
+      },
+    },
   };
 
   const piedata = {
@@ -53,9 +67,19 @@ const AdminPage = () => {
 
   const pieOptions = {
     responsive: true,
-    scales: {
-      y: {
-        beginAtZero: true,
+    maintainAspectRatio: false,
+    aspectRatio: 1,
+    plugins: {
+      legend: {
+        position: 'top',
+      },
+      title: {
+        display: true,
+        text: '사용자 비율',
+        font: {
+          size: 18,
+          weight: 'bold',
+        },
       },
     },
   };
@@ -100,14 +124,13 @@ const AdminPage = () => {
             sx={{
               p: 2,
               width: 600,
-              height: 400
+              height: 400,
+              position: 'relative'
             }}
           >
-            <Typography variant="h6" mb={2}>
-              사용자 비율
-            </Typography>
+
             <Box flex={1}>
-              <Doughnut data={piedata} options={pieOptions} />
+              <Doughnut data={piedata} options={pieOptions} style={{ width: '100%', height: 380 }} />
             </Box>
           </Paper>
         </Grid>
@@ -120,9 +143,7 @@ const AdminPage = () => {
               height: 400
             }}
           >
-            <Typography variant="h6" mb={2}>
-              월별 배송 내역
-            </Typography>
+
             <Box flex={1}>
               <Bar data={barData} options={barOptions} />
             </Box>
