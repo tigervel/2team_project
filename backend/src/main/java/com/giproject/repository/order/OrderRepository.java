@@ -2,8 +2,8 @@ package com.giproject.repository.order;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 
-import com.giproject.entity.order.OrderSheet;
+import com.giproject.entity.order.Order;
 
-public interface OrderRepository extends JpaRepository<OrderSheet, Long>{
+public interface OrderRepository extends JpaRepository<Order, Long>{
 
 }
