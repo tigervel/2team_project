@@ -8,7 +8,8 @@ import servicecenterRouter from "./servicecenterRouter"
 
 import adminRouter from "./adminRouter";
 import SignUpPage from "../pages/SignUpPage";
-
+import estimateRouter from "./estimateRouter";
+import orderRouter from "./orderRouter";
 
 
 
@@ -24,7 +25,7 @@ const Estimate = lazy(() => import("../pages/EstimatePage"));
 
 const MyPageLayout = lazy(() => import("../layout/MyPageLayout"));
 
-
+const Order = lazy(() => import("../pages/OrderPage"));
 const ServiceCenter = lazy(() => import("../pages/ServiceCenterPage"));
 const QABoard = lazy(() => import("../pages/qaboard/qaboardPage"));
 
@@ -47,6 +48,7 @@ const root = createBrowserRouter([
             {
                 path: "estimatepage",
                 element: <Suspense fallback={Loading}><Estimate /></Suspense>,
+                children:estimateRouter.children
             },
             {
                 path: "servicecenterpage",
@@ -58,6 +60,11 @@ const root = createBrowserRouter([
                 path: "qaboard",
                 element: <Suspense fallback={Loading}><QABoard /></Suspense>,
             },
+              {
+                path: "order",
+                element: <Suspense fallback={Loading}><Order /></Suspense>,
+                children: orderRouter.children
+            },
 
         ]
     },
@@ -67,8 +74,9 @@ const root = createBrowserRouter([
         children: mypageRouter
     }
     , {
-        path: 'adminpage',
+        path: 'admin',
         element: <Admin />,
+        children: adminRouter()
     },
     {
         path: 'signup',
