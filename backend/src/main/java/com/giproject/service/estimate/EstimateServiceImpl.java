@@ -90,7 +90,8 @@ public class EstimateServiceImpl implements EstimateService{
 	        dto.setAccepted(isAcceptedOpt.orElse(false)); // null이면 false 처리
 
 	        log.info("DTO 변환 성공: {} (isAccepted: {})", dto.getEno(), dto.isAccepted());
-
+	        Optional<Long> matchingNoOpt = matchingRepository.findMatchingNoByEstimateNo(estimate.getEno());
+	        dto.setMatchingNo(matchingNoOpt.orElse(null));
 	        return dto;
 	    }).collect(Collectors.toList());
 	}

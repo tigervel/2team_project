@@ -39,4 +39,7 @@ public interface MatchingRepository extends JpaRepository<Matching, Long> {
 	
 	@Query("SELECT m.isAccepted FROM Matching m WHERE m.estimate.eno = :estimateNo")
 	Optional<Boolean> findIsAcceptedByEstimateNo(@Param("estimateNo") Long estimateNo);
+	
+	@Query("SELECT m.matchingNo FROM Matching m WHERE m.estimate.eno = :estimateNo")
+	Optional<Long> findMatchingNoByEstimateNo(@Param("estimateNo") Long estimateNo);
 }

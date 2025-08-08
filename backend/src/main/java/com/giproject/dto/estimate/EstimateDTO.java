@@ -30,7 +30,8 @@ public class EstimateDTO {
 	private boolean isTemp;
 	@JsonProperty("isAccepted")
 	private boolean accepted;
-	
+	private Long matchingNo;
+
 
 	private boolean isOrdered;
 	private int baseCost;

@@ -5,6 +5,8 @@ import {
 } from '@mui/material';
 import PageComponent from '../common/PageComponent';
 import { getMyAllEstimateList } from '../../../api/estimateApi/estimateApi';
+import { useNavigate } from "react-router-dom";
+
 
 const initState = {
   dtoList: [],
@@ -14,13 +16,19 @@ const initState = {
   totalCount: 0,
   prevPage: 0,
   nextPage: 0,
-  totalPage: 0, // ✅ 오타 수정 (tatalPage → totalPage)
+  totalPage: 0, 
   current: 1,
 };
 
 const DeliveryInfoPage = () => {
   const [serverData, setServerData] = useState(initState);
   const [pageParams, setPageParams] = useState({ page: 1, size: 5 });
+  const navigate = useNavigate();
+
+  const handleConfirmClick = (matchingNo) => {
+    navigate("/order", { state: { matchingNo } });
+  };
+
 
   useEffect(() => {
     getMyAllEstimateList(pageParams)
@@ -78,7 +86,12 @@ const DeliveryInfoPage = () => {
           <TableCell align="center">{item.cargoId}</TableCell>
           <TableCell align="center">
             {item.isAccepted ? (
-              <Button variant="contained" color="success" size="small">
+              <Button
+                variant="contained"
+                color="success"
+                size="small"
+                onClick={() => handleConfirmClick(item.matchingNo)}
+              >
                 승인 확인
               </Button>
             ) : (
