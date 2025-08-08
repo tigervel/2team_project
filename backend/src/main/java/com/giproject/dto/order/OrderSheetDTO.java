@@ -13,7 +13,7 @@ import lombok.Setter;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class OrderDTO {
+public class OrderSheetDTO {
 	
 	private Long orderNo;
 	private Long matchingNo;

@@ -15,8 +15,8 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class OrderServiceImpl implements OrderService{
 	
-	OrderRepository orderRepository;
-	MatchingRepository matchingRepository;
+	private final OrderRepository orderRepository;
+	private final MatchingRepository matchingRepository;
 	 
 	@Override
 	public OrderFormDTO loadOrderForm(Long matchingNo) {
