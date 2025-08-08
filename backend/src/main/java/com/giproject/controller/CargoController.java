@@ -94,16 +94,31 @@ public class CargoController {
      * 이미지 업로드
      */
     @PostMapping("/upload/{cargoNo}")
-    public ResponseEntity<?> uploadImage(@PathVariable Integer cargoNo, @RequestParam("image") MultipartFile file) {
+    public ResponseEntity<?> uploadImage(
+            @PathVariable("cargoNo") Integer cargoNo,
+            @RequestParam("image") MultipartFile file) {
         try {
+            // DB에서 해당 cargo 조회
+            Cargo cargo = cargoRepository.findById(cargoNo)
+                    .orElseThrow(() -> new RuntimeException("차량 없음: " + cargoNo));
+
+            // 기존 이미지 파일 삭제
+            if (cargo.getCargoImage() != null) {
+                String existingImagePath = "src/main/resources/static" + cargo.getCargoImage();
+                Path existingPath = Paths.get(existingImagePath);
+                if (Files.exists(existingPath)) {
+                    Files.delete(existingPath); // 파일 존재하면 삭제
+                }
+            }
+
+            // 새 파일 저장
             String fileName = UUID.randomUUID() + "_" + file.getOriginalFilename();
             Path uploadPath = Paths.get("src/main/resources/static/uploads/" + fileName);
 
             Files.createDirectories(uploadPath.getParent());
             Files.write(uploadPath, file.getBytes());
 
-            // DB에 상대 경로 저장
-            Cargo cargo = cargoRepository.findById(cargoNo).orElseThrow();
+            // DB에 새 경로 저장
             cargo.setCargoImage("/uploads/" + fileName);
             cargoRepository.save(cargo);
 

@@ -2,6 +2,7 @@ package com.giproject.entity.matching;
 
 import java.time.LocalDateTime;
 
+import com.giproject.entity.cargo.CargoOwner;
 import com.giproject.entity.estimate.Estimate;
 
 import jakarta.persistence.Entity;
@@ -34,13 +35,23 @@ public class Matching {
 	@JoinColumn(name="eno")
 	private Estimate estimate;
 	
+	@ManyToOne
+	@JoinColumn(name = "cargo_id")
+	private CargoOwner cargoOwner;
 	
 	
 	private boolean isAccepted;
 	private LocalDateTime acceptedTime;
 	
-	void changeIsAccepted (boolean isAccepted) {
+	public void changeIsAccepted (boolean isAccepted) {
 		this.isAccepted = isAccepted;
+	}
+	
+	public void changeAcceptedTime(LocalDateTime acceptedTime) {
+		this.acceptedTime = acceptedTime;
+	}
+	public void changeCargoOwner(CargoOwner cargoOwner) {
+		this.cargoOwner = cargoOwner;
 	}
 	
 	

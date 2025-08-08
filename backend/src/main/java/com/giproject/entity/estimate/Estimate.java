@@ -39,6 +39,16 @@ public class Estimate {
 	private String cargoType;
 	private LocalDateTime  startTime;
 	private int totalCost;
+	private int baseCost;
+	private int distanceCost;
+	private int specialOption;
+	
+	@Column(nullable = false)//true 시 주문서 작성완료
+	private boolean isOrdered;
+	
+	
+	@Column(nullable = false) //true 시 매칭완료
+	private boolean matched;
 	
 	@Column(nullable = false)
 	private boolean isTemp;//true 면 임시저장
@@ -66,6 +76,14 @@ public class Estimate {
 	public void changeTotalCost(int totalCost) {
 		this.totalCost = totalCost;
 	}
-	
+	public void changeMatched(boolean matched) {
+		this.matched = matched;
+	}
+	public void changeIsTemp(boolean isTemp) {
+		this.isTemp = isTemp;
+	}
+	public void changeIsOrdered(boolean isOrdered) {
+		this.isOrdered = isOrdered;
+	}
 
 }

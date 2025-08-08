@@ -1,5 +1,7 @@
 package com.giproject.service.estimate;
 
+import java.util.List;
+
 import com.giproject.dto.estimate.EstimateDTO;
 import com.giproject.entity.estimate.Estimate;
 import com.giproject.entity.member.Member;
@@ -11,6 +13,7 @@ public interface EstimateService {
 
 	default EstimateDTO entityToDTO(Estimate estimate) {
 		EstimateDTO dto =  EstimateDTO.builder()
+				.eno(estimate.getEno())
 				.startAddress(estimate.getStartAddress())
 				.endAddress(estimate.getEndAddress())
 				.distanceKm(estimate.getDistanceKm())
@@ -18,6 +21,9 @@ public interface EstimateService {
 				.cargoType(estimate.getCargoType())
 				.startTime(estimate.getStartTime())
 				.totalCost(estimate.getTotalCost())
+				.isTemp(estimate.isTemp())
+				.matched(estimate.isMatched())
+				.isOrdered(estimate.isOrdered())
 				.memberId(estimate.getMember().getMemId())
 				.build();
 		return dto;
@@ -32,6 +38,9 @@ public interface EstimateService {
 				.cargoType(dto.getCargoType())
 				.startTime(dto.getStartTime())
 				.totalCost(dto.getTotalCost())
+				.isTemp(dto.isTemp())
+				.matched(dto.isMatched())
+				.isOrdered(dto.isOrdered())
 				.member(member)
 				.build();
 		return estimate;
@@ -40,4 +49,10 @@ public interface EstimateService {
 	Long sendEstimate(EstimateDTO dto);
 	
 	Long saveDraft(EstimateDTO dto);
+	
+	EstimateDTO exportEstimate(String mameberId,Long eno);
+	
+	List<EstimateDTO> getSaveEstimate(String memberId);
+	
+	List<EstimateDTO> myEstimateList(String memberId);
 }

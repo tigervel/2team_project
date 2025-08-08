@@ -10,11 +10,11 @@ import store from './store/store';  // store 경로 맞게 조정
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
-  <React.StrictMode>
+  // <React.StrictMode>
     <Provider store={store}>
       <App />
     </Provider>
-  </React.StrictMode>
+  // </React.StrictMode>
 );
 
 reportWebVitals();

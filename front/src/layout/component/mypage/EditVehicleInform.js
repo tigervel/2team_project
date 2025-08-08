@@ -20,7 +20,7 @@ const EditVehicleInform = () => {
     preview: null
   });
 
-  // 🚚 차량 목록 불러오기
+  // 차량 목록 불러오기
   const fetchVehicles = async () => {
     try {
       const res = await axios.get(`http://localhost:8080/g2i4/cargo/list/${cargoId}`);
@@ -30,7 +30,7 @@ const EditVehicleInform = () => {
         address: cargo.cargoType,
         weight: cargo.cargoCapacity,
         imagePath: cargo.cargoImage,
-        preview: cargo.cargoImage ? `http://localhost:8080${cargo.cargoImage}` : null
+        preview: cargo.cargoImage ? `http://localhost:8080/g2i4${cargo.cargoImage}` : null
       }));
       setVehicles(data);
     } catch (err) {
@@ -141,7 +141,17 @@ const EditVehicleInform = () => {
                 height: 250, bgcolor: '#e5e7eb', borderRadius: 1,
                 display: 'flex', alignItems: 'center', justifyContent: 'center'
               }}>
-                <img src={vehicle.preview || '/camera-icon.png'} alt="preview" style={{ width: 100, height: 100, objectFit: 'contain', opacity: 0.8 }} />
+                <img
+                  src={vehicle.preview || 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="500" height="310"><rect width="100%" height="100%" fill="%23d1d5db"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="%236b7280" font-size="24" font-family="sans-serif">No Image</text></svg>'}
+                  alt="preview"
+                  style={{
+                    width: 'auto',
+                    height: 'auto',
+                    maxWidth: '100%',
+                    maxHeight: '100%',
+                    objectFit: 'contain',
+                  }}
+                />
               </Box>
               <Box sx={{ textAlign: 'center' }}>
                 <Typography fontWeight="bold">{vehicle.name}</Typography>
@@ -176,13 +186,23 @@ const EditVehicleInform = () => {
           <Typography variant="h6" mb={3}>차량 정보 입력</Typography>
           <Box display="flex" gap={4} flexDirection={{ xs: 'column', md: 'row' }}>
             <Box sx={{ flex: 1, bgcolor: '#e5e7eb', aspectRatio: '5/3', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 1 }}>
-              <img src={formData.preview || '/camera-icon.png'} alt="preview" style={{ maxHeight: '100%', maxWidth: '100%', objectFit: 'contain' }} />
+              <img
+                src={formData.preview ||  'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="500" height="300"><rect width="100%" height="100%" fill="%23d1d5db"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="%236b7280" font-size="24" font-family="sans-serif">No Image</text></svg>'}
+                alt="preview"
+                style={{
+                  width: 'auto',
+                  height: 'auto',
+                  maxWidth: '100%',
+                  maxHeight: '100%',
+                  objectFit: 'contain',
+                }}
+              />
             </Box>
             <Box flex={1} display="flex" flexDirection="column" gap={2}>
               <TextField label="차량 이름" value={formData.name} onChange={handleChange('name')} fullWidth />
               <TextField label="차량 종류" value={formData.address} onChange={handleChange('address')} fullWidth />
               <TextField label="적재 무게(kg)" value={formData.weight} onChange={handleChange('weight')} fullWidth />
-              <Button variant="outlined" component="label">
+              <Button variant="outlined" component="label" >
                 이미지 업로드
                 <input hidden accept="image/*" type="file" onChange={handleImageChange} />
               </Button>
