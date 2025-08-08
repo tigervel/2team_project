@@ -20,6 +20,8 @@ public interface MatchingRepository extends JpaRepository<Matching, Long> {
 		    WHERE m.cargoOwner IS NULL
 		      AND m.isAccepted = false
 		      AND m.estimate.isTemp = false
+		      And m.estimate.matched = false
+		      And m.estimate.isOrdered = false
 		      AND NOT EXISTS (
 		        SELECT 1 FROM RejectedMatching r
 		        WHERE r.cargoOwner = :cargoOwner

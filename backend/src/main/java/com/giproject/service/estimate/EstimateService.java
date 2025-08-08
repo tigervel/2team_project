@@ -23,6 +23,7 @@ public interface EstimateService {
 				.totalCost(estimate.getTotalCost())
 				.isTemp(estimate.isTemp())
 				.matched(estimate.isMatched())
+				.isOrdered(estimate.isOrdered())
 				.memberId(estimate.getMember().getMemId())
 				.build();
 		return dto;
@@ -38,7 +39,8 @@ public interface EstimateService {
 				.startTime(dto.getStartTime())
 				.totalCost(dto.getTotalCost())
 				.isTemp(dto.isTemp())
-				.matched(dto.isMatched())																			
+				.matched(dto.isMatched())
+				.isOrdered(dto.isOrdered())
 				.member(member)
 				.build();
 		return estimate;

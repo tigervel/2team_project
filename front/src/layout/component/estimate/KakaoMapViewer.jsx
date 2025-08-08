@@ -61,7 +61,10 @@ const KakaoMapViewer = ({ startAddress, endAddress }) => {
         }
       );
       const data = await res.json();
-
+       if (!data.routes || !data.routes[0]?.sections || !data.routes[0].sections[0]?.roads) {
+      alert("경로 정보를 불러올 수 없습니다. 주소를 다시 확인해주세요.");
+      return;
+    }
       const path = data.routes[0].sections[0].roads.flatMap((road) =>
         road.vertexes.reduce((acc, val, idx) => {
           if (idx % 2 === 0) {
@@ -92,7 +95,7 @@ const KakaoMapViewer = ({ startAddress, endAddress }) => {
         map,
         position: linePath[0],
         image: new window.kakao.maps.MarkerImage(
-          "https://t1.daumcdn.net/localimg/localimages/07/mapapidoc/red_b.png",
+          "../../../image/logo/marker.png",
           new window.kakao.maps.Size(40, 40)
         ),
       });

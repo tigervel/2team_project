@@ -32,7 +32,9 @@ public class EstimateDTO {
 	private boolean accepted;
 	
 
-
-
+	private boolean isOrdered;
+	private int baseCost;
+	private int distanceCost;
+	private int specialOption;
 	
 }
