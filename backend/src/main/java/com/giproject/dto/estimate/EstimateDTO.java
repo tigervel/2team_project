@@ -2,6 +2,8 @@ package com.giproject.dto.estimate;
 
 import java.time.LocalDateTime;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -26,4 +28,11 @@ public class EstimateDTO {
 	private boolean matched;
 	private String memberId;
 	private boolean isTemp;
+	@JsonProperty("isAccepted")
+	private boolean accepted;
+	
+
+
+
+	
 }

@@ -38,7 +38,7 @@ public interface EstimateService {
 				.startTime(dto.getStartTime())
 				.totalCost(dto.getTotalCost())
 				.isTemp(dto.isTemp())
-				.matched(dto.isMatched())
+				.matched(dto.isMatched())																			
 				.member(member)
 				.build();
 		return estimate;
@@ -53,4 +53,6 @@ public interface EstimateService {
 	List<EstimateDTO> getSaveEstimate(String memberId);
 	
 	List<EstimateDTO> myEstimateList(String memberId);
+
+	
 }

@@ -31,3 +31,12 @@ export const postSaveEs = async (estimateDTO)=>{
     const res = await axios.post(`${prefix}/savedreft`,estimateDTO,)
     return res;
 }
+
+export const getMyAllEstimateList = async ({ page, size }) => {
+  const res = await axios.get(`${prefix}/my-all-list`, {
+    params: { page, size },
+    withCredentials: true,
+  });
+  return res.data;
+};
+
