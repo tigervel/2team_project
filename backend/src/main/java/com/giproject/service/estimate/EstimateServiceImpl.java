@@ -27,6 +27,9 @@ public class EstimateServiceImpl implements EstimateService{
 	
 	@Override
 	public Long sendEstimate(EstimateDTO dto) {
+		
+		
+		
 		Member member= esmateRepository.getMemId(dto.getMemberId()).orElseThrow();
 		Estimate estimate= DTOToEntity(dto,member);
 		esmateRepository.save(estimate);

@@ -119,6 +119,10 @@ const LoginComponent = () => {
             로그인
           </Button>
 
+          <Box sx={{display: 'flex', justifyContent: 'center', fontFamily: 'SUIT, sans-serif', fontSize: '13px', textTransform: 'none'}}>
+            <Button>아이디 찾기</Button> <Button>비밀번호 찾기</Button>
+          </Box>
+
           <Divider sx={{ my: 3 }}>OR</Divider>
 
           {/* 소셜 로그인 버튼들 */}
