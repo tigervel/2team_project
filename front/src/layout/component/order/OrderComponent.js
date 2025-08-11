@@ -48,8 +48,27 @@ const OrderComponent = () => {
   const [orderSheet, setOrderSheet] = useState(iniState);
   const { state } = useLocation();
   const matchingNo = state?.matchingNo;
-  
-console.log("🔍 전달된 matchingNo:", matchingNo); // ✅ 이 줄 추가
+
+  const splitPhone = (raw) => {
+    const d = (raw ?? "").replace(/\D/g, "");
+    if (!d) return ["", "", ""] //우선 3개의 배열 리턴
+
+    if (d.startsWith("02") && (d.length === 9 || d.length === 10)) {
+      return d.length === 9 ? [d.slice(0, 2), d.slice(2, 5), d.slice(5)]
+        : [d.slice(0, 2), d.slice(2, 6), d.slice(6)]
+
+    }
+    if (d.length === 11) return [d.slice(0, 3), d.slice(3, 7), d.slice(7)];
+    if (d.length === 10) return [d.slice(0, 3), d.slice(3, 6), d.slice(6)];
+
+    return [d.slice(0, 3), d.slice(3, d.length - 4), d.slice(-4)];
+  }
+
+  const [p1, p2, p3] = useMemo(() => splitPhone(serverData?.ordererPhone),
+    [serverData?.ordererPhone])
+
+
+  console.log("🔍 전달된 matchingNo:", matchingNo); // ✅ 이 줄 추가
 
   useEffect(() => {
     if (matchingNo) {
@@ -123,11 +142,11 @@ console.log("🔍 전달된 matchingNo:", matchingNo); // ✅ 이 줄 추가
             <LabelBox text="휴대전화" />
           </Grid>
           <Grid item sx={{ flex: 1, minWidth: 0, display: "flex", gap: 1 }}>
-            <TextField size="small" sx={{ width: "15%" }} Value="010" inputProps={{ readOnly: true }} />
+            <TextField size="small" sx={{ width: "15%" }} value={p1} inputProps={{ readOnly: true }} />
             <Typography variant="h6">-</Typography>
-            <TextField size="small" sx={{ width: "20%" }} inputProps={{ readOnly: true }} />
+            <TextField size="small" sx={{ width: "20%" }} value={p2} inputProps={{ readOnly: true }} />
             <Typography variant="h6">-</Typography>
-            <TextField size="small" sx={{ width: "20%" }} inputProps={{ readOnly: true }} />
+            <TextField size="small" sx={{ width: "20%" }} value={p3} inputProps={{ readOnly: true }} />
           </Grid>
         </Grid>
 
@@ -236,7 +255,7 @@ console.log("🔍 전달된 matchingNo:", matchingNo); // ✅ 이 줄 추가
       {/* ===== 결제 섹션 ===== */}
 
 
-    <OrderPaymentSelect serverData={serverData} orderSheet={orderSheet}/>
+      <OrderPaymentSelect serverData={serverData} orderSheet={orderSheet} />
     </Box>
   );
 }
