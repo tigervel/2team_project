@@ -30,34 +30,40 @@ const DeliveryInfoPage = () => {
   };
 
 
-  useEffect(() => {
-    getMyAllEstimateList(pageParams)
-      .then((data) => {
-        const totalCount = data.length;
-        const totalPage = Math.ceil(totalCount / pageParams.size);
-        const current = pageParams.page;
-        const startIdx = (current - 1) * pageParams.size;
-        const endIdx = startIdx + pageParams.size;
-        const pageData = data.slice(startIdx, endIdx);
+useEffect(() => {
+  getMyAllEstimateList(pageParams)
+    .then((data) => {
+      const totalCount = data.length;
+      const totalPage = Math.ceil(totalCount / pageParams.size);
+      const current = pageParams.page;
+      const startIdx = (current - 1) * pageParams.size;
+      const endIdx = startIdx + pageParams.size;
+      const pageData = data.slice(startIdx, endIdx);
 
-        const pageNumList = Array.from({ length: totalPage }, (_, i) => i + 1);
+      // 페이지 번호 최대 5개 제한
+      const startPage = Math.max(1, current - 2);
+      const endPage = Math.min(totalPage, startPage + 4);
+      const pageNumList = Array.from(
+        { length: endPage - startPage + 1 },
+        (_, i) => startPage + i
+      );
 
-        setServerData({
-          dtoList: pageData,
-          pageNumList,
-          prev: current > 1,
-          next: current < totalPage,
-          totalCount,
-          totalPage,
-          prevPage: current > 1 ? current - 1 : 1,
-          nextPage: current < totalPage ? current + 1 : totalPage,
-          current,
-        });
-      })
-      .catch((err) => {
-        console.error("견적 목록 로딩 실패:", err);
+      setServerData({
+        dtoList: pageData,
+        pageNumList,
+        prev: current > 1,
+        next: current < totalPage,
+        totalCount,
+        totalPage,
+        prevPage: current > 1 ? current - 1 : 1,
+        nextPage: current < totalPage ? current + 1 : totalPage,
+        current,
       });
-  }, [pageParams]);
+    })
+    .catch((err) => {
+      console.error("견적 목록 로딩 실패:", err);
+    });
+}, [pageParams]);
 
   const movePage = (pageObj) => {
     setPageParams((prev) => ({
