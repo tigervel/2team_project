@@ -168,7 +168,13 @@ public class QABoardController {
             }
         }
         
-        log.info("PUT /api/qaboard/posts/{} - title: {}, userId: {}, userName: {}", postId, updateRequest.getTitle(), userId, userName);
+        // 상세한 요청 데이터 로깅 (디버깅용)
+        log.info("PUT /api/qaboard/posts/{} - Request Details:", postId);
+        log.info("  - Title: '{}' (length: {})", updateRequest.getTitle(), updateRequest.getTitle() != null ? updateRequest.getTitle().length() : "null");
+        log.info("  - Content: '{}' (length: {})", updateRequest.getContent() != null ? updateRequest.getContent().substring(0, Math.min(50, updateRequest.getContent().length())) + "..." : "null", updateRequest.getContent() != null ? updateRequest.getContent().length() : "null");
+        log.info("  - Category: '{}'", updateRequest.getCategory());
+        log.info("  - IsPrivate: {}", updateRequest.getIsPrivate());
+        log.info("  - UserId: '{}', UserName: '{}'", userId, userName);
         
         // 사용자 정보에 따른 권한 설정
         boolean isAdmin = userId != null && userId.toLowerCase().contains("admin");
