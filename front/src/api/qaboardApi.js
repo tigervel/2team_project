@@ -127,7 +127,7 @@ export const getMyPosts = async (userInfo, params = {}) => {
     queryParams.append('page', page.toString());
     queryParams.append('size', size.toString());
     
-    const url = `${qaHost}/my-posts?${queryParams.toString()}`;
+    const url = `${qaHost}/posts/my?${queryParams.toString()}`;
     const res = await axios.get(url, { headers });
     return res.data;
 };
