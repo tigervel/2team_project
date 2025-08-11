@@ -39,7 +39,7 @@ const serverInitState = {
   baseCost: '',
   distanceCost: '',
   specialOptionCost: '',
-  totalCost: '11111',
+  totalCost: '1',
   matchingNo: ''
 
 }

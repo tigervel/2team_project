@@ -1,6 +1,6 @@
 import * as PortOne from "@portone/browser-sdk/v2";
 
-export const iniPayment = async (orderData) => {
+export const requestPayment = async (orderData) => {
     
     try {
         return await PortOne.requestPayment({

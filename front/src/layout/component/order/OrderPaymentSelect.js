@@ -12,11 +12,12 @@ import {
     ToggleButtonGroup,
     ToggleButton,
 } from "@mui/material";
-import { iniPayment } from "../../../api/paymentApi/paymentUtil";
+import { requestPayment } from "../../../api/paymentApi/paymentUtil";
+import useCustomMove from "../../../hooks/useCustomMove";
 
 const CHANNELS = {
   CARD:     "channel-key-279bfb34-a441-4da9-aeb3-48011004f6c2",
-  TOSS:     "channel-key-2b3f1412-6b97-496a-8af4-fa645789bc18",
+  TOSS:     "channel-key-480547ae-0d47-46fb-bd42-b41a7c102111",
   KAKAO:    "channel-key-<카카오 채널키>",
   NAVER:    "channel-key-<네이버 채널키>",
 }
@@ -25,7 +26,10 @@ const iniState = {
     channelKey: "",
     provider:""
 }
+
+
 const OrderPaymentSelect = ({ serverData }) => {
+    const {moveToHome} = useCustomMove();
     const handleClick = () => {
 
         const orderData = {
@@ -37,8 +41,10 @@ const OrderPaymentSelect = ({ serverData }) => {
             customerPhone: (serverData.ordererPhone),
             customerEmail: (serverData.ordererEmail),
         }
-        iniPayment(orderData).then((res) => {
+        requestPayment(orderData).then((res) => {
             console.log("결제 완료 : ", res)
+            alert("결제가 완료 되었습니다.")
+            moveToHome();
         }).catch((err) => {
             console.log("결제 실패 : ", err)
         })
@@ -56,6 +62,7 @@ const OrderPaymentSelect = ({ serverData }) => {
             setOrderType({ payMethod: "EASY_PAY", channelKey: CHANNELS.NAVER, provider: "NAVER" });
         }
          console.log(e.currentTarget.name)
+         console.log(orderType.channelKey)
     };
    
 
@@ -82,7 +89,7 @@ return (
 
                 <Box sx={{ display: "flex", gap: 3, flexWrap: "wrap" }}>
                     <Button name="CARD" variant="outlined" sx={{ px: 1, py: 1.5, borderRadius: 2 }} onClick={handleSelectMethod}>신용·체크카드</Button>
-                    <Button name="EASY_PAY" variant="outlined" sx={{ p: 0, borderRadius: 2 }} onClick={handleSelectMethod}>
+                    <Button name="TOSS" variant="outlined" sx={{ p: 0, borderRadius: 2 }} onClick={handleSelectMethod}>
                         <img
                             src="../../image/logo/TossPay_Logo_Primary.png"
                             style={{ width: 100, height: 40 }}
