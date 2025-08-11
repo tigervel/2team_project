@@ -30,11 +30,11 @@ public class OrderController {
 	}
 	
 	@PostMapping("/create")
-	public ResponseEntity<Map<String, Long>> createOrder(@RequestBody OrderSheetDTO dto) {
+	public ResponseEntity<Long> createOrder(@RequestBody OrderSheetDTO dto) {
 		Long no=dto.getMatchingNo();
 		
-		OrderSheet sheet=orderService.placeOrderFromPayment(dto, no);
+		Long orderNo=orderService.placeOrderFromPayment(dto, no);
 		
-		return ResponseEntity.ok(Map.of("Succese",sheet.getOrderNo()));
+		return ResponseEntity.ok(orderNo);
 	}
 }

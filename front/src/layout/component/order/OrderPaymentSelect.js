@@ -31,7 +31,7 @@ const iniState = {
 
 const OrderPaymentSelect = ({ serverData, orderSheet }) => {
     const { moveToHome } = useCustomMove();
-
+    const [orderNo, setOrderNo] = useState("")
     const [paymentType, setPaymentType] = useState(null);
 
 
@@ -46,17 +46,19 @@ const OrderPaymentSelect = ({ serverData, orderSheet }) => {
             customerPhone: (serverData.ordererPhone),
             customerEmail: (serverData.ordererEmail),
         }
-      
-        requestPayment(orderData).then((res) => {
-           const payload ={
-            ...orderSheet,
-             matchingNo:Number(serverData.matchingNo)
-           }
 
-           postOrderCreate(payload).then((data)=>{
-            console.log(data)
-           })
+        requestPayment(orderData).then((res) => {
+            const payload = {
+                ...orderSheet,
+                matchingNo: Number(serverData.matchingNo)
+            }
+
+            const newOrderNo = postOrderCreate(payload)
+            setOrderNo(newOrderNo); //오더번호 리턴받아 저장
+            
+
             console.log("결제 완료 : ", res)
+
             alert("주문이 완료 되었습니다.")
             moveToHome();
 

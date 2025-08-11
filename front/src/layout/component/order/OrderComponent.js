@@ -48,7 +48,10 @@ const OrderComponent = () => {
   const [orderSheet, setOrderSheet] = useState(iniState);
   const [customDomain, setCustomDomain] = useState("");
   const [emailLocal, setEmailLocal] = useState("");
-  const [emailDomain, setEmailDomain] = useState("naver.");
+  const [emailDomain, setEmailDomain] = useState("");
+  const [startPNum, SetstartPNum] = useState("")
+  const [middlePNum, SetMddlePNum] = useState("")
+  const [endPNum, SetEndPNum] = useState("")
   const { state } = useLocation();
   const matchingNo = state?.matchingNo;
 
@@ -82,6 +85,8 @@ const OrderComponent = () => {
   [fullEmail]
 );
 
+  const fullPhone = `${startPNum}${middlePNum}${endPNum}`
+
   const handleChangeOrderSheet = (e) => {
     orderSheet[e.target.name] = e.target.value;
     setOrderSheet({ ...orderSheet })
@@ -90,15 +95,17 @@ const OrderComponent = () => {
     if (matchingNo) {
       setOrderSheet(prev =>({
         ...prev,
-        addresseeEmail:fullEmail
+        addresseeEmail:fullEmail,
+        phone:fullPhone
       }));
       postOrderPome(matchingNo)
         .then((data) => setServerdata(data))
         .catch(console.error)
     }
-  }, [matchingNo,setOrderSheet,fullEmail]);
+  }, [matchingNo,setOrderSheet,fullEmail,fullPhone]);
 
   // 금액 상태 (실제 로직 연결 예정)
+
 
 
 
@@ -173,20 +180,12 @@ const OrderComponent = () => {
             <LabelBox text="이메일" />
           </Grid>
           <Grid item sx={{ flex: 1, minWidth: 0, display: "flex", gap: 1 }}>
-            <TextField size="small" sx={{ flex: 1 }} defaultValue="abcd1234" inputProps={{ readOnly: true }} />
+            <TextField size="small" sx={{ flex: 1, maxWidth:150}} inputProps={{ readOnly: true }}
+              value={serverData.ordererEmail.split('@')[0]}/>
             <Typography variant="h6">@</Typography>
-            <TextField size="small" sx={{ flex: 1 }} placeholder="도메인" disabled={emailDomain !== "custom"} inputProps={{ readOnly: true }} />
-            <Select
-              size="small"
-              value={emailDomain}
-              onChange={(e) => setEmailDomain(e.target.value)}
-              sx={{ flex: 1, minWidth: 0 }}
-            >
-              <MenuItem value="naver.com">naver.com</MenuItem>
-              <MenuItem value="gmail.com">gmail.com</MenuItem>
-              <MenuItem value="daum.net">daum.net</MenuItem>
-              <MenuItem value="custom">직접입력</MenuItem>
-            </Select>
+            <TextField size="small" sx={{ flex: 1 , maxWidth:300}} placeholder="도메인"  value={serverData.ordererEmail.split('@')[1]}
+           inputProps={{ readOnly: true }} />
+        
 
           </Grid>
         </Grid>
@@ -236,11 +235,17 @@ const OrderComponent = () => {
             <LabelBox text="휴대전화" />
           </Grid>
           <Grid item sx={{ flex: 1, minWidth: 0, display: "flex", gap: 1 }}>
-            <TextField size="small" sx={{ width: "15%" }} defaultValue="010" />
+            <TextField size="small" sx={{ width: "15%" }} onChange={(e)=>{
+              SetstartPNum(e.target.value);
+            }} />
             <Typography variant="h6">-</Typography>
-            <TextField size="small" sx={{ width: "20%" }} />
+            <TextField size="small" sx={{ width: "20%" }} onChange={(e)=>{
+              SetMddlePNum(e.target.value)
+            }}/>
             <Typography variant="h6">-</Typography>
-            <TextField size="small" sx={{ width: "20%" }} />
+            <TextField size="small" sx={{ width: "20%" }} onChange={(e)=>{
+              SetEndPNum(e.target.value)
+            }}/>
           </Grid>
         </Grid>
 
@@ -254,7 +259,7 @@ const OrderComponent = () => {
             onChange={(e) => setEmailLocal(e.target.value.replace(/\s/g, ""))} />
             <Typography variant="h6">@</Typography>
             <TextField size="small" 
-              sx={{ flex: 1 }} value={emailDomain === "custom" ? "" : emailDomain}
+              sx={{ flex: 1 }} value={emailDomain === "custom" ? customDomain : emailDomain}
               onChange={(e) => setCustomDomain(e.target.value.replace(/\s/g, ""))}
               disabled={emailDomain !== "custom"} />
             <Select
