@@ -31,15 +31,15 @@ const iniState = {
 
 
 const serverInitState = {
-  ordererName: '홍',
-  ordererPhone: '111111111111',
-  ordererEmail: 'abc@abc.com',
+  ordererName: '',
+  ordererPhone: '',
+  ordererEmail: '',
   startAddress: '',
   endAddress: '',
   baseCost: '',
   distanceCost: '',
   specialOptionCost: '',
-  totalCost: '1',
+  totalCost: '',
   matchingNo: ''
 
 }
@@ -48,6 +48,7 @@ const OrderComponent = () => {
   const [orderSheet, setOrderSheet] = useState(iniState);
   const { state } = useLocation();
   const matchingNo = state?.matchingNo;
+  
 console.log("🔍 전달된 matchingNo:", matchingNo); // ✅ 이 줄 추가
 
   useEffect(() => {
@@ -122,7 +123,7 @@ console.log("🔍 전달된 matchingNo:", matchingNo); // ✅ 이 줄 추가
             <LabelBox text="휴대전화" />
           </Grid>
           <Grid item sx={{ flex: 1, minWidth: 0, display: "flex", gap: 1 }}>
-            <TextField size="small" sx={{ width: "15%" }} defaultValue="010" inputProps={{ readOnly: true }} />
+            <TextField size="small" sx={{ width: "15%" }} Value="010" inputProps={{ readOnly: true }} />
             <Typography variant="h6">-</Typography>
             <TextField size="small" sx={{ width: "20%" }} inputProps={{ readOnly: true }} />
             <Typography variant="h6">-</Typography>

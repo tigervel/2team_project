@@ -28,23 +28,15 @@ const iniState = {
     provider: ""
 }
 
-const userInit = {
-    addressee: '',
-    phone: '',
-    addresseeEmail: '',
-    startRestAddress: '',
-    endRestAddress: '',
-    matchingNo:''
-}
 
 const OrderPaymentSelect = ({ serverData, orderSheet }) => {
     const { moveToHome } = useCustomMove();
 
     const [paymentType, setPaymentType] = useState(null);
-    const [orderSheetData, setOrderSheetData] = useState(userInit);
+
 
     const handleClick = () => {
-        
+        console.log(serverData.matchingNo)
         const orderData = {
             orderName: (serverData.ordererName),
             totalAmount: Number(serverData?.totalCost ?? 0),
@@ -54,18 +46,20 @@ const OrderPaymentSelect = ({ serverData, orderSheet }) => {
             customerPhone: (serverData.ordererPhone),
             customerEmail: (serverData.ordererEmail),
         }
-        setOrderSheetData(orderSheet);
+      
         requestPayment(orderData).then((res) => {
-           setOrderSheetData((prev)=>({
-            ...prev,
-            matchingNo:(serverData.matchingNo)
-           }))
-           postOrderCreate(orderSheetData).then((data)=>{
+           const payload ={
+            ...orderSheet,
+             matchingNo:Number(serverData.matchingNo)
+           }
+
+           postOrderCreate(payload).then((data)=>{
             console.log(data)
            })
             console.log("결제 완료 : ", res)
             alert("주문이 완료 되었습니다.")
             moveToHome();
+
         }).catch((err) => {
             console.log("결제 실패 : ", err)
         })

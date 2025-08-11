@@ -27,14 +27,11 @@ public class SecurityConfig {
             .requestMatchers("/api/qaboard/**").permitAll() // QABoard API 임시 허용 (JWT 구현 전)
             .requestMatchers("/h2-console/**").permitAll() // H2 Console 허용 (개발 환경용)
 
-<<<<<<< HEAD
+
             .requestMatchers("/g2i4/**").permitAll()
             .requestMatchers("/uploads/**").permitAll()
 
-=======
-            .requestMatchers("/g2i4/**").permitAll() 
-            .requestMatchers("/uploads/**").permitAll() 
->>>>>>> 163ff0561fc9e963c220a286f34a437a6bfea57c
+
             .anyRequest().authenticated()
         );
         return http.build();
