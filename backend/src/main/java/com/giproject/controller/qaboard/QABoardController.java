@@ -56,10 +56,10 @@ public class QABoardController {
 	 */
 	@GetMapping("/posts")
 	public ResponseEntity<PageResponseDTO<QAPostDTO.ListResponse>> getPostList(
-			@RequestParam(name = "category", required = false) String category,
-			@RequestParam(name = "keyword", required = false) String keyword,
-			@RequestParam(name = "page", defaultValue = "0") int page,
-			@RequestParam(name = "size", defaultValue = "10") int size,
+			@RequestParam(value="category", required = false) String category,
+			@RequestParam(value="keyword", required = false) String keyword,
+			@RequestParam(value = "page", defaultValue = "0") int page,
+			@RequestParam(value = "size", defaultValue = "10") int size,
 			@RequestHeader(name = "X-User-Id", required = false) String userId,
 			@RequestHeader(name = "X-User-Name", required = false) String userName) {
 		System.out.println("---------------------여기까지는 옵니다----------------");
@@ -209,7 +209,7 @@ public class QABoardController {
 	 */
 	@GetMapping("/posts/my")
 	public ResponseEntity<PageResponseDTO<QAPostDTO.ListResponse>> getMyPosts(
-			@RequestParam(name="page" ,defaultValue = "0") int page, @RequestParam(name="size",defaultValue = "10") int size,
+			@RequestParam(value="page" ,defaultValue = "0") int page, @RequestParam(value="size",defaultValue = "10") int size,
 			@RequestHeader("X-User-Id") String userId, @RequestHeader("X-User-Name") String userName) {
 
 		// URL 인코딩된 사용자명 디코딩

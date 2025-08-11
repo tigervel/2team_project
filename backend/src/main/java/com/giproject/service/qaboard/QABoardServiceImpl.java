@@ -36,7 +36,7 @@ public class QABoardServiceImpl implements QABoardService {
 
     private final QAPostRepository qaPostRepository;
     private final AdminResponseRepository adminResponseRepository;
-
+    @Transactional
     @Override
     public QAPostDTO createPost(QAPostDTO.CreateRequest createRequest, String authorId, String authorName) {
         log.info("Creating new post by user: {}", authorId);
@@ -77,7 +77,7 @@ public class QABoardServiceImpl implements QABoardService {
         
         return convertToDTO(savedPost, null);
     }
-
+    @Transactional
     @Override
     public PageResponseDTO<QAPostDTO.ListResponse> getPostList(String category, String keyword, 
                                                               Pageable pageable, boolean isAdmin, String currentUserId) {
@@ -139,7 +139,7 @@ public class QABoardServiceImpl implements QABoardService {
         
         return PageResponseDTO.of(postPage, responseList);
     }
-
+    @Transactional
     @Override
     public QAPostDTO getPostDetail(Long postId, String currentUserId, boolean isAdmin) {
         log.info("Getting post detail - postId: {}, userId: {}, isAdmin: {}", postId, currentUserId, isAdmin);
@@ -158,7 +158,7 @@ public class QABoardServiceImpl implements QABoardService {
         
         return convertToDTO(qaPost, adminResponse);
     }
-
+    @Transactional
     @Override
     public QAPostDTO updatePost(Long postId, QAPostDTO.UpdateRequest updateRequest, 
                                String currentUserId, boolean isAdmin) {
@@ -222,7 +222,7 @@ public class QABoardServiceImpl implements QABoardService {
             throw new RuntimeException("게시글 삭제 중 오류가 발생했습니다: " + e.getMessage(), e);
         }
     }
-
+    @Transactional
     @Override
     public PageResponseDTO<QAPostDTO.ListResponse> getMyPosts(String authorId, Pageable pageable) {
         log.info("Getting my posts for user: {}", authorId);
@@ -235,7 +235,7 @@ public class QABoardServiceImpl implements QABoardService {
         
         return PageResponseDTO.of(postPage, responseList);
     }
-
+    @Transactional
     @Override
     public void incrementViewCount(Long postId) {
         qaPostRepository.findById(postId).ifPresent(post -> {
@@ -243,7 +243,7 @@ public class QABoardServiceImpl implements QABoardService {
             qaPostRepository.save(post);
         });
     }
-
+    @Transactional
     @Override
     public boolean hasPostPermission(Long postId, String currentUserId, boolean isAdmin) {
         if (isAdmin) {
@@ -252,7 +252,7 @@ public class QABoardServiceImpl implements QABoardService {
         
         return qaPostRepository.existsByPostIdAndAuthorId(postId, currentUserId);
     }
-
+    @Transactional
     @Override
     public boolean canViewPost(Long postId, String currentUserId, boolean isAdmin) {
         if (isAdmin) {
@@ -330,6 +330,7 @@ public class QABoardServiceImpl implements QABoardService {
     /**
      * QAPost 엔티티를 목록용 ListResponse로 변환
      */
+    @Transactional
     private QAPostDTO.ListResponse convertToListResponse(QAPost qaPost) {
         // 관리자 답변 조회
         AdminResponse adminResponse = adminResponseRepository.findByQaPostPostId(qaPost.getPostId()).orElse(null);
@@ -374,6 +375,7 @@ public class QABoardServiceImpl implements QABoardService {
      * @param authorId 사용자 ID
      * @return 결정된 AuthorType
      */
+    @Transactional
     private AuthorType determineAuthorType(String authorId) {
         if (authorId == null || authorId.trim().isEmpty()) {
             return AuthorType.MEMBER;

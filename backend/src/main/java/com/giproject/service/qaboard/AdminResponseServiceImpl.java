@@ -8,6 +8,7 @@ import com.giproject.entity.qaboard.QAPost;
 import com.giproject.repository.qaboard.AdminResponseRepository;
 import com.giproject.repository.qaboard.QAPostRepository;
 
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 
@@ -26,7 +27,8 @@ public class AdminResponseServiceImpl implements AdminResponseService {
 
     private final AdminResponseRepository adminResponseRepository;
     private final QAPostRepository qaPostRepository;
-
+    
+    @Transactional
     @Override
     public AdminResponseDTO createResponse(Long postId, AdminResponseDTO.CreateRequest createRequest, 
                                           String adminId, String adminName) {
@@ -63,7 +65,7 @@ public class AdminResponseServiceImpl implements AdminResponseService {
         
         return convertToDTO(savedResponse);
     }
-
+    @Transactional
     @Override
     public AdminResponseDTO getResponse(Long postId) {
         log.info("Getting admin response for post: {}", postId);
@@ -73,7 +75,7 @@ public class AdminResponseServiceImpl implements AdminResponseService {
         
         return adminResponse != null ? convertToDTO(adminResponse) : null;
     }
-
+    @Transactional
     @Override
     public AdminResponseDTO updateResponse(Long postId, AdminResponseDTO.UpdateRequest updateRequest, String adminId) {
         log.info("Updating admin response for post: {} by admin: {}", postId, adminId);
@@ -93,7 +95,7 @@ public class AdminResponseServiceImpl implements AdminResponseService {
         
         return convertToDTO(updatedResponse);
     }
-
+    @Transactional
     @Override
     public void deleteResponse(Long postId, String adminId) {
         log.info("Deleting admin response for post: {} by admin: {}", postId, adminId);
@@ -108,12 +110,12 @@ public class AdminResponseServiceImpl implements AdminResponseService {
         adminResponseRepository.delete(adminResponse);
         log.info("Admin response deleted successfully for post: {}", postId);
     }
-
+    @Transactional
     @Override
     public boolean hasResponse(Long postId) {
         return adminResponseRepository.existsByQaPostPostId(postId);
     }
-
+    @Transactional
     @Override
     public boolean hasResponsePermission(Long responseId, String adminId) {
         // 관리자는 모든 답변에 대한 권한을 가짐
