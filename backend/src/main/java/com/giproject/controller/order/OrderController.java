@@ -9,6 +9,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.giproject.dto.order.OrderFormDTO;
+import com.giproject.dto.order.OrderSheetDTO;
+import com.giproject.entity.order.OrderSheet;
 import com.giproject.service.order.OrderService;
 
 import lombok.RequiredArgsConstructor;
@@ -25,5 +27,14 @@ public class OrderController {
 		
 		return ResponseEntity.ok(dto);
 		
+	}
+	
+	@PostMapping("/create")
+	public ResponseEntity<Map<String, Long>> createOrder(@RequestBody OrderSheetDTO dto) {
+		Long no=dto.getMatchingNo();
+		System.out.println(no);
+		OrderSheet sheet=orderService.placeOrderFromPayment(dto);
+		
+		return ResponseEntity.ok(Map.of("Succese",sheet.getOrderNo()));
 	}
 }

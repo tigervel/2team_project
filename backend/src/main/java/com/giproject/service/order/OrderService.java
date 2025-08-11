@@ -42,4 +42,6 @@ public interface OrderService {
 	}
 	
 	public OrderFormDTO loadOrderForm(Long matchingNo);
+	
+	public OrderSheet placeOrderFromPayment(OrderSheetDTO dto);
 }

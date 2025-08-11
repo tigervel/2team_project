@@ -234,7 +234,7 @@ const OrderComponent = () => {
       {/* ===== 결제 섹션 ===== */}
 
 
-    <OrderPaymentSelect serverData={serverData}/>
+    <OrderPaymentSelect serverData={serverData} orderSheet={orderSheet}/>
     </Box>
   );
 }
