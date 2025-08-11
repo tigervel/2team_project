@@ -7,8 +7,10 @@ import {
     TextField,
     Pagination,
     CircularProgress,
+    Button,
 } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
+import axios from "axios";
 
 const FeesBasic = () => {
     const [activeTab, setActiveTab] = useState(0);
@@ -65,7 +67,7 @@ const FeesBasic = () => {
                     <CircularProgress />
                 </Box>
             ) : (
-                <FeesBasicTable />
+                <FeesBasicTable activeTab={activeTab} />
             )}
 
             <Box display="flex" justifyContent="center" mt={3}>
@@ -75,18 +77,46 @@ const FeesBasic = () => {
     );
 };
 
-const FeesBasicTable = () => {
+const FeesBasicTable = ({ activeTab }) => {
     const rows = ["0.5톤", "1톤", "2톤", "3톤", "4톤", "5톤이상"];
-    const columns = ["거리1", "거리2", "거리3", "거리4", "거리5", "거리6"];
+    const columns = ["거리별 요금", "기본 요금"];
 
     const [tableData, setTableData] = useState(
         Array(rows.length).fill(0).map(() => Array(columns.length).fill(""))
     );
 
+    useEffect(() => {
+        const type = activeTab === 0 ? "basic" : "extra";
+        axios.get(`/api/admin/fees/${type}`).then(res => {
+            if (res.data) {
+                setTableData(res.data);
+            }
+        }).catch(error => { // 오류 처리 로직
+            console.error("API 요청 실패:", error);
+        });
+    }, [activeTab]);
+
     const handleChange = (rowIdx, colIdx, value) => {
         const updatedData = [...tableData];
         updatedData[rowIdx][colIdx] = value;
         setTableData(updatedData);
+    };
+
+    const handleSave = async (rowIdx, colIdx) => {
+        const payload = {
+            // 여기도 수정된 부분입니다.
+            type: activeTab === 0 ? "basic" : "extra",
+            category: rows[rowIdx],
+            distance: columns[colIdx],
+            price: Number(tableData[rowIdx][colIdx])
+        };
+
+        try {
+            await axios.post("/api/admin/fees", payload);
+            alert("저장 성공");
+        } catch (error) {
+            alert("저장 실패");
+        }
     };
 
     return (
@@ -120,6 +150,14 @@ const FeesBasicTable = () => {
                     ))}
                 </tbody>
             </table>
+            <Button
+                variant="contained"
+                color="primary"
+                onClick={handleSave}
+                style={{ marginTop: "16px" }}
+            >
+                저장
+            </Button>
         </div>
     );
 };
@@ -142,16 +180,6 @@ const inputStyle = {
     textAlign: "center",
     padding: "4px",
     border: "1px solid #ddd",
-    borderRadius: "4px",
-};
-
-const buttonStyle = {
-    padding: "8px 16px",
-    fontSize: "14px",
-    cursor: "pointer",
-    backgroundColor: "#1976d2",
-    color: "#fff",
-    border: "none",
     borderRadius: "4px",
 };
 
