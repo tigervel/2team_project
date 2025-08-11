@@ -72,6 +72,18 @@ useEffect(() => {
     }));
   };
 
+  const tableColgroup = (
+  <colgroup>
+    <col style={{ width: '10%' }} />  {/* 화물명 */}
+    <col style={{ width: '10%' }} />  {/* 무게 */}
+    <col style={{ width: '26%' }} />  {/* 출발지 - 넓게 */}
+    <col style={{ width: '26%' }} />  {/* 도착지 - 넓게 */}
+    <col style={{ width: '12%' }} />  {/* 배송 시작일 */}
+    <col style={{ width: '8%'  }} />  {/* 운전 기사 */}
+    <col style={{ width: '8%'  }} />  {/* 승인 여부 */}
+  </colgroup>
+);
+
   const renderTableRows = () =>
     serverData.dtoList.length === 0 ? (
       <TableRow>
@@ -110,7 +122,7 @@ useEffect(() => {
 
   return (
     <Box sx={{ bgcolor: '#f7f9fc', minHeight: '100vh', py: 6 }}>
-      <Container maxWidth="md">
+      <Container maxWidth="xl" disableGutters sx={{ px: { xs: 1, sm: 2 } }}>
         <Typography variant="h5" fontWeight="bold" gutterBottom textAlign="center">
           배송 정보 관리
         </Typography>
@@ -122,6 +134,8 @@ useEffect(() => {
           </Typography>
           <TableContainer component={Paper} elevation={1}>
             <Table>
+              {tableColgroup}
+
               <TableHead>
                 <TableRow>
                   <TableCell align="center">화물명</TableCell>
