@@ -15,8 +15,9 @@ public interface MemberService {
     UserResponseDTO getSessionUserInfo(HttpSession session);
     
 	MemberDTO getKakaoMember(String accessToken);
-		
-	void modifyMember(MemberModifyDTO dto);
+	
+    MemberDTO getNaverMember(String accessToken);
+	
 		
 	default MemberDTO entityToDTO(Member member)
 	{

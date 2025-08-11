@@ -8,6 +8,7 @@ import Divider from '@mui/material/Divider';
 import TextField from '@mui/material/TextField';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
+import SNSLoginComponent from "./SNSLoginComponent";
 
 const initState = { id: '', pw: '' };
 
@@ -30,24 +31,6 @@ const LoginComponent = () => {
         moveToPath('/');
       }
     });
-  };
-
-  const socialSignIn = (providerId) => {
-    let url = '';
-    switch (providerId) {
-      case 'google':
-        url = 'http://localhost:8080/oauth2/authorization/google';
-        break;
-      case 'kakao':
-        url = 'http://localhost:8080/oauth2/authorization/kakao';
-        break;
-      case 'naver':
-        url = 'http://localhost:8080/oauth2/authorization/naver';
-        break;
-      default:
-        break;
-    }
-    window.location.href = url;
   };
 
   const ButtonStyle = {
@@ -125,36 +108,7 @@ const LoginComponent = () => {
 
           <Divider sx={{ my: 3 }}>OR</Divider>
 
-          {/* 소셜 로그인 버튼들 */}
-          <Button
-            fullWidth
-            variant="outlined"
-            sx={ButtonStyle}
-            onClick={() => socialSignIn('naver')}
-          >
-            <img src="/assets/naver-icon.png" alt="Naver" style={{ width: 20, height: 20 }} />
-            <span>Sign in with Naver</span>
-          </Button>
-
-          <Button
-            fullWidth
-            variant="outlined"
-            sx={ButtonStyle}
-            onClick={() => socialSignIn('google')}
-          >
-            <img src="/assets/google-icon.png" alt="Google" style={{ width: 20, height: 20 }} />
-            <span>Sign in with Google</span>
-          </Button>
-
-          <Button
-            fullWidth
-            variant="outlined"
-            sx={ButtonStyle}
-            onClick={() => socialSignIn('kakao')}
-          >
-            <img src="/assets/kakao-icon.png" alt="Kakao" style={{ width: 20, height: 20 }} />
-            <span>Sign in with Kakao</span>
-          </Button>
+          <SNSLoginComponent />
         </Box>
       </Box>
     </AppProvider>

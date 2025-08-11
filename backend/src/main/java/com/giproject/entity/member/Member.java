@@ -10,6 +10,7 @@ import java.util.List;
 @Entity
 @Table(name = "Member") // 첫번째 코드에 있었음
 @Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder

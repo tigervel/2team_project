@@ -49,7 +49,7 @@ public class UserInfoController {
         }
     }
     
-    @PutMapping("/user/update")
+    @PutMapping("/update")
     public ResponseEntity<?> updateUser(@RequestBody UpdateUserDTO dto) {
         if ("MEMBER".equals(dto.getUserType())) {
             Member member = memberRepository.findById(dto.getId()).orElseThrow();
@@ -63,5 +63,5 @@ public class UserInfoController {
             cargoOwnerRepository.save(owner);
         }
         return ResponseEntity.ok("수정 완료");
-}
+    }
 }

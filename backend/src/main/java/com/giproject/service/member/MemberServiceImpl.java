@@ -133,8 +133,64 @@ public class MemberServiceImpl implements MemberService {
 	}
 
 	@Override
-	public void modifyMember(MemberModifyDTO dto) {
-		// TODO Auto-generated method stub
-		
+	public MemberDTO getNaverMember(String accessToken) {
+	    String naverUserInfoUrl = "https://openapi.naver.com/v1/nid/me";
+
+	    if (accessToken == null) {
+	        throw new RuntimeException("Access Token is NULL");
+	    }
+
+	    RestTemplate restTemplate = new RestTemplate();
+
+	    HttpHeaders headers = new HttpHeaders();
+	    headers.add("Authorization", "Bearer " + accessToken);
+	    HttpEntity<String> entity = new HttpEntity<>(headers);
+
+	    ResponseEntity<LinkedHashMap> response = restTemplate.exchange(
+	        naverUserInfoUrl,
+	        HttpMethod.GET,
+	        entity,
+	        LinkedHashMap.class);
+
+	    log.info("------------------네이버 인증 서버의 결과 값 : " + response);
+
+	    LinkedHashMap<String, Object> bodyMap = response.getBody();
+
+	    if (bodyMap == null || !"success".equals(bodyMap.get("resultcode"))) {
+	        throw new RuntimeException("네이버 사용자 정보 조회 실패");
+	    }
+
+	    LinkedHashMap<String, Object> responseMap = (LinkedHashMap<String, Object>) bodyMap.get("response");
+
+	    String naverId = (String) responseMap.get("id");
+	    String email = (String) responseMap.get("email");
+	    String name = (String) responseMap.get("name");
+	    String phone = (String) responseMap.get("mobile");
+
+	    // 회원 존재 여부 확인 (Primary Key가 naverId라고 가정)
+	    Optional<Member> existingMember = memberRepository.findById(naverId);
+
+	    Member member;
+
+	    if (existingMember.isPresent()) {
+	        member = existingMember.get();
+	    } else {
+	        // 신규 회원 등록
+	        member = Member.builder()
+	            .memId(naverId)
+	            .memEmail(email)
+	            .memName(name)
+	            .memPhone(phone)
+	            .memPw(passwordEncoder.encode(makeTempPassword())) // 임시 비밀번호 생성
+	            .memCreateIdDateTime(LocalDateTime.now())
+	            .build();
+
+	        memberRepository.save(member);
+	    }
+
+	    return entityToDTO(member);
 	}
+
+
+	
 }
