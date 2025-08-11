@@ -61,10 +61,10 @@ public class QABoardController {
      */
     @GetMapping("/posts")
     public ResponseEntity<PageResponseDTO<QAPostDTO.ListResponse>> getPostList(
-            @RequestParam(required = false) String category,
-            @RequestParam(required = false) String keyword,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(value = "category", required = false) String category,
+            @RequestParam(value = "keyword", required = false) String keyword,
+            @RequestParam(value = "page", defaultValue = "0") int page,
+            @RequestParam(value = "size", defaultValue = "10") int size,
             @RequestHeader(value = "X-User-Id", required = false) String userId,
             @RequestHeader(value = "X-User-Name", required = false) String userName) {
         
@@ -215,8 +215,8 @@ public class QABoardController {
      */
     @GetMapping("/posts/my")
     public ResponseEntity<PageResponseDTO<QAPostDTO.ListResponse>> getMyPosts(
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(value = "page", defaultValue = "0") int page,
+            @RequestParam(value = "size", defaultValue = "10") int size,
             @RequestHeader("X-User-Id") String userId,
             @RequestHeader("X-User-Name") String userName) {
         
