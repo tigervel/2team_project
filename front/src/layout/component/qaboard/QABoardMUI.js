@@ -369,7 +369,9 @@ const QABoardMUI = () => {
 
   const handleSaveEdit = async (updatedItem) => {
     try {
-      const userInfo = createUserInfo(updatedItem.author);
+      console.log('handleSaveEdit called with:', updatedItem);
+      const userInfo = createUserInfo(); // 현재 로그인된 사용자 정보 사용
+      console.log('userInfo:', userInfo);
       
       const updateData = {
         title: updatedItem.title,
@@ -377,6 +379,8 @@ const QABoardMUI = () => {
         category: updatedItem.category,
         isPrivate: updatedItem.isPrivate
       };
+      console.log('updateData:', updateData);
+      console.log('postId:', updatedItem.id);
       
       // API 호출하여 게시글 수정
       const response = await qaboardApi.updatePost(updatedItem.id, updateData, userInfo);
