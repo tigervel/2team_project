@@ -8,7 +8,7 @@ import com.giproject.entity.qaboard.QAPost;
 import com.giproject.repository.qaboard.AdminResponseRepository;
 import com.giproject.repository.qaboard.QAPostRepository;
 
-import jakarta.transaction.Transactional;
+import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 
@@ -65,10 +65,10 @@ public class AdminResponseServiceImpl implements AdminResponseService {
         
         return convertToDTO(savedResponse);
     }
-    @Transactional
     @Override
+    @Transactional(readOnly = true)
     public AdminResponseDTO getResponse(Long postId) {
-        log.info("Getting admin response for post: {}", postId);
+        log.debug("Getting admin response for post: {}", postId);
         
         AdminResponse adminResponse = adminResponseRepository.findByQaPostPostId(postId)
                 .orElse(null);
@@ -110,13 +110,14 @@ public class AdminResponseServiceImpl implements AdminResponseService {
         adminResponseRepository.delete(adminResponse);
         log.info("Admin response deleted successfully for post: {}", postId);
     }
-    @Transactional
     @Override
+    @Transactional(readOnly = true)
     public boolean hasResponse(Long postId) {
         return adminResponseRepository.existsByQaPostPostId(postId);
     }
-    @Transactional
+    
     @Override
+    @Transactional(readOnly = true)
     public boolean hasResponsePermission(Long responseId, String adminId) {
         // 관리자는 모든 답변에 대한 권한을 가짐
         // 실제 구현에서는 관리자 역할 검증이 Controller나 Security 레벨에서 처리됨

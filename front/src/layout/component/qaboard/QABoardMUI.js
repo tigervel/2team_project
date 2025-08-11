@@ -42,6 +42,7 @@ import {
   Visibility,
   Forum
 } from '@mui/icons-material';
+import { CircularProgress } from '@mui/material';
 
 // 새로 추가된 컴포넌트들
 import AdminResponseForm from './AdminResponseForm';
@@ -80,6 +81,7 @@ const QABoardMUI = () => {
   const [editingResponseId, setEditingResponseId] = useState(null);
   const [qaData, setQaData] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
   const [totalPages, setTotalPages] = useState(0);
   const [totalElements, setTotalElements] = useState(0);
 
@@ -98,6 +100,7 @@ const QABoardMUI = () => {
   // API로부터 게시글 목록 조회
   const fetchPostList = async () => {
     setLoading(true);
+    setError(null); // 에러 상태 초기화
     try {
       const params = {
         category: activeCategory,
@@ -139,6 +142,21 @@ const QABoardMUI = () => {
       setTotalElements(response.totalElements);
     } catch (error) {
       console.error('Failed to fetch post list:', error);
+      
+      // 에러 타입에 따른 처리
+      let errorMessage = '게시글을 불러오는 중 오류가 발생했습니다.';
+      if (error.response && error.response.status === 403) {
+        errorMessage = '게시글 조회 권한이 없습니다.';
+        console.warn('Access denied to QA Board');
+      } else if (error.response && error.response.status >= 500) {
+        errorMessage = '서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요.';
+        console.error('Server error occurred');
+      } else if (error.code === 'NETWORK_ERROR') {
+        errorMessage = '네트워크 연결을 확인해주세요.';
+      }
+      
+      setError(errorMessage);
+      
       // 에러 발생 시 빈 배열로 설정
       setQaData([]);
       setTotalPages(0);
@@ -555,8 +573,11 @@ const QABoardMUI = () => {
           {/* Q&A List */}
           <Box mb={3}>
             {loading ? (
-              <Box textAlign="center" py={4}>
-                <Typography>로딩 중...</Typography>
+              <Box display="flex" flexDirection="column" alignItems="center" py={6}>
+                <CircularProgress size={40} sx={{ mb: 2 }} />
+                <Typography variant="body2" color="text.secondary">
+                  게시글을 불러오는 중입니다...
+                </Typography>
               </Box>
             ) : qaData.map((item) => {
               const visibility = getPostVisibility(item, isAdmin, currentUserId);
@@ -727,9 +748,39 @@ const QABoardMUI = () => {
             })}
           </Box>
 
-          {!loading && qaData.length === 0 && (
+          {/* 에러 상태 표시 */}
+          {!loading && error && (
             <Box textAlign="center" py={6}>
-              <Typography color="text.secondary">게시글이 없습니다.</Typography>
+              <Typography color="error" gutterBottom>
+                {error}
+              </Typography>
+              <Button
+                variant="outlined"
+                onClick={fetchPostList}
+                sx={{ mt: 2 }}
+              >
+                다시 시도
+              </Button>
+            </Box>
+          )}
+
+          {/* 빈 상태 표시 */}
+          {!loading && !error && qaData.length === 0 && (
+            <Box textAlign="center" py={6}>
+              <Typography color="text.secondary" variant="h6" gutterBottom>
+                게시글이 없습니다
+              </Typography>
+              <Typography color="text.secondary" variant="body2" sx={{ mb: 2 }}>
+                {searchTerm ? '검색 조건에 맞는 게시글이 없습니다.' : '첫 번째 질문을 작성해보세요!'}
+              </Typography>
+              {!searchTerm && (
+                <Button
+                  variant="contained"
+                  onClick={() => setIsNewInquiryOpen(true)}
+                >
+                  첫 질문 작성하기
+                </Button>
+              )}
             </Box>
           )}
 

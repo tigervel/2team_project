@@ -330,10 +330,9 @@ public class QABoardServiceImpl implements QABoardService {
     /**
      * QAPost 엔티티를 목록용 ListResponse로 변환
      */
-    @Transactional
     private QAPostDTO.ListResponse convertToListResponse(QAPost qaPost) {
-        // 관리자 답변 조회
-        AdminResponse adminResponse = adminResponseRepository.findByQaPostPostId(qaPost.getPostId()).orElse(null);
+        // N+1 문제를 방지하기 위해 adminResponse가 이미 fetch join되었는지 확인
+        AdminResponse adminResponse = qaPost.getAdminResponse();
         boolean hasResponse = adminResponse != null;
         
         // 관리자 답변 DTO 변환
@@ -352,16 +351,16 @@ public class QABoardServiceImpl implements QABoardService {
         return QAPostDTO.ListResponse.builder()
                 .postId(qaPost.getPostId())
                 .title(qaPost.getTitle())
-                .content(qaPost.getContent()) // 게시글 내용 포함
+                .content(qaPost.getContent())
                 .category(qaPost.getCategory().getCode())
                 .isPrivate(qaPost.getIsPrivate())
-                .authorId(qaPost.getAuthorId()) // 작성자 ID 포함
+                .authorId(qaPost.getAuthorId())
                 .authorName(qaPost.getAuthorName())
                 .authorType(qaPost.getAuthorType())
                 .createdAt(qaPost.getCreatedAt())
                 .viewCount(qaPost.getViewCount())
                 .hasResponse(hasResponse)
-                .adminResponse(adminResponseDTO) // 관리자 답변 포함
+                .adminResponse(adminResponseDTO)
                 .build();
     }
     
@@ -375,7 +374,6 @@ public class QABoardServiceImpl implements QABoardService {
      * @param authorId 사용자 ID
      * @return 결정된 AuthorType
      */
-    @Transactional
     private AuthorType determineAuthorType(String authorId) {
         if (authorId == null || authorId.trim().isEmpty()) {
             return AuthorType.MEMBER;

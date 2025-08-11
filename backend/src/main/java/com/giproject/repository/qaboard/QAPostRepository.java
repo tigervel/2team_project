@@ -35,18 +35,32 @@ public interface QAPostRepository extends JpaRepository<QAPost, Long> {
     /**
      * 공개 게시글 목록 조회 (일반 사용자용)
      * 비공개 게시글 제외하고 최신순 정렬
+     * AdminResponse와 함께 Fetch Join으로 N+1 문제 해결
      */
+    @Query("SELECT DISTINCT p FROM QAPost p " +
+           "LEFT JOIN FETCH p.adminResponse " +
+           "WHERE p.isPrivate = false " +
+           "ORDER BY p.createdAt DESC")
     Page<QAPost> findByIsPrivateFalseOrderByCreatedAtDesc(Pageable pageable);
 
     /**
      * 모든 게시글 목록 조회 (관리자용)
      * 공개/비공개 구분 없이 최신순 정렬
+     * AdminResponse와 함께 Fetch Join으로 N+1 문제 해결
      */
+    @Query("SELECT DISTINCT p FROM QAPost p " +
+           "LEFT JOIN FETCH p.adminResponse " +
+           "ORDER BY p.createdAt DESC")
     Page<QAPost> findAllByOrderByCreatedAtDesc(Pageable pageable);
 
     /**
      * 카테고리별 공개 게시글 조회 (일반 사용자용)
+     * AdminResponse와 함께 Fetch Join으로 N+1 문제 해결
      */
+    @Query("SELECT DISTINCT p FROM QAPost p " +
+           "LEFT JOIN FETCH p.adminResponse " +
+           "WHERE p.category = :category AND p.isPrivate = false " +
+           "ORDER BY p.createdAt DESC")
     Page<QAPost> findByCategoryAndIsPrivateFalseOrderByCreatedAtDesc(
         @Param("category") QACategory category, 
         Pageable pageable
@@ -54,7 +68,12 @@ public interface QAPostRepository extends JpaRepository<QAPost, Long> {
 
     /**
      * 카테고리별 모든 게시글 조회 (관리자용)
+     * AdminResponse와 함께 Fetch Join으로 N+1 문제 해결
      */
+    @Query("SELECT DISTINCT p FROM QAPost p " +
+           "LEFT JOIN FETCH p.adminResponse " +
+           "WHERE p.category = :category " +
+           "ORDER BY p.createdAt DESC")
     Page<QAPost> findByCategoryOrderByCreatedAtDesc(
         @Param("category") QACategory category, 
         Pageable pageable
@@ -62,8 +81,10 @@ public interface QAPostRepository extends JpaRepository<QAPost, Long> {
 
     /**
      * 제목/내용 검색 - 공개 게시글만 (일반 사용자용)
+     * AdminResponse와 함께 Fetch Join으로 N+1 문제 해결
      */
-    @Query("SELECT p FROM QAPost p " +
+    @Query("SELECT DISTINCT p FROM QAPost p " +
+           "LEFT JOIN FETCH p.adminResponse " +
            "WHERE p.isPrivate = false " +
            "AND (LOWER(p.title) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
            "OR LOWER(p.content) LIKE LOWER(CONCAT('%', :keyword, '%'))) " +
@@ -72,8 +93,10 @@ public interface QAPostRepository extends JpaRepository<QAPost, Long> {
 
     /**
      * 제목/내용 검색 - 모든 게시글 (관리자용)
+     * AdminResponse와 함께 Fetch Join으로 N+1 문제 해결
      */
-    @Query("SELECT p FROM QAPost p " +
+    @Query("SELECT DISTINCT p FROM QAPost p " +
+           "LEFT JOIN FETCH p.adminResponse " +
            "WHERE LOWER(p.title) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
            "OR LOWER(p.content) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
            "ORDER BY p.createdAt DESC")
@@ -81,8 +104,10 @@ public interface QAPostRepository extends JpaRepository<QAPost, Long> {
 
     /**
      * 카테고리 + 검색 조합 - 공개 게시글만 (일반 사용자용)
+     * AdminResponse와 함께 Fetch Join으로 N+1 문제 해결
      */
-    @Query("SELECT p FROM QAPost p " +
+    @Query("SELECT DISTINCT p FROM QAPost p " +
+           "LEFT JOIN FETCH p.adminResponse " +
            "WHERE p.category = :category " +
            "AND p.isPrivate = false " +
            "AND (LOWER(p.title) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
@@ -96,8 +121,10 @@ public interface QAPostRepository extends JpaRepository<QAPost, Long> {
 
     /**
      * 카테고리 + 검색 조합 - 모든 게시글 (관리자용)
+     * AdminResponse와 함께 Fetch Join으로 N+1 문제 해결
      */
-    @Query("SELECT p FROM QAPost p " +
+    @Query("SELECT DISTINCT p FROM QAPost p " +
+           "LEFT JOIN FETCH p.adminResponse " +
            "WHERE p.category = :category " +
            "AND (LOWER(p.title) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
            "OR LOWER(p.content) LIKE LOWER(CONCAT('%', :keyword, '%'))) " +
@@ -111,7 +138,12 @@ public interface QAPostRepository extends JpaRepository<QAPost, Long> {
     /**
      * 특정 작성자의 게시글 조회 (마이페이지용)
      * 본인이 작성한 게시글 (공개/비공개 모두 포함)
+     * AdminResponse와 함께 Fetch Join으로 N+1 문제 해결
      */
+    @Query("SELECT DISTINCT p FROM QAPost p " +
+           "LEFT JOIN FETCH p.adminResponse " +
+           "WHERE p.authorId = :authorId " +
+           "ORDER BY p.createdAt DESC")
     Page<QAPost> findByAuthorIdOrderByCreatedAtDesc(
         @Param("authorId") String authorId, 
         Pageable pageable
@@ -146,15 +178,20 @@ public interface QAPostRepository extends JpaRepository<QAPost, Long> {
     Optional<String> findAuthorIdByPostId(@Param("postId") Long postId);
 
     // 사용자별 접근 가능한 게시글 검색 (공개 게시글 + 본인 비공개 게시글)
-    @Query("SELECT p FROM QAPost p WHERE " +
-           "(LOWER(p.title) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
+    // AdminResponse와 함께 Fetch Join으로 N+1 문제 해결
+    @Query("SELECT DISTINCT p FROM QAPost p " +
+           "LEFT JOIN FETCH p.adminResponse " +
+           "WHERE (LOWER(p.title) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
            "OR LOWER(p.content) LIKE LOWER(CONCAT('%', :keyword, '%'))) " +
            "AND (p.isPrivate = false OR p.authorId = :userId) " +
            "ORDER BY p.createdAt DESC")
     Page<QAPost> searchAccessiblePosts(@Param("keyword") String keyword, @Param("userId") String userId, Pageable pageable);
     
     // 카테고리별 사용자 접근 가능한 게시글 검색
-    @Query("SELECT p FROM QAPost p WHERE p.category = :category " +
+    // AdminResponse와 함께 Fetch Join으로 N+1 문제 해결
+    @Query("SELECT DISTINCT p FROM QAPost p " +
+           "LEFT JOIN FETCH p.adminResponse " +
+           "WHERE p.category = :category " +
            "AND (LOWER(p.title) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
            "OR LOWER(p.content) LIKE LOWER(CONCAT('%', :keyword, '%'))) " +
            "AND (p.isPrivate = false OR p.authorId = :userId) " +
@@ -165,7 +202,10 @@ public interface QAPostRepository extends JpaRepository<QAPost, Long> {
                                                  Pageable pageable);
     
     // 사용자별 접근 가능한 게시글 목록 (카테고리별)
-    @Query("SELECT p FROM QAPost p WHERE p.category = :category " +
+    // AdminResponse와 함께 Fetch Join으로 N+1 문제 해결
+    @Query("SELECT DISTINCT p FROM QAPost p " +
+           "LEFT JOIN FETCH p.adminResponse " +
+           "WHERE p.category = :category " +
            "AND (p.isPrivate = false OR p.authorId = :userId) " +
            "ORDER BY p.createdAt DESC")
     Page<QAPost> findAccessiblePostsByCategory(@Param("category") QACategory category, 
@@ -173,7 +213,10 @@ public interface QAPostRepository extends JpaRepository<QAPost, Long> {
                                               Pageable pageable);
     
     // 사용자별 접근 가능한 전체 게시글 목록
-    @Query("SELECT p FROM QAPost p WHERE (p.isPrivate = false OR p.authorId = :userId) " +
+    // AdminResponse와 함께 Fetch Join으로 N+1 문제 해결
+    @Query("SELECT DISTINCT p FROM QAPost p " +
+           "LEFT JOIN FETCH p.adminResponse " +
+           "WHERE (p.isPrivate = false OR p.authorId = :userId) " +
            "ORDER BY p.createdAt DESC")
     Page<QAPost> findAccessiblePosts(@Param("userId") String userId, Pageable pageable);
 }

@@ -2,8 +2,6 @@ package com.giproject.service.qaboard;
 
 import com.giproject.dto.qaboard.AdminResponseDTO;
 
-import jakarta.transaction.Transactional;
-
 /**
  * 관리자 답변 서비스 인터페이스
  * 
@@ -11,7 +9,6 @@ import jakarta.transaction.Transactional;
  * - 답변 작성, 수정, 삭제
  * - 관리자 권한 검증
  */
-@Transactional
 public interface AdminResponseService {
 
     /**

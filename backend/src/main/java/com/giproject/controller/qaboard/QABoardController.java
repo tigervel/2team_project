@@ -62,16 +62,8 @@ public class QABoardController {
 			@RequestParam(value = "size", defaultValue = "10") int size,
 			@RequestHeader(name = "X-User-Id", required = false) String userId,
 			@RequestHeader(name = "X-User-Name", required = false) String userName) {
-		System.out.println("---------------------여기까지는 옵니다----------------");
-
 		// URL 인코딩된 사용자명 디코딩
-		if (userName != null) {
-			try {
-				userName = java.net.URLDecoder.decode(userName, "UTF-8");
-			} catch (Exception e) {
-				log.warn("Failed to decode user name: {}", userName);
-			}
-		}
+		userName = decodeUserName(userName);
 
 		log.info("GET /api/qaboard/posts - category: {}, keyword: {}, page: {}, size: {}, userId: {}, userName: {}",
 				category, keyword, page, size, userId, userName);
@@ -81,10 +73,14 @@ public class QABoardController {
 		boolean isAdmin = userId != null && userId.toLowerCase().contains("admin");
 
 		Pageable pageable = PageRequest.of(page, size);
-		PageResponseDTO<QAPostDTO.ListResponse> response = qaBoardService.getPostList(category, keyword, pageable,
-				isAdmin, userId);
-		System.out.println("---------------------여기까지는 옵니다----------------");
-		return ResponseEntity.ok(response);
+		try {
+			PageResponseDTO<QAPostDTO.ListResponse> response = qaBoardService.getPostList(category, keyword, pageable,
+					isAdmin, userId);
+			return ResponseEntity.ok(response);
+		} catch (Exception e) {
+			log.error("Error fetching post list: {}", e.getMessage(), e);
+			throw new RuntimeException("게시글 목록 조회 중 오류가 발생했습니다.", e);
+		}
 	}
 
 	/**
@@ -98,13 +94,7 @@ public class QABoardController {
 			@RequestHeader(value = "X-User-Id", required = false) String userId,
 			@RequestHeader(value = "X-User-Name", required = false) String userName) {
 		// URL 인코딩된 사용자명 디코딩
-		if (userName != null) {
-			try {
-				userName = java.net.URLDecoder.decode(userName, "UTF-8");
-			} catch (Exception e) {
-				log.warn("Failed to decode user name: {}", userName);
-			}
-		}
+		userName = decodeUserName(userName);
 
 		log.info("GET /api/qaboard/posts/{} - userId: {}, userName: {}", postId, userId, userName);
 
@@ -112,11 +102,22 @@ public class QABoardController {
 		boolean isAdmin = userId != null && userId.toLowerCase().contains("admin");
 		String currentUserId = userId != null ? userId : "anonymous";
 
-		// 조회수 증가
-		qaBoardService.incrementViewCount(postId);
+		try {
+			// 조회수 증가
+			qaBoardService.incrementViewCount(postId);
 
-		QAPostDTO response = qaBoardService.getPostDetail(postId, currentUserId, isAdmin);
-		return ResponseEntity.ok(response);
+			QAPostDTO response = qaBoardService.getPostDetail(postId, currentUserId, isAdmin);
+			return ResponseEntity.ok(response);
+		} catch (IllegalArgumentException e) {
+			log.error("Post not found: {}", e.getMessage());
+			throw e;
+		} catch (SecurityException e) {
+			log.error("Access denied for post {}: {}", postId, e.getMessage());
+			throw e;
+		} catch (Exception e) {
+			log.error("Error fetching post detail for postId {}: {}", postId, e.getMessage(), e);
+			throw new RuntimeException("게시글 조회 중 오류가 발생했습니다.", e);
+		}
 	}
 
 	/**
@@ -128,18 +129,22 @@ public class QABoardController {
 	@PostMapping("/posts")
 	public ResponseEntity<QAPostDTO> createPost(@Valid @RequestBody QAPostDTO.CreateRequest createRequest,
 			@RequestHeader("X-User-Id") String authorId, @RequestHeader("X-User-Name") String authorName) {
-		// URL 인코딩된 사용자명 디코딩
-		try {
-			authorName = java.net.URLDecoder.decode(authorName, "UTF-8");
-		} catch (Exception e) {
-			log.warn("Failed to decode author name: {}", authorName);
-		}
+		// URL 인코딩된 작성자명 디코딩
+		authorName = decodeUserName(authorName);
 
 		log.info("POST /api/qaboard/posts - title: {}, authorId: {}, authorName: {}", createRequest.getTitle(),
 				authorId, authorName);
 
-		QAPostDTO response = qaBoardService.createPost(createRequest, authorId, authorName);
-		return ResponseEntity.ok(response);
+		try {
+			QAPostDTO response = qaBoardService.createPost(createRequest, authorId, authorName);
+			return ResponseEntity.ok(response);
+		} catch (IllegalArgumentException e) {
+			log.error("Invalid data for post creation: {}", e.getMessage());
+			throw e;
+		} catch (Exception e) {
+			log.error("Error creating post: {}", e.getMessage(), e);
+			throw new RuntimeException("게시글 작성 중 오류가 발생했습니다.", e);
+		}
 	}
 
 	/**
@@ -154,13 +159,7 @@ public class QABoardController {
 			@Valid @RequestBody QAPostDTO.UpdateRequest updateRequest, @RequestHeader("X-User-Id") String userId,
 			@RequestHeader("X-User-Name") String userName) {
 		// URL 인코딩된 사용자명 디코딩
-		if (userName != null) {
-			try {
-				userName = java.net.URLDecoder.decode(userName, "UTF-8");
-			} catch (Exception e) {
-				log.warn("Failed to decode user name: {}", userName);
-			}
-		}
+		userName = decodeUserName(userName);
 
 		log.info("PUT /api/qaboard/posts/{} - title: {}, userId: {}, userName: {}", postId, updateRequest.getTitle(),
 				userId, userName);
@@ -182,13 +181,7 @@ public class QABoardController {
 	public ResponseEntity<Map<String, String>> deletePost(@PathVariable(name = "postId") Long postId,
 			@RequestHeader("X-User-Id") String userId, @RequestHeader("X-User-Name") String userName) {
 		// URL 인코딩된 사용자명 디코딩
-		if (userName != null) {
-			try {
-				userName = java.net.URLDecoder.decode(userName, "UTF-8");
-			} catch (Exception e) {
-				log.warn("Failed to decode user name: {}", userName);
-			}
-		}
+		userName = decodeUserName(userName);
 
 		log.info("DELETE /api/qaboard/posts/{} - userId: {}, userName: {}", postId, userId, userName);
 
@@ -213,13 +206,7 @@ public class QABoardController {
 			@RequestHeader("X-User-Id") String userId, @RequestHeader("X-User-Name") String userName) {
 
 		// URL 인코딩된 사용자명 디코딩
-		if (userName != null) {
-			try {
-				userName = java.net.URLDecoder.decode(userName, "UTF-8");
-			} catch (Exception e) {
-				log.warn("Failed to decode user name: {}", userName);
-			}
-		}
+		userName = decodeUserName(userName);
 
 		log.info("GET /api/qaboard/posts/my - page: {}, size: {}, userId: {}, userName: {}", page, size, userId,
 				userName);
@@ -242,13 +229,7 @@ public class QABoardController {
 			@Valid @RequestBody AdminResponseDTO.CreateRequest createRequest, @RequestHeader("X-User-Id") String userId,
 			@RequestHeader("X-User-Name") String userName) {
 		// URL 인코딩된 사용자명 디코딩
-		if (userName != null) {
-			try {
-				userName = java.net.URLDecoder.decode(userName, "UTF-8");
-			} catch (Exception e) {
-				log.warn("Failed to decode user name: {}", userName);
-			}
-		}
+		userName = decodeUserName(userName);
 
 		log.info("POST /api/qaboard/posts/{}/response - userId: {}, userName: {}", postId, userId, userName);
 
@@ -292,13 +273,7 @@ public class QABoardController {
 			@Valid @RequestBody AdminResponseDTO.UpdateRequest updateRequest, @RequestHeader("X-User-Id") String userId,
 			@RequestHeader("X-User-Name") String userName) {
 		// URL 인코딩된 사용자명 디코딩
-		if (userName != null) {
-			try {
-				userName = java.net.URLDecoder.decode(userName, "UTF-8");
-			} catch (Exception e) {
-				log.warn("Failed to decode user name: {}", userName);
-			}
-		}
+		userName = decodeUserName(userName);
 
 		log.info("PUT /api/qaboard/posts/{}/response - userId: {}, userName: {}", postId, userId, userName);
 
@@ -322,13 +297,7 @@ public class QABoardController {
 	public ResponseEntity<Map<String, String>> deleteAdminResponse(@PathVariable(name = "postId") Long postId,
 			@RequestHeader("X-User-Id") String userId, @RequestHeader("X-User-Name") String userName) {
 		// URL 인코딩된 사용자명 디코딩
-		if (userName != null) {
-			try {
-				userName = java.net.URLDecoder.decode(userName, "UTF-8");
-			} catch (Exception e) {
-				log.warn("Failed to decode user name: {}", userName);
-			}
-		}
+		userName = decodeUserName(userName);
 
 		log.info("DELETE /api/qaboard/posts/{}/response - userId: {}, userName: {}", postId, userId, userName);
 
@@ -354,6 +323,21 @@ public class QABoardController {
 
 		List<Map<String, String>> categories = qaCategoryService.getAllCategories();
 		return ResponseEntity.ok(categories);
+	}
+
+	/**
+	 * URL 인코딩된 사용자명 디코딩 처리
+	 */
+	private String decodeUserName(String userName) {
+		if (userName == null) {
+			return null;
+		}
+		try {
+			return java.net.URLDecoder.decode(userName, "UTF-8");
+		} catch (Exception e) {
+			log.warn("Failed to decode user name: {}", userName);
+			return userName; // 디코딩 실패 시 원본 반환
+		}
 	}
 
 	/**

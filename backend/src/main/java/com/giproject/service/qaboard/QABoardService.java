@@ -6,8 +6,6 @@ import com.giproject.dto.qaboard.QAPostDTO;
 import com.giproject.dto.qaboard.PageResponseDTO;
 import com.giproject.entity.qaboard.QACategory;
 
-import jakarta.transaction.Transactional;
-
 /**
  * QABoard 서비스 인터페이스
  * 
@@ -17,7 +15,6 @@ import jakarta.transaction.Transactional;
  * - 페이지네이션 및 검색
  * - Entity ↔ DTO 변환
  */
-@Transactional
 public interface QABoardService {
 
     /**
