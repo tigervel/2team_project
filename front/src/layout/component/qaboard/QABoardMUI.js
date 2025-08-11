@@ -751,6 +751,8 @@ const QABoardMUI = () => {
             onClose={() => setIsNewInquiryOpen(false)}
             maxWidth="sm"
             fullWidth
+            disableRestoreFocus={false}
+            keepMounted={false}
           >
             <DialogTitle>새 문의 작성</DialogTitle>
             <DialogContent>
