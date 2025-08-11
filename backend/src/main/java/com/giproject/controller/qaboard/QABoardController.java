@@ -61,10 +61,10 @@ public class QABoardController {
      */
     @GetMapping("/posts")
     public ResponseEntity<PageResponseDTO<QAPostDTO.ListResponse>> getPostList(
-            @RequestParam(required = false) String category,
-            @RequestParam(required = false) String keyword,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(value = "category", required = false) String category,
+            @RequestParam(value = "keyword", required = false) String keyword,
+            @RequestParam(value = "page", defaultValue = "0") int page,
+            @RequestParam(value = "size", defaultValue = "10") int size,
             @RequestHeader(value = "X-User-Id", required = false) String userId,
             @RequestHeader(value = "X-User-Name", required = false) String userName) {
         
@@ -98,7 +98,7 @@ public class QABoardController {
      * @return 게시글 상세 정보
      */
     @GetMapping("/posts/{postId}")
-    public ResponseEntity<QAPostDTO> getPostDetail(@PathVariable Long postId,
+    public ResponseEntity<QAPostDTO> getPostDetail(@PathVariable("postId") Long postId,
                                                   @RequestHeader(value = "X-User-Id", required = false) String userId,
                                                   @RequestHeader(value = "X-User-Name", required = false) String userName) {
         // URL 인코딩된 사용자명 디코딩
@@ -155,7 +155,7 @@ public class QABoardController {
      * @return 수정된 게시글 정보
      */
     @PutMapping("/posts/{postId}")
-    public ResponseEntity<QAPostDTO> updatePost(@PathVariable Long postId,
+    public ResponseEntity<QAPostDTO> updatePost(@PathVariable("postId") Long postId,
                                                @Valid @RequestBody QAPostDTO.UpdateRequest updateRequest,
                                                @RequestHeader("X-User-Id") String userId,
                                                @RequestHeader("X-User-Name") String userName) {
@@ -184,7 +184,7 @@ public class QABoardController {
      * @return 성공 메시지
      */
     @DeleteMapping("/posts/{postId}")
-    public ResponseEntity<Map<String, String>> deletePost(@PathVariable Long postId,
+    public ResponseEntity<Map<String, String>> deletePost(@PathVariable("postId") Long postId,
                                                          @RequestHeader("X-User-Id") String userId,
                                                          @RequestHeader("X-User-Name") String userName) {
         // URL 인코딩된 사용자명 디코딩
@@ -215,8 +215,8 @@ public class QABoardController {
      */
     @GetMapping("/posts/my")
     public ResponseEntity<PageResponseDTO<QAPostDTO.ListResponse>> getMyPosts(
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(value = "page", defaultValue = "0") int page,
+            @RequestParam(value = "size", defaultValue = "10") int size,
             @RequestHeader("X-User-Id") String userId,
             @RequestHeader("X-User-Name") String userName) {
         
@@ -245,7 +245,7 @@ public class QABoardController {
      * @return 생성된 답변 정보
      */
     @PostMapping("/posts/{postId}/response")
-    public ResponseEntity<AdminResponseDTO> createAdminResponse(@PathVariable Long postId,
+    public ResponseEntity<AdminResponseDTO> createAdminResponse(@PathVariable("postId") Long postId,
                                                                @Valid @RequestBody AdminResponseDTO.CreateRequest createRequest,
                                                                @RequestHeader("X-User-Id") String userId,
                                                                @RequestHeader("X-User-Name") String userName) {
@@ -277,7 +277,7 @@ public class QABoardController {
      * @return 답변 정보
      */
     @GetMapping("/posts/{postId}/response")
-    public ResponseEntity<AdminResponseDTO> getAdminResponse(@PathVariable Long postId) {
+    public ResponseEntity<AdminResponseDTO> getAdminResponse(@PathVariable("postId") Long postId) {
         log.info("GET /api/qaboard/posts/{}/response", postId);
         
         AdminResponseDTO response = adminResponseService.getResponse(postId);
@@ -296,7 +296,7 @@ public class QABoardController {
      * @return 수정된 답변 정보
      */
     @PutMapping("/posts/{postId}/response")
-    public ResponseEntity<AdminResponseDTO> updateAdminResponse(@PathVariable Long postId,
+    public ResponseEntity<AdminResponseDTO> updateAdminResponse(@PathVariable("postId") Long postId,
                                                                @Valid @RequestBody AdminResponseDTO.UpdateRequest updateRequest,
                                                                @RequestHeader("X-User-Id") String userId,
                                                                @RequestHeader("X-User-Name") String userName) {
@@ -328,7 +328,7 @@ public class QABoardController {
      * @return 성공 메시지
      */
     @DeleteMapping("/posts/{postId}/response")
-    public ResponseEntity<Map<String, String>> deleteAdminResponse(@PathVariable Long postId,
+    public ResponseEntity<Map<String, String>> deleteAdminResponse(@PathVariable("postId") Long postId,
                                                                   @RequestHeader("X-User-Id") String userId,
                                                                   @RequestHeader("X-User-Name") String userName) {
         // URL 인코딩된 사용자명 디코딩
