@@ -15,14 +15,11 @@ export const getPostList = async (params = {}, userInfo = {}) => {
     queryParams.append('page', page.toString());
     queryParams.append('size', size.toString());
     
-    // 사용자 정보를 헤더에 추가
-    const headers = {};
-    if (userInfo.userId) {
-        headers['X-User-Id'] = userInfo.userId;
-    }
-    if (userInfo.userName) {
-        headers['X-User-Name'] = encodeURIComponent(userInfo.userName || ''); // URL 인코딩으로 한국어 문자 처리
-    }
+    // 사용자 정보를 헤더에 추가 (필수 헤더로 통일)
+    const headers = {
+        'X-User-Id': userInfo.userId || 'anonymous',
+        'X-User-Name': encodeURIComponent(userInfo.userName || '익명') // URL 인코딩으로 한국어 문자 처리
+    };
     
     const url = `${qaHost}/posts?${queryParams.toString()}`;
     const res = await axios.get(url, { headers });
@@ -31,14 +28,11 @@ export const getPostList = async (params = {}, userInfo = {}) => {
 
 // 게시글 상세 조회
 export const getPostDetail = async (postId, userInfo = {}) => {
-    // 사용자 정보를 헤더에 추가
-    const headers = {};
-    if (userInfo.userId) {
-        headers['X-User-Id'] = userInfo.userId;
-    }
-    if (userInfo.userName) {
-        headers['X-User-Name'] = encodeURIComponent(userInfo.userName || ''); // URL 인코딩으로 한국어 문자 처리
-    }
+    // 사용자 정보를 헤더에 추가 (필수 헤더로 통일)
+    const headers = {
+        'X-User-Id': userInfo.userId || 'anonymous',
+        'X-User-Name': encodeURIComponent(userInfo.userName || '익명') // URL 인코딩으로 한국어 문자 처리
+    };
     
     const res = await axios.get(`${qaHost}/posts/${postId}`, { headers });
     return res.data;

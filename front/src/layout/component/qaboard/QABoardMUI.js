@@ -86,6 +86,12 @@ const QABoardMUI = () => {
   const ITEMS_PER_PAGE = 4;
   const FAQ_ITEMS_PER_PAGE = 5;
 
+  // 공통 userInfo 생성 함수
+  const createUserInfo = (defaultUserName = '익명') => ({
+    userId: currentUserId || loginState.memberId || 'anonymous',
+    userName: loginState.nickname || defaultUserName
+  });
+
   const categories = [
     { id: 'all', name: '전체' },
     { id: 'general', name: '일반문의' },
@@ -107,10 +113,7 @@ const QABoardMUI = () => {
       };
       
       // 현재 로그인한 사용자 정보 생성
-      const userInfo = {
-        userId: currentUserId || loginState.memberId || null,
-        userName: loginState.nickname || null
-      };
+      const userInfo = createUserInfo();
       
       const response = await qaboardApi.getPostList(params, userInfo);
       
@@ -220,11 +223,19 @@ const QABoardMUI = () => {
   const startFaqIndex = (currentFaqPage - 1) * FAQ_ITEMS_PER_PAGE;
   const paginatedFaqItems = filteredFaqItems.slice(startFaqIndex, startFaqIndex + FAQ_ITEMS_PER_PAGE);
 
-  const togglePostExpansion = (postId) => {
+  const togglePostExpansion = async (postId) => {
     const newExpanded = new Set(expandedPosts);
     if (newExpanded.has(postId)) {
       newExpanded.delete(postId);
     } else {
+      // 게시글을 처음 열 때 상세 정보 API 호출하여 조회수 증가
+      try {
+        const userInfo = createUserInfo();
+        await qaboardApi.getPostDetail(postId, userInfo);
+        console.log(`조회수 증가: 게시글 ID ${postId}`);
+      } catch (error) {
+        console.error('Failed to fetch post detail for view count:', error);
+      }
       newExpanded.add(postId);
     }
     setExpandedPosts(newExpanded);
@@ -254,10 +265,7 @@ const QABoardMUI = () => {
         isPrivate: newInquiry.isPrivate
       };
       
-      const userInfo = {
-        userId: currentUserId || loginState.memberId || 'anonymous',
-        userName: loginState.nickname || '익명'
-      };
+      const userInfo = createUserInfo();
       
       console.log('Creating post with data:', postData);
       console.log('User info:', userInfo);
@@ -287,10 +295,7 @@ const QABoardMUI = () => {
   const handleDelete = async (itemId) => {
     if (window.confirm('정말 삭제하시겠습니까?')) {
       try {
-        const userInfo = {
-          userId: currentUserId || loginState.memberId || 'user',
-          userName: loginState.nickname || '사용자'
-        };
+        const userInfo = createUserInfo('사용자');
         
         // API 호출하여 게시글 삭제
         const response = await qaboardApi.deletePost(itemId, userInfo);
@@ -320,10 +325,7 @@ const QABoardMUI = () => {
   const handleAdminDelete = async (itemId) => {
     if (window.confirm('관리자 권한으로 이 게시글을 삭제하시겠습니까?\n삭제된 게시글은 복구할 수 없습니다.')) {
       try {
-        const userInfo = {
-          userId: currentUserId || loginState.memberId || 'admin',
-          userName: loginState.nickname || '관리자'
-        };
+        const userInfo = createUserInfo('관리자');
         
         // API 호출하여 게시글 삭제 (관리자 권한)
         const response = await qaboardApi.deletePost(itemId, userInfo);
@@ -345,10 +347,7 @@ const QABoardMUI = () => {
 
   const handleSaveResponseEdit = async (itemId, updatedResponse) => {
     try {
-      const userInfo = {
-        userId: currentUserId || loginState.memberId || 'admin',
-        userName: loginState.nickname || '관리자'
-      };
+      const userInfo = createUserInfo('관리자');
       
       // API 호출하여 관리자 답변 수정
       const response = await qaboardApi.updateAdminResponse(itemId, updatedResponse, userInfo);
@@ -370,10 +369,7 @@ const QABoardMUI = () => {
 
   const handleSaveEdit = async (updatedItem) => {
     try {
-      const userInfo = {
-        userId: currentUserId || loginState.memberId || updatedItem.authorId,
-        userName: loginState.nickname || updatedItem.author
-      };
+      const userInfo = createUserInfo(updatedItem.author);
       
       const updateData = {
         title: updatedItem.title,
@@ -402,10 +398,7 @@ const QABoardMUI = () => {
 
   const handleSubmitAdminResponse = async (responseData) => {
     try {
-      const userInfo = {
-        userId: currentUserId || loginState.memberId || 'admin',
-        userName: loginState.nickname || '관리자'
-      };
+      const userInfo = createUserInfo('관리자');
       
       // API 호출하여 관리자 답변 생성
       const response = await qaboardApi.createAdminResponse(responseData.questionId, responseData, userInfo);
@@ -583,7 +576,10 @@ const QABoardMUI = () => {
                   {!isEditing && (
                     <Card 
                       sx={{ cursor: 'pointer', '&:hover': { boxShadow: 3 } }}
-                      onClick={() => togglePostExpansion(item.id)}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        togglePostExpansion(item.id);
+                      }}
                     >
                       <CardHeader
                         title={
