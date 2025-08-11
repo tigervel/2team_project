@@ -23,9 +23,13 @@ public class SecurityConfig {
         .csrf(csrf -> csrf.disable())
         .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
         .authorizeHttpRequests(auth -> auth
+            .requestMatchers("/api/test").permitAll()
+            .requestMatchers("/api/qaboard/**").permitAll() // QABoard API 임시 허용 (JWT 구현 전)
+            .requestMatchers("/h2-console/**").permitAll() // H2 Console 허용 (개발 환경용)
 
             .requestMatchers("/g2i4/**").permitAll() 
             .requestMatchers("/uploads/**").permitAll() 
+
             .anyRequest().authenticated()
         );
         return http.build();
@@ -36,8 +40,8 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
 
-        // 정확한 origin 명시
-        config.setAllowedOrigins(List.of("http://localhost:3000"));
+        // 정확한 origin 명시 (frontend 포트 추가)
+        config.setAllowedOrigins(List.of("http://localhost:3000", "http://localhost:3002"));
 
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));

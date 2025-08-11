@@ -18,8 +18,8 @@ import { Link } from 'react-router-dom';
 const pages = [
   { label: '견적서 작성', path: '/estimatepage' },
   { label: '운송 접수 사항', path: '/estimatepage/list' },
-  { label: '고객지원', path: '/servicecenterpage' },
-  { label: '문의사항', path: '/servicecenterpage' }
+  { label: '고객지원', path: '/qaboard' },
+  { label: '문의사항', path: '/qaboard' }
 ];
 const settings = [
   { label: '마이페이지', path: '/mypage' },

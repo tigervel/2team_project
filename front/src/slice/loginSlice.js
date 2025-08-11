@@ -4,6 +4,8 @@ import { loginPost } from "../api/memberApi";
 //인증시 사용되는 기본 데이터를 초기화 합니다. 우린 email 을  id 로 사용했으니 email 로 
 const initState={
     email:'',
+    role: 'USER', // 기본값 USER, 관리자는 ADMIN
+    memberId: null, // 로그인된 사용자의 ID
 
 }
 //여기서는 리덕스의 비동기통신 함수를 이용해서 API 의 서버전송 함수를 호출하고, 이에 따른 결과를
@@ -32,7 +34,13 @@ const loginSlice = createSlice({
             console.log(action.payload)
             const data= action.payload;
  
-            return {email:data.email,nickname:data.nickname,pw:data.pw}
+            return {
+                email: data.email,
+                nickname: data.nickname,
+                pw: data.pw,
+                role: data.role || 'USER',
+                memberId: data.memberId || data.id
+            }
 
              //전달된 상태값을 받아서 이를 새로운 상태로 리턴시켜줍니다
         },
@@ -45,7 +53,11 @@ const loginSlice = createSlice({
         builder.addCase(loginPostAsync.fulfilled,(state,action)=>{
             console.log('fulfilld')
             const data = action.payload;
-            return data
+            return {
+                ...data,
+                role: data.role || 'USER',
+                memberId: data.memberId || data.id
+            }
             
         })
         .addCase(loginPostAsync.pending,(state,action)=>{
