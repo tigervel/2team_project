@@ -3,9 +3,11 @@ package com.giproject.service.order;
 import org.springframework.stereotype.Service;
 
 import com.giproject.dto.order.OrderFormDTO;
+import com.giproject.dto.order.OrderSheetDTO;
 import com.giproject.entity.estimate.Estimate;
 import com.giproject.entity.matching.Matching;
 import com.giproject.entity.member.Member;
+import com.giproject.entity.order.OrderSheet;
 import com.giproject.repository.matching.MatchingRepository;
 import com.giproject.repository.order.OrderRepository;
 
@@ -38,6 +40,14 @@ public class OrderServiceImpl implements OrderService{
 				.matchingNo(matchingNo)
 				.build();
 				
+	}
+
+	@Override
+	public OrderSheet placeOrderFromPayment(OrderSheetDTO dto) {
+		Matching matching= matchingRepository.findById(dto.getMatchingNo()).orElseThrow();
+		OrderSheet sheet = dtoToEntity(dto, matching);
+		orderRepository.save(sheet);
+		return sheet;
 	}
 
 }
