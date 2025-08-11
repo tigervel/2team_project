@@ -1,4 +1,5 @@
-import * as PortOne from "@portone/browser-sdk/v2";
+import PortOne from "@portone/browser-sdk/v2";
+
 
 export const requestPayment = async (orderData) => {
     
