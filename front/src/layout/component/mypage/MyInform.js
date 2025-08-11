@@ -95,11 +95,11 @@ const MyInform = () => {
               </Paper>
             </Grid>
 
-            <Grid item xs={12} md={6}>
+            <Grid item xs={14} md={6}>
               <Paper sx={{ p: 2, width:648, height:390}}>
                 <Typography variant="body2" color="text.secondary" align="center" mb={2}>내 문의 내역</Typography>
                 <TableContainer>
-                  <Table size="small" >
+                  <Table size="medium">
                     <TableHead>
                       <TableRow>
                         <TableCell align="center">문의내용</TableCell>
