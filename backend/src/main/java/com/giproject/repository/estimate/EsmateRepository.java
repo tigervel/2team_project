@@ -31,6 +31,6 @@ public interface EsmateRepository extends JpaRepository<Estimate, Long>{
 	
 	@Query("Select e From Estimate e where e.member.memId =:memberId ")
 	public List<Estimate> getMyEstimate(@Param("memberId") String memberId);
-	
+
 	
 }

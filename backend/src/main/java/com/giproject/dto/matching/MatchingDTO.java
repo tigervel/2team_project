@@ -2,6 +2,8 @@ package com.giproject.dto.matching;
 
 import java.time.LocalDateTime;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -18,6 +20,7 @@ public class MatchingDTO {
 	private Long matchNo;
 	private Long eno;
 	private String cargoId;
+	@JsonProperty("isAccepted")
 	private boolean isAccepted;
 	private LocalDateTime acceptedTime;
 	

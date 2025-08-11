@@ -8,7 +8,7 @@ import java.util.List;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 
 @Entity
-@Table(name = "cargo_owner") // ← 테이블 이름도 snake_case
+@Table(name = "cargo_owner")
 @Getter
 @Setter
 @NoArgsConstructor
@@ -36,7 +36,9 @@ public class CargoOwner {
 
     @Column(name = "cargo_created_datetime")
     private LocalDateTime cargoCreateidDateTime;
-
+    @Column(name = "profile_image")
+    private String profileImage;
+    
     @OneToMany(mappedBy = "cargoOwner", cascade = CascadeType.ALL, orphanRemoval = true)
     @JsonManagedReference
     private List<Cargo> cargoList;

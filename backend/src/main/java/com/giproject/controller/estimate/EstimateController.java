@@ -121,5 +121,13 @@ public class EstimateController {
 		
 		return ResponseEntity.ok(dtoList);
 	}
+	@GetMapping("/my-all-list")
+	public ResponseEntity<List<EstimateDTO>> getMyAllEstimateList() {
+	    // 추후 인증 기반으로 수정 예정
+	    String user = "user";
 
+	    List<EstimateDTO> dtoList = estimateService.myEstimateList(user);
+
+	    return ResponseEntity.ok(dtoList);
+	}
 }

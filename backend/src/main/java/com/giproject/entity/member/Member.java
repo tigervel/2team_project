@@ -2,6 +2,7 @@ package com.giproject.entity.member;
 
 import java.time.LocalDateTime;
 
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
@@ -25,7 +26,8 @@ public class Member {
 	private String memPhone;
 	private String memAddress;
 	private LocalDateTime memCreateIdDateTime;
-	
+	@Column(name = "profile_image")
+	private String profileImage;
 	
 	
 	

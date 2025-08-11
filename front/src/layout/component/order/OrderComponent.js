@@ -48,6 +48,7 @@ const OrderComponent = () => {
   const [orderSheet, setOrderSheet] = useState(iniState);
   const { state } = useLocation();
   const matchingNo = state?.matchingNo;
+console.log("🔍 전달된 matchingNo:", matchingNo); // ✅ 이 줄 추가
 
   useEffect(() => {
     if (matchingNo) {

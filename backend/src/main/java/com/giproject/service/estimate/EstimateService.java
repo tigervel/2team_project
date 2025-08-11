@@ -55,4 +55,6 @@ public interface EstimateService {
 	List<EstimateDTO> getSaveEstimate(String memberId);
 	
 	List<EstimateDTO> myEstimateList(String memberId);
+
+	
 }

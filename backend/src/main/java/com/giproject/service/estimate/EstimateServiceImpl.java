@@ -20,6 +20,7 @@ import lombok.extern.log4j.Log4j2;
 @Service
 @RequiredArgsConstructor
 @Log4j2
+
 public class EstimateServiceImpl implements EstimateService{
 	private final EsmateRepository esmateRepository;
 	private final MatchingRepository matchingRepository;
@@ -74,14 +75,26 @@ public class EstimateServiceImpl implements EstimateService{
 
 	@Override
 	public List<EstimateDTO> myEstimateList(String memberId) {
-		List<Estimate> esList = esmateRepository.getMyEstimate(memberId);
-		
-		return esList.stream()
-				.map(this::entityToDTO)
-				.collect(Collectors.toList());
+	    List<Estimate> esList = esmateRepository.getMyEstimate(memberId);
+	    log.info("myEstimateList() 진입 - 조회 결과 수: {}", esList.size());
+
+	    return esList.stream().map(estimate -> {
+	        if (estimate.getMember() == null) {
+	            log.warn("estimate {} 의 member가 null입니다", estimate.getEno());
+	        }
+
+	        EstimateDTO dto = entityToDTO(estimate);
+
+	        // ✅ matching 여부 조회
+	        Optional<Boolean> isAcceptedOpt = matchingRepository.findIsAcceptedByEstimateNo(estimate.getEno());
+	        dto.setAccepted(isAcceptedOpt.orElse(false)); // null이면 false 처리
+
+	        log.info("DTO 변환 성공: {} (isAccepted: {})", dto.getEno(), dto.isAccepted());
+	        Optional<Long> matchingNoOpt = matchingRepository.findMatchingNoByEstimateNo(estimate.getEno());
+	        dto.setMatchingNo(matchingNoOpt.orElse(null));
+	        return dto;
+	    }).collect(Collectors.toList());
 	}
-	
 	
 
 }
-

@@ -38,8 +38,6 @@ public class Matching {
 	@ManyToOne
 	@JoinColumn(name = "cargo_id")
 	private CargoOwner cargoOwner;
-	
-	
 	private boolean isAccepted;
 	private LocalDateTime acceptedTime;
 	
@@ -52,8 +50,5 @@ public class Matching {
 	}
 	public void changeCargoOwner(CargoOwner cargoOwner) {
 		this.cargoOwner = cargoOwner;
-	}
-	
-	
-	
+	}	
 }
