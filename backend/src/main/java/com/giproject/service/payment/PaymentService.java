@@ -30,4 +30,5 @@ public interface PaymentService {
 		
 		return payment;
 	}
+	public Payment acceptedPayment(Long orderStheetDTO , PaymentDTO dto);
 }

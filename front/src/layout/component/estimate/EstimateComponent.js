@@ -20,7 +20,7 @@ import { calculateDistanceBetweenAddresses } from "../common/calculateDistanceBe
 
 
 
-
+const tomorrowStart = dayjs().add(1, "day").hour(9).minute(0).second(0).millisecond(0);
 
 const SPECIAL_NOTE_OPTIONS = [
   { label: "냉동식품 및 유제품", cost: 300000 },
@@ -32,7 +32,7 @@ const initState = {
   endAddress: '',
   cargoType: '',
   cargoWeight: '',
-  startTime: dayjs(),
+  startTime: tomorrowStart,
   totalCost: 0,
   distanceKm: '',
   baseCost:0,
@@ -256,7 +256,7 @@ const EstimateComponent = () => {
                 label="예약 시간"
                 name='startTime'
                 value={estimate.startTime}
-                minDateTime={tomorrow}
+                minDateTime={tomorrowStart}
                 shouldDisableDate={(data) => {
                   return isBeforeMinDateTime(data.hour(9))
                 }}
