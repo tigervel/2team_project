@@ -1,18 +1,59 @@
 package com.giproject.service.member;
 
 import com.giproject.dto.common.UserResponseDTO;
+import com.giproject.dto.member.MemberDTO;
+import com.giproject.dto.secure.MemberModifyDTO;
+import com.giproject.dto.secure.MemberRole;
 import com.giproject.entity.member.Member;
 import com.giproject.repository.member.MemberRepository;
 
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.log4j.Log4j2;
+
+import java.time.LocalDateTime;
+import java.util.LinkedHashMap;
+import java.util.Optional;
+
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestTemplate;
+import org.springframework.web.util.UriComponents;
+import org.springframework.web.util.UriComponentsBuilder;
 
 @Service
 @RequiredArgsConstructor
+@Log4j2
 public class MemberServiceImpl implements MemberService {
 
     private final MemberRepository memberRepository;
+    private final PasswordEncoder passwordEncoder;
+	
+	private String makeTempPassword()
+	{
+		StringBuffer sb = new StringBuffer();
+		for(int i = 0; i < 10; i++)
+		{
+			sb.append((char)((int)(Math.random() * 55) + 65));
+		}
+		return sb.toString();
+	}
+    
+	private Member makeSocialMember(String email) {
+	    String tempPass = makeTempPassword();
+	    String nickName = email.split("@")[0]; // 이메일 앞부분을 닉네임 기본값
+
+	    return Member.builder()
+	            .memEmail(email) // 소셜 로그인은 이메일만 저장
+	            .memPw(passwordEncoder.encode(tempPass))
+	            .memName(nickName)
+	            .memCreateIdDateTime(LocalDateTime.now())
+	            .build();
+	}
 
     @Override
     public UserResponseDTO getSessionUserInfo(HttpSession session) {
@@ -27,4 +68,129 @@ public class MemberServiceImpl implements MemberService {
             member.getMemCreateIdDateTime()
         );
     }
+
+	@Override
+	public MemberDTO getKakaoMember(String accessToken) {
+		String email = getEmailFromKakaoAccessToken(accessToken);
+		
+		log.info("Email : " + email);
+		
+		Optional<Member> res = memberRepository.findById(email);
+		
+		if(!res.isEmpty())
+		{
+			// 기존 회원이 SNS 로 로그인
+			MemberDTO dto = entityToDTO(res.get());
+			
+			return dto;
+		}
+		
+		// 기존 회원이 아닌 경우 임의의 닉네임과 암호를 전송
+		Member snsMember = makeSocialMember(email);
+		memberRepository.save(snsMember);
+		
+		MemberDTO dto = entityToDTO(snsMember);
+		
+		return dto;
+	}
+	
+	private String getEmailFromKakaoAccessToken(String accessToken)
+	{
+		String kakaoAccessURL = "https://kapi.kakao.com/v2/user/me";
+		
+		if(accessToken == null)
+		{
+			throw new RuntimeException("Access Token is NULL");
+		}
+		
+		RestTemplate restTemplate = new RestTemplate();
+		
+		// 메서드를 이용해서 target rest 서버에 header 정보와 body 를 세팅
+		HttpHeaders headers = new HttpHeaders();
+		headers.add("Authorization", "Bearer " + accessToken);
+		headers.add("Content-Type", "application/x-www-form-urlencoded");
+		HttpEntity<String> entity = new HttpEntity<String>(headers);
+		
+		UriComponents uriComponents = UriComponentsBuilder.fromHttpUrl(kakaoAccessURL).build();
+		
+		ResponseEntity<LinkedHashMap> response = restTemplate
+				.exchange(uriComponents.toString(), 
+						HttpMethod.GET, 
+						entity, 
+						LinkedHashMap.class);
+		
+		log.info("------------------카카오 인증 서버의 결과 값 : " + response);
+		
+		LinkedHashMap<String, LinkedHashMap> bodyMap = response.getBody();
+		
+		log.info("사용자의 허용 정보 : " + bodyMap);
+		
+		LinkedHashMap<String, String> kakaoAccount = bodyMap.get("kakao_account");
+		
+		log.info("카카오 계정 정보 : " + kakaoAccount);
+		
+		return kakaoAccount.get("email");
+	}
+
+	@Override
+	public MemberDTO getNaverMember(String accessToken) {
+	    String naverUserInfoUrl = "https://openapi.naver.com/v1/nid/me";
+
+	    if (accessToken == null) {
+	        throw new RuntimeException("Access Token is NULL");
+	    }
+
+	    RestTemplate restTemplate = new RestTemplate();
+
+	    HttpHeaders headers = new HttpHeaders();
+	    headers.add("Authorization", "Bearer " + accessToken);
+	    HttpEntity<String> entity = new HttpEntity<>(headers);
+
+	    ResponseEntity<LinkedHashMap> response = restTemplate.exchange(
+	        naverUserInfoUrl,
+	        HttpMethod.GET,
+	        entity,
+	        LinkedHashMap.class);
+
+	    log.info("------------------네이버 인증 서버의 결과 값 : " + response);
+
+	    LinkedHashMap<String, Object> bodyMap = response.getBody();
+
+	    if (bodyMap == null || !"success".equals(bodyMap.get("resultcode"))) {
+	        throw new RuntimeException("네이버 사용자 정보 조회 실패");
+	    }
+
+	    LinkedHashMap<String, Object> responseMap = (LinkedHashMap<String, Object>) bodyMap.get("response");
+
+	    String naverId = (String) responseMap.get("id");
+	    String email = (String) responseMap.get("email");
+	    String name = (String) responseMap.get("name");
+	    String phone = (String) responseMap.get("mobile");
+
+	    // 회원 존재 여부 확인 (Primary Key가 naverId라고 가정)
+	    Optional<Member> existingMember = memberRepository.findById(naverId);
+
+	    Member member;
+
+	    if (existingMember.isPresent()) {
+	        member = existingMember.get();
+	    } else {
+	        // 신규 회원 등록
+	        member = Member.builder()
+	            .memId(naverId)
+	            .memEmail(email)
+	            .memName(name)
+	            .memPhone(phone)
+	            .memPw(passwordEncoder.encode(makeTempPassword())) // 임시 비밀번호 생성
+	            .memCreateIdDateTime(LocalDateTime.now())
+	            .build();
+
+	        memberRepository.save(member);
+	    }
+
+	    return entityToDTO(member);
+	}
+
+
+	
 }

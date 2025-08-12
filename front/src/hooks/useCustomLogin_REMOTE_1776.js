@@ -16,16 +16,7 @@ const useCustomLogin = ()=>{
     //로그인 상태 변수 선언
    const loginState= useSelector(state=> state.login);
 
-
-
-    
-    // 권한 확인 함수들
-    const isAdmin = loginState.role === 'ADMIN'; // 관리자 권한 확인
-    const isUser = loginState.role === 'USER'; // 일반 사용자 권한 확인
-    const currentUserId = loginState.memberId; // 현재 로그인한 사용자 ID
-
    const isLogin = loginState.email?true:false;//로그인 여부
-
 
     //로그인 처리 함수 정의
    const doLogin= async(loginParam)=>{
@@ -43,25 +34,9 @@ const useCustomLogin = ()=>{
 const moveToLogin = () => {
    navigate('/member/login', { replace: true });
 };
-
-     const moveToLoginReturn =()=>{//로그인 페이지로 이동하는 컴포넌트
-        return <Navigate replace to={"/member/login"}/>
-     }
-     return{
-        loginState,
-        isLogin,
-        doLogin,
-        doLogout,
-        moveToLogin,
-        moveToPath,
-        moveToLoginReturn,
-        // 새로 추가된 권한 관련 함수들
-        isAdmin,
-        isUser,
-        currentUserId
-     }
-
-  
-
+   const moveToLoginReturn =()=>{//로그인 페이지로 이동하는 컴포넌트
+      return <Navigate replace to={"/member/login"}/>
+   }
+   return{loginState,isLogin,doLogin,doLogout,moveToLogin,moveToPath,moveToLoginReturn}
 }
 export default useCustomLogin;

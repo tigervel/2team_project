@@ -58,21 +58,21 @@ public class UserInfoController {
         }
     }
     
-    @PutMapping("/update")
-    public ResponseEntity<?> updateUser(@RequestBody UpdateUserDTO dto) {
-        if ("MEMBER".equals(dto.getUserType())) {
-            Member member = memberRepository.findById(dto.getId()).orElseThrow();
-            member.setMemName(dto.getName());
-            member.setMemAddress(dto.getAddress());
-            memberRepository.save(member);
-        } else if ("CARGO_OWNER".equals(dto.getUserType())) {
-            CargoOwner owner = cargoOwnerRepository.findById(dto.getId()).orElseThrow();
-            owner.setCargoName(dto.getName());
-            owner.setCargoAddress(dto.getAddress());
-            cargoOwnerRepository.save(owner);
-        }
-        return ResponseEntity.ok("수정 완료");
-    }  
+//    @PutMapping("/update")
+//    public ResponseEntity<?> updateUser(@RequestBody UpdateUserDTO dto) {
+//        if ("MEMBER".equals(dto.getUserType())) {
+//            Member member = memberRepository.findById(dto.getId()).orElseThrow();
+//            member.setMemName(dto.getName());
+//            member.setMemAddress(dto.getAddress());
+//            memberRepository.save(member);
+//        } else if ("CARGO_OWNER".equals(dto.getUserType())) {
+//            CargoOwner owner = cargoOwnerRepository.findById(dto.getId()).orElseThrow();
+//            owner.setCargoName(dto.getName());
+//            owner.setCargoAddress(dto.getAddress());
+//            cargoOwnerRepository.save(owner);
+//        }
+//        return ResponseEntity.ok("수정 완료");
+//    }  
     @PostMapping("/upload-image")
     public ResponseEntity<?> uploadProfileImage(
             @RequestParam("image") MultipartFile file,
@@ -101,7 +101,7 @@ public class UserInfoController {
             // DB 저장
             if ("MEMBER".equals(userType)) {
                 Member member = memberRepository.findById(id).orElseThrow();
-                member.setProfileImage(savedFilename);
+                //member.setProfileImage(savedFilename);
                 memberRepository.save(member);
             } else if ("CARGO_OWNER".equals(userType)) {
                 CargoOwner owner = cargoOwnerRepository.findById(id).orElseThrow();

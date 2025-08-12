@@ -36,7 +36,6 @@ public class QABoardServiceImpl implements QABoardService {
 
     private final QAPostRepository qaPostRepository;
     private final AdminResponseRepository adminResponseRepository;
-    @Transactional
     @Override
     @Transactional
     public QAPostDTO createPost(QAPostDTO.CreateRequest createRequest, String authorId, String authorName) {
@@ -159,7 +158,6 @@ public class QABoardServiceImpl implements QABoardService {
         
         return convertToDTO(qaPost, adminResponse);
     }
-    @Transactional
     @Override
     @Transactional
     public QAPostDTO updatePost(Long postId, QAPostDTO.UpdateRequest updateRequest, 
@@ -237,7 +235,6 @@ public class QABoardServiceImpl implements QABoardService {
         
         return PageResponseDTO.of(postPage, responseList);
     }
-    @Transactional
     @Override
     @Transactional
     public void incrementViewCount(Long postId) {

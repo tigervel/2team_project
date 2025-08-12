@@ -48,14 +48,15 @@ public class AdminMemberServiceImpl implements AdminMemberService {
     }
     
     private MemberDTO convertToDto(Member member) {
-        return MemberDTO.builder()
-                .memId(member.getMemId())
-                .memEmail(member.getMemEmail())
-                .memName(member.getMemName())
-                .memPhone(member.getMemPhone())
-                .memAddress(member.getMemAddress())
-                .memCreateIdDateTime(member.getMemCreateIdDateTime())
-                .build();
+    	MemberDTO dto = new MemberDTO(member.getMemId()
+    			,member.getMemPw()
+    			, member.getMemEmail(), 
+    			member.getMemName(), member.getMemPhone(), 
+    			member.getMemAddress(), member.getMemCreateIdDateTime(), 
+    			member.getMemberRoleList());
+    	
+    	
+        return dto;
     }
 
 }
