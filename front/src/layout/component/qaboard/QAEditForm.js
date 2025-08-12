@@ -51,17 +51,23 @@ const QAEditForm = ({ item, categories, onSave, onCancel, isVisible }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    if (!formData.title.trim()) {
+    // 프론트엔드 검증 강화
+    if (!formData.title || !formData.title.trim()) {
       setError('제목을 입력해주세요.');
       return;
     }
 
-    if (!formData.content.trim()) {
+    if (formData.title.trim().length > 200) {
+      setError('제목은 200자 이내로 입력해주세요.');
+      return;
+    }
+
+    if (!formData.content || !formData.content.trim()) {
       setError('내용을 입력해주세요.');
       return;
     }
 
-    if (!formData.category) {
+    if (!formData.category || formData.category.trim() === '') {
       setError('카테고리를 선택해주세요.');
       return;
     }
@@ -70,19 +76,28 @@ const QAEditForm = ({ item, categories, onSave, onCancel, isVisible }) => {
     setError('');
 
     try {
+      // 데이터 검증 및 정규화
       const updatedItem = {
         ...item,
         title: formData.title.trim(),
         content: formData.content.trim(),
-        category: formData.category,
-        isPrivate: formData.isPrivate,
+        category: formData.category.trim(),
+        isPrivate: Boolean(formData.isPrivate), // 명시적 Boolean 변환
         lastModified: new Date().toISOString().split('T')[0]
       };
       
-      console.log('QAEditForm - Calling onSave with:', updatedItem);
+      // 상세한 디버깅 로그
+      console.log('QAEditForm - 전송할 데이터 검증:');
+      console.log('  - Title:', `"${updatedItem.title}" (${updatedItem.title.length}자)`);
+      console.log('  - Content:', `"${updatedItem.content.substring(0, 50)}..." (${updatedItem.content.length}자)`);
+      console.log('  - Category:', `"${updatedItem.category}"`);
+      console.log('  - IsPrivate:', updatedItem.isPrivate, typeof updatedItem.isPrivate);
+      console.log('  - ID:', updatedItem.id);
+      
       await onSave(updatedItem);
     } catch (err) {
-      setError('수정 중 오류가 발생했습니다.');
+      console.error('QAEditForm - 수정 중 오류:', err);
+      setError(`수정 중 오류가 발생했습니다: ${err.message || '알 수 없는 오류'}`);
     } finally {
       setIsSubmitting(false);
     }

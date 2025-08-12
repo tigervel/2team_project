@@ -95,6 +95,25 @@ public class QAPostDTO {
         
         @Builder.Default
         private Boolean isPrivate = false;
+        
+        // 세터 메서드에서 null 값 처리 추가
+        public void setIsPrivate(Boolean isPrivate) {
+            this.isPrivate = isPrivate != null ? isPrivate : false;
+        }
+        
+        // 카테고리 trim 처리
+        public void setCategory(String category) {
+            this.category = category != null ? category.trim() : null;
+        }
+        
+        // 제목과 내용 trim 처리
+        public void setTitle(String title) {
+            this.title = title != null ? title.trim() : null;
+        }
+        
+        public void setContent(String content) {
+            this.content = content != null ? content.trim() : null;
+        }
     }
     
     /**

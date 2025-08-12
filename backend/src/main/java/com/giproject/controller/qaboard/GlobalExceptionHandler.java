@@ -77,21 +77,31 @@ public class GlobalExceptionHandler {
      */
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<Map<String, Object>> handleValidationException(MethodArgumentNotValidException e) {
-        log.warn("Validation error: {}", e.getMessage());
+        log.error("Validation error occurred: {}", e.getMessage());
         
         Map<String, Object> errorResponse = new HashMap<>();
         Map<String, String> fieldErrors = new HashMap<>();
         
-        // 필드별 에러 메시지 수집
+        // 필드별 에러 메시지 수집 및 상세 로깅
         e.getBindingResult().getAllErrors().forEach(error -> {
             String fieldName = ((FieldError) error).getField();
             String errorMessage = error.getDefaultMessage();
+            Object rejectedValue = ((FieldError) error).getRejectedValue();
+            
             fieldErrors.put(fieldName, errorMessage);
+            
+            // 상세한 검증 실패 로깅
+            log.error("Validation failed for field '{}': {} (rejected value: '{}')", 
+                     fieldName, errorMessage, rejectedValue);
         });
+        
+        // 추가 컨텍스트 정보 로깅
+        log.error("Total validation errors: {}", fieldErrors.size());
+        log.error("Request object: {}", e.getBindingResult().getTarget());
         
         errorResponse.put("status", HttpStatus.BAD_REQUEST.value());
         errorResponse.put("error", "Validation Failed");
-        errorResponse.put("message", "입력값 검증에 실패했습니다.");
+        errorResponse.put("message", "입력값 검증에 실패했습니다. 입력 데이터를 확인해주세요.");
         errorResponse.put("fieldErrors", fieldErrors);
         errorResponse.put("timestamp", System.currentTimeMillis());
         
