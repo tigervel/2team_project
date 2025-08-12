@@ -33,8 +33,9 @@ public class EstimateServiceImpl implements EstimateService{
 		
 		Member member= esmateRepository.getMemId(dto.getMemberId()).orElseThrow();
 		Estimate estimate= DTOToEntity(dto,member);
-		esmateRepository.save(estimate);
 		
+		esmateRepository.save(estimate);
+		estimate.changeIsTemp(false);
 		Matching matching = Matching.builder()
 				.estimate(estimate)
 				.isAccepted(false)
