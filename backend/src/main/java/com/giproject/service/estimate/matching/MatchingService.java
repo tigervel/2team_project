@@ -21,7 +21,6 @@ public interface MatchingService {
 				.estimate(estimate)
 				.isAccepted(dto.isAccepted());
 
-
 		if (dto.isAccepted()) {
 			builder.acceptedTime(LocalDateTime.now());
 		}

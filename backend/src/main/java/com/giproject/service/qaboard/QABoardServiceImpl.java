@@ -38,6 +38,7 @@ public class QABoardServiceImpl implements QABoardService {
     private final AdminResponseRepository adminResponseRepository;
     @Transactional
     @Override
+    @Transactional
     public QAPostDTO createPost(QAPostDTO.CreateRequest createRequest, String authorId, String authorName) {
         log.info("Creating new post by user: {}", authorId);
         
@@ -160,6 +161,7 @@ public class QABoardServiceImpl implements QABoardService {
     }
     @Transactional
     @Override
+    @Transactional
     public QAPostDTO updatePost(Long postId, QAPostDTO.UpdateRequest updateRequest, 
                                String currentUserId, boolean isAdmin) {
         log.info("Updating post - postId: {}, userId: {}, isAdmin: {}", postId, currentUserId, isAdmin);
@@ -237,6 +239,7 @@ public class QABoardServiceImpl implements QABoardService {
     }
     @Transactional
     @Override
+    @Transactional
     public void incrementViewCount(Long postId) {
         qaPostRepository.findById(postId).ifPresent(post -> {
             post.incrementViewCount();

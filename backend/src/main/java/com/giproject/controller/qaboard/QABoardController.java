@@ -45,6 +45,7 @@ public class QABoardController {
 	private final AdminResponseService adminResponseService;
 	private final QACategoryService qaCategoryService;
 
+<<<<<<< HEAD
 	/**
 	 * 게시글 목록 조회
 	 * 
@@ -67,11 +68,86 @@ public class QABoardController {
 
 		log.info("GET /api/qaboard/posts - category: {}, keyword: {}, page: {}, size: {}, userId: {}, userName: {}",
 				category, keyword, page, size, userId, userName);
+=======
+    /**
+     * 게시글 목록 조회
+     * 
+     * @param category 카테고리 필터 (선택)
+     * @param keyword 검색어 (선택)
+     * @param page 페이지 번호 (0부터 시작, 기본값: 0)
+     * @param size 페이지 크기 (기본값: 10)
+     * @return 페이지네이션된 게시글 목록
+     */
+    @GetMapping("/posts")
+    public ResponseEntity<PageResponseDTO<QAPostDTO.ListResponse>> getPostList(
+            @RequestParam(value = "category", required = false) String category,
+            @RequestParam(value = "keyword", required = false) String keyword,
+            @RequestParam(value = "page", defaultValue = "0") int page,
+            @RequestParam(value = "size", defaultValue = "10") int size,
+            @RequestHeader(value = "X-User-Id", required = false) String userId,
+            @RequestHeader(value = "X-User-Name", required = false) String userName) {
+        
+        // URL 인코딩된 사용자명 디코딩
+        if (userName != null) {
+            try {
+                userName = java.net.URLDecoder.decode(userName, "UTF-8");
+            } catch (Exception e) {
+                log.warn("Failed to decode user name: {}", userName);
+            }
+        }
+        
+        log.info("GET /api/qaboard/posts - category: {}, keyword: {}, page: {}, size: {}, userId: {}, userName: {}", 
+                 category, keyword, page, size, userId, userName);
+        
+        // TODO: JWT 토큰에서 사용자 정보 추출
+        // 현재는 테스트용으로 userId로 관리자 권한 판단
+        boolean isAdmin = userId != null && userId.toLowerCase().contains("admin");
+        
+        Pageable pageable = PageRequest.of(page, size);
+        PageResponseDTO<QAPostDTO.ListResponse> response = 
+                qaBoardService.getPostList(category, keyword, pageable, isAdmin, userId);
+        
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * 게시글 상세 조회
+     * 
+     * @param postId 게시글 ID
+     * @return 게시글 상세 정보
+     */
+    @GetMapping("/posts/{postId}")
+    public ResponseEntity<QAPostDTO> getPostDetail(@PathVariable("postId") Long postId,
+                                                  @RequestHeader(value = "X-User-Id", required = false) String userId,
+                                                  @RequestHeader(value = "X-User-Name", required = false) String userName) {
+        // URL 인코딩된 사용자명 디코딩
+        if (userName != null) {
+            try {
+                userName = java.net.URLDecoder.decode(userName, "UTF-8");
+            } catch (Exception e) {
+                log.warn("Failed to decode user name: {}", userName);
+            }
+        }
+        
+        log.info("GET /api/qaboard/posts/{} - userId: {}, userName: {}", postId, userId, userName);
+        
+        // 사용자 정보에 따른 권한 설정
+        boolean isAdmin = userId != null && userId.toLowerCase().contains("admin");
+        String currentUserId = userId != null ? userId : "anonymous";
+        
+        // 조회수 증가
+        qaBoardService.incrementViewCount(postId);
+        
+        QAPostDTO response = qaBoardService.getPostDetail(postId, currentUserId, isAdmin);
+        return ResponseEntity.ok(response);
+    }
+>>>>>>> 5c3497f58cf8987046af14513e6baf6ca5aec3b4
 
 		// TODO: JWT 토큰에서 사용자 정보 추출
 		// 현재는 테스트용으로 userId로 관리자 권한 판단
 		boolean isAdmin = userId != null && userId.toLowerCase().contains("admin");
 
+<<<<<<< HEAD
 		Pageable pageable = PageRequest.of(page, size);
 		try {
 			PageResponseDTO<QAPostDTO.ListResponse> response = qaBoardService.getPostList(category, keyword, pageable,
@@ -131,6 +207,213 @@ public class QABoardController {
 			@RequestHeader("X-User-Id") String authorId, @RequestHeader("X-User-Name") String authorName) {
 		// URL 인코딩된 작성자명 디코딩
 		authorName = decodeUserName(authorName);
+=======
+    /**
+     * 게시글 수정
+     * 
+     * @param postId 게시글 ID
+     * @param updateRequest 게시글 수정 요청 데이터
+     * @return 수정된 게시글 정보
+     */
+    @PutMapping("/posts/{postId}")
+    public ResponseEntity<QAPostDTO> updatePost(@PathVariable("postId") Long postId,
+                                               @Valid @RequestBody QAPostDTO.UpdateRequest updateRequest,
+                                               @RequestHeader("X-User-Id") String userId,
+                                               @RequestHeader("X-User-Name") String userName) {
+        // URL 인코딩된 사용자명 디코딩
+        if (userName != null) {
+            try {
+                userName = java.net.URLDecoder.decode(userName, "UTF-8");
+            } catch (Exception e) {
+                log.warn("Failed to decode user name: {}", userName);
+            }
+        }
+        
+        log.info("PUT /api/qaboard/posts/{} - title: {}, userId: {}, userName: {}", postId, updateRequest.getTitle(), userId, userName);
+        
+        // 사용자 정보에 따른 권한 설정
+        boolean isAdmin = userId != null && userId.toLowerCase().contains("admin");
+        
+        QAPostDTO response = qaBoardService.updatePost(postId, updateRequest, userId, isAdmin);
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * 게시글 삭제
+     * 
+     * @param postId 게시글 ID
+     * @return 성공 메시지
+     */
+    @DeleteMapping("/posts/{postId}")
+    public ResponseEntity<Map<String, String>> deletePost(@PathVariable("postId") Long postId,
+                                                         @RequestHeader("X-User-Id") String userId,
+                                                         @RequestHeader("X-User-Name") String userName) {
+        // URL 인코딩된 사용자명 디코딩
+        if (userName != null) {
+            try {
+                userName = java.net.URLDecoder.decode(userName, "UTF-8");
+            } catch (Exception e) {
+                log.warn("Failed to decode user name: {}", userName);
+            }
+        }
+        
+        log.info("DELETE /api/qaboard/posts/{} - userId: {}, userName: {}", postId, userId, userName);
+        
+        // 사용자 정보에 따른 권한 설정
+        boolean isAdmin = userId != null && userId.toLowerCase().contains("admin");
+        
+        qaBoardService.deletePost(postId, userId, isAdmin);
+        
+        return ResponseEntity.ok(Map.of("message", "게시글이 성공적으로 삭제되었습니다."));
+    }
+
+    /**
+     * 내가 작성한 게시글 조회 (마이페이지용)
+     * 
+     * @param page 페이지 번호
+     * @param size 페이지 크기
+     * @return 내 게시글 목록
+     */
+    @GetMapping("/posts/my")
+    public ResponseEntity<PageResponseDTO<QAPostDTO.ListResponse>> getMyPosts(
+            @RequestParam(value = "page", defaultValue = "0") int page,
+            @RequestParam(value = "size", defaultValue = "10") int size,
+            @RequestHeader("X-User-Id") String userId,
+            @RequestHeader("X-User-Name") String userName) {
+        
+        // URL 인코딩된 사용자명 디코딩
+        if (userName != null) {
+            try {
+                userName = java.net.URLDecoder.decode(userName, "UTF-8");
+            } catch (Exception e) {
+                log.warn("Failed to decode user name: {}", userName);
+            }
+        }
+        
+        log.info("GET /api/qaboard/posts/my - page: {}, size: {}, userId: {}, userName: {}", page, size, userId, userName);
+        
+        Pageable pageable = PageRequest.of(page, size);
+        PageResponseDTO<QAPostDTO.ListResponse> response = qaBoardService.getMyPosts(userId, pageable);
+        
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * 관리자 답변 작성
+     * 
+     * @param postId 게시글 ID
+     * @param createRequest 답변 작성 요청 데이터
+     * @return 생성된 답변 정보
+     */
+    @PostMapping("/posts/{postId}/response")
+    public ResponseEntity<AdminResponseDTO> createAdminResponse(@PathVariable("postId") Long postId,
+                                                               @Valid @RequestBody AdminResponseDTO.CreateRequest createRequest,
+                                                               @RequestHeader("X-User-Id") String userId,
+                                                               @RequestHeader("X-User-Name") String userName) {
+        // URL 인코딩된 사용자명 디코딩
+        if (userName != null) {
+            try {
+                userName = java.net.URLDecoder.decode(userName, "UTF-8");
+            } catch (Exception e) {
+                log.warn("Failed to decode user name: {}", userName);
+            }
+        }
+        
+        log.info("POST /api/qaboard/posts/{}/response - userId: {}, userName: {}", postId, userId, userName);
+        
+        // 관리자 권한 확인
+        boolean isAdmin = userId != null && userId.toLowerCase().contains("admin");
+        if (!isAdmin) {
+            throw new RuntimeException("관리자 권한이 필요합니다.");
+        }
+        
+        AdminResponseDTO response = adminResponseService.createResponse(postId, createRequest, userId, userName);
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * 관리자 답변 조회
+     * 
+     * @param postId 게시글 ID
+     * @return 답변 정보
+     */
+    @GetMapping("/posts/{postId}/response")
+    public ResponseEntity<AdminResponseDTO> getAdminResponse(@PathVariable("postId") Long postId) {
+        log.info("GET /api/qaboard/posts/{}/response", postId);
+        
+        AdminResponseDTO response = adminResponseService.getResponse(postId);
+        if (response == null) {
+            return ResponseEntity.notFound().build();
+        }
+        
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * 관리자 답변 수정
+     * 
+     * @param postId 게시글 ID
+     * @param updateRequest 답변 수정 요청 데이터
+     * @return 수정된 답변 정보
+     */
+    @PutMapping("/posts/{postId}/response")
+    public ResponseEntity<AdminResponseDTO> updateAdminResponse(@PathVariable("postId") Long postId,
+                                                               @Valid @RequestBody AdminResponseDTO.UpdateRequest updateRequest,
+                                                               @RequestHeader("X-User-Id") String userId,
+                                                               @RequestHeader("X-User-Name") String userName) {
+        // URL 인코딩된 사용자명 디코딩
+        if (userName != null) {
+            try {
+                userName = java.net.URLDecoder.decode(userName, "UTF-8");
+            } catch (Exception e) {
+                log.warn("Failed to decode user name: {}", userName);
+            }
+        }
+        
+        log.info("PUT /api/qaboard/posts/{}/response - userId: {}, userName: {}", postId, userId, userName);
+        
+        // 관리자 권한 확인
+        boolean isAdmin = userId != null && userId.toLowerCase().contains("admin");
+        if (!isAdmin) {
+            throw new RuntimeException("관리자 권한이 필요합니다.");
+        }
+        
+        AdminResponseDTO response = adminResponseService.updateResponse(postId, updateRequest, userId);
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * 관리자 답변 삭제
+     * 
+     * @param postId 게시글 ID
+     * @return 성공 메시지
+     */
+    @DeleteMapping("/posts/{postId}/response")
+    public ResponseEntity<Map<String, String>> deleteAdminResponse(@PathVariable("postId") Long postId,
+                                                                  @RequestHeader("X-User-Id") String userId,
+                                                                  @RequestHeader("X-User-Name") String userName) {
+        // URL 인코딩된 사용자명 디코딩
+        if (userName != null) {
+            try {
+                userName = java.net.URLDecoder.decode(userName, "UTF-8");
+            } catch (Exception e) {
+                log.warn("Failed to decode user name: {}", userName);
+            }
+        }
+        
+        log.info("DELETE /api/qaboard/posts/{}/response - userId: {}, userName: {}", postId, userId, userName);
+        
+        // 관리자 권한 확인
+        boolean isAdmin = userId != null && userId.toLowerCase().contains("admin");
+        if (!isAdmin) {
+            throw new RuntimeException("관리자 권한이 필요합니다.");
+        }
+        
+        adminResponseService.deleteResponse(postId, userId);
+        
+        return ResponseEntity.ok(Map.of("message", "답변이 성공적으로 삭제되었습니다."));
+    }
+>>>>>>> 5c3497f58cf8987046af14513e6baf6ca5aec3b4
 
 		log.info("POST /api/qaboard/posts - title: {}, authorId: {}, authorName: {}", createRequest.getTitle(),
 				authorId, authorName);

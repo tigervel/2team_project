@@ -85,7 +85,7 @@ public class EstimateServiceImpl implements EstimateService{
 
 	        EstimateDTO dto = entityToDTO(estimate);
 
-	        // ✅ matching 여부 조회
+	        // matching 여부 조회
 	        Optional<Boolean> isAcceptedOpt = matchingRepository.findIsAcceptedByEstimateNo(estimate.getEno());
 	        dto.setAccepted(isAcceptedOpt.orElse(false)); // null이면 false 처리
 

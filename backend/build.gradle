@@ -49,3 +49,8 @@ compileJava {
 tasks.named('test') {
 	useJUnitPlatform()
 }
+
+// 컴파일 시 파라미터 이름 정보 보존 (다른 환경에서의 400 에러 방지)
+tasks.withType(JavaCompile) {
+	options.compilerArgs += ['-parameters']
+}

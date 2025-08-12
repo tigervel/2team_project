@@ -78,7 +78,8 @@ const QAEditForm = ({ item, categories, onSave, onCancel, isVisible }) => {
         isPrivate: formData.isPrivate,
         lastModified: new Date().toISOString().split('T')[0]
       };
-
+      
+      console.log('QAEditForm - Calling onSave with:', updatedItem);
       await onSave(updatedItem);
     } catch (err) {
       setError('수정 중 오류가 발생했습니다.');

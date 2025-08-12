@@ -31,7 +31,7 @@ public class Member {
 	
 	
 	
-	void changeMemPw(String memPw) {
+	public void changeMemPw(String memPw) {
 		this.memPw = memPw;
 	}
 	

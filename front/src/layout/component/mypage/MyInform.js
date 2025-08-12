@@ -1,13 +1,27 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import Chart from 'chart.js/auto';
 import {
   Box, Grid, Paper, Typography,
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow
 } from '@mui/material';
+import { getMyAllEstimateList } from '../../../api/estimateApi/estimateApi';
 
 const MyInform = () => {
   const chartRef = useRef(null);
   const chartInstanceRef = useRef(null);
+
+  const [totalOrders, setTotalOrders] = useState(0); // 총 주문건수 state
+
+  useEffect(() => {
+    // 백엔드에서 목록 가져오기
+    getMyAllEstimateList({ page: 1, size: 1000 }) // 페이지 크게 해서 전체 가져오기
+      .then((data) => {
+        setTotalOrders(data.length); // 목록 개수를 총 주문건수로
+      })
+      .catch((err) => {
+        console.error("총 주문건수 불러오기 실패:", err);
+      });
+  }, []);
 
   useEffect(() => {
     const ctx = chartRef.current.getContext('2d');
@@ -43,13 +57,9 @@ const MyInform = () => {
     };
   }, []);
 
-  const ownerId = 1; // 예시: 차량 관리 노출 조건
-
   return (
     <Box sx={{ display: 'flex' }}>
-        
       <Box sx={{ flexGrow: 1 , px : 0}}>
-
         <Box sx={{ p: 4, bgcolor: '#f3f4f6' }}>
           <Typography variant="h5" fontWeight="bold" gutterBottom>
             배송 정보 관리
@@ -58,7 +68,7 @@ const MyInform = () => {
           {/* 상태 카드 */}
           <Grid container spacing={2} mb={4}>
             {[
-              ['총 주문건수', '15건'],
+              ['총 주문건수', `${totalOrders}건`], // 백엔드 데이터 반영
               ['배송 중', '2건'],
               ['배송 완료', '13건'],
               ['취소/중단', '0건'],
@@ -85,11 +95,11 @@ const MyInform = () => {
               </Paper>
             </Grid>
 
-            <Grid item xs={12} md={6}>
+            <Grid item xs={14} md={6}>
               <Paper sx={{ p: 2, width:648, height:390}}>
                 <Typography variant="body2" color="text.secondary" align="center" mb={2}>내 문의 내역</Typography>
                 <TableContainer>
-                  <Table size="small" >
+                  <Table size="medium">
                     <TableHead>
                       <TableRow>
                         <TableCell align="center">문의내용</TableCell>
@@ -117,29 +127,6 @@ const MyInform = () => {
               </Paper>
             </Grid>
           </Grid>
-
-          {/* 지난 배송 내역 */}
-          <Paper sx={{ p: 2 }}>
-            <Typography variant="body2" color="text.secondary" mb={2}>지난 배송 내역</Typography>
-            <Grid container spacing={2}>
-              {[
-                ['충주 → 부산', '4.5M'],
-                ['서울', '2.3M'],
-                ['대구', '2M'],
-                ['Germany', '1.7M'],
-                ['Romania', '1.6M'],
-                ['Japan', '1.2M'],
-                ['Netherlands', '1M'],
-              ].map(([location, value], idx) => (
-                <Grid item xs={6} sm={3} key={idx}>
-                  <Box display="flex" justifyContent="space-between">
-                    <Typography variant="body2">{location}</Typography>
-                    <Typography variant="body2" fontWeight="bold">{value}</Typography>
-                  </Box>
-                </Grid>
-              ))}
-            </Grid>
-          </Paper>
         </Box>
       </Box>
     </Box>
