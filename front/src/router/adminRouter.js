@@ -26,22 +26,27 @@ const adminRouter = () => {
             element: <Suspense fallback={loading}><DeliveryPage /></Suspense>,
         },
         {
+            //전체회원
             path: "memberAll",
             element: <Suspense fallback={loading}><MemberAll /></Suspense>,
         },
         {
+            //화주
             path: "memberOwner",
             element: <Suspense fallback={loading}><MemberOwner /></Suspense>,
         },
         {
+            //차주
             path: "memberCowner",
             element: <Suspense fallback={loading}><MemberCowner /></Suspense>,
         },
         {
+            //신고내역
             path: "memberReport",
             element: <Suspense fallback={loading}><MemberReport /></Suspense>,
         },
         {
+            //관리자관리
             path: "memberAdmin",
             element: <Suspense fallback={loading}><MemberAdmin /></Suspense>,
         },

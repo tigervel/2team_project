@@ -22,6 +22,7 @@ import {
 
 import PersonIcon from '@mui/icons-material/Person';
 
+//const HEADER_HEIGHT = 100;
 const drawerWidth = 260;
 
 const AdminSidebar = () => {
@@ -78,10 +79,12 @@ const AdminSidebar = () => {
           width: drawerWidth,
           boxSizing: "border-box",
           backgroundColor: "#f9fafb",
+          
         },
       }}
     >
-      <Box sx={{ p: 2, textAlign: "center" }}>
+    <Box sx={{ paddingTop: "100px" }}>
+      <Box sx={{ p: 2, textAlign: "center"}}>
         <Typography variant="h6" fontWeight="bold" gutterBottom>
           관리자 페이지
         </Typography>
@@ -98,59 +101,60 @@ const AdminSidebar = () => {
         </Avatar>
       </Box>
 
-      <List disablePadding>
-        {groups.map((group) =>
-          group.items ? (
-            <Box key={group.title}>
-              <ListItemButton onClick={() => handleToggle(group.title)}>
+        <List disablePadding>
+          {groups.map((group) =>
+            group.items ? (
+              <Box key={group.title}>
+                <ListItemButton onClick={() => handleToggle(group.title)}>
+                  {group.icon && <ListItemIcon>{group.icon}</ListItemIcon>}
+                  <ListItemText primary={group.title} />
+                  {openGroups[group.title] ? <ExpandLess /> : <ExpandMore />}
+                </ListItemButton>
+                <Collapse in={openGroups[group.title]} timeout="auto" unmountOnExit>
+                  <List component="div" disablePadding>
+                    {group.items.map((item) => {
+                      const active = location.pathname === item.path;
+                      return (
+                        <ListItemButton
+                          key={item.label}
+                          component={Link}
+                          to={item.path}
+                          selected={active}
+                          sx={{ pl: 4 }}
+                        >
+                          <ListItemText
+                            primary={item.label}
+                            primaryTypographyProps={{
+                              fontWeight: active ? 700 : 400,
+                              color: active ? "primary.main" : "text.primary",
+                            }}
+                          />
+                        </ListItemButton>
+                      );
+                    })}
+                  </List>
+                </Collapse>
+              </Box>
+            ) : (
+              <ListItemButton
+                key={group.title}
+                component={Link}
+                to={group.path}
+                selected={location.pathname === group.path}
+              >
                 {group.icon && <ListItemIcon>{group.icon}</ListItemIcon>}
-                <ListItemText primary={group.title} />
-                {openGroups[group.title] ? <ExpandLess /> : <ExpandMore />}
+                <ListItemText
+                  primary={group.title}
+                  primaryTypographyProps={{
+                    fontWeight: location.pathname === group.path ? 700 : 400,
+                    color: location.pathname === group.path ? "primary.main" : "text.primary",
+                  }}
+                />
               </ListItemButton>
-              <Collapse in={openGroups[group.title]} timeout="auto" unmountOnExit>
-                <List component="div" disablePadding>
-                  {group.items.map((item) => {
-                    const active = location.pathname === item.path;
-                    return (
-                      <ListItemButton
-                        key={item.label}
-                        component={Link}
-                        to={item.path}
-                        selected={active}
-                        sx={{ pl: 4 }}
-                      >
-                        <ListItemText
-                          primary={item.label}
-                          primaryTypographyProps={{
-                            fontWeight: active ? 700 : 400,
-                            color: active ? "primary.main" : "text.primary",
-                          }}
-                        />
-                      </ListItemButton>
-                    );
-                  })}
-                </List>
-              </Collapse>
-            </Box>
-          ) : (
-            <ListItemButton
-              key={group.title}
-              component={Link}
-              to={group.path}
-              selected={location.pathname === group.path}
-            >
-              {group.icon && <ListItemIcon>{group.icon}</ListItemIcon>}
-              <ListItemText
-                primary={group.title}
-                primaryTypographyProps={{
-                  fontWeight: location.pathname === group.path ? 700 : 400,
-                  color: location.pathname === group.path ? "primary.main" : "text.primary",
-                }}
-              />
-            </ListItemButton>
-          )
-        )}
-      </List>
+            )
+          )}
+        </List>
+        </Box>
     </Drawer>
   );
 };
