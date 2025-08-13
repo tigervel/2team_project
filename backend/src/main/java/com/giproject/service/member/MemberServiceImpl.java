@@ -13,7 +13,9 @@ import lombok.extern.log4j.Log4j2;
 
 import java.time.LocalDateTime;
 import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -32,6 +34,7 @@ public class MemberServiceImpl implements MemberService {
 
     private final MemberRepository memberRepository;
     private final PasswordEncoder passwordEncoder;
+    private final GoogleOAuthService googleOAuthService;
 	
 	private String makeTempPassword()
 	{
@@ -191,6 +194,36 @@ public class MemberServiceImpl implements MemberService {
 	    return entityToDTO(member);
 	}
 
+	@Override
+    public MemberDTO getGoogleMember(String accessToken) {
+        // 1) 구글 사용자 정보 조회
+        Map<String, Object> profile = googleOAuthService.getUserProfile(accessToken);
 
-	
+        String email = (String) profile.get("email");
+        String name = (String) profile.get("name");
+
+        // 2) 이메일로 회원 조회 또는 신규 회원 생성
+        Member member = memberRepository.findByMemEmail(email)
+            .orElseGet(() -> {
+                Member newMember = Member.builder()
+                    .memId(UUID.randomUUID().toString())
+                    .memEmail(email)
+                    .memName(name)
+                    .social(true)  // 소셜 로그인 유저 표시용 필드
+                    .build();
+                return memberRepository.save(newMember);
+            });
+
+        // 3) DTO 변환 후 반환
+        return new MemberDTO(
+            member.getMemId(),
+            null,
+            member.getMemEmail(),
+            member.getMemName(),
+            member.getMemPhone(),
+            member.getMemAddress(),
+            member.getMemCreateIdDateTime(),
+            member.getMemberRoleList()
+        );
+    }
 }

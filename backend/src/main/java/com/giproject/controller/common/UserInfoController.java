@@ -26,6 +26,7 @@ import com.giproject.repository.cargo.CargoOwnerRepository;
 import com.giproject.repository.member.MemberRepository;
 import com.giproject.service.cargoowner.CargoOwnerService;
 import com.giproject.service.member.MemberService;
+import com.giproject.service.member.MemberServiceImpl;
 
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
@@ -39,7 +40,7 @@ public class UserInfoController {
     private final CargoOwnerRepository cargoOwnerRepository;
     private final MemberService memberService;
     private final CargoOwnerService cargoOwnerService;
-
+    private final MemberServiceImpl memberServiceImpl;
 
     @GetMapping("/info")
     public ResponseEntity<?> getUserInfo(HttpSession session) {

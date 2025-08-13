@@ -5,14 +5,10 @@
   "dependencies": {
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.1",
-    "@mui/icons-material": "^7.2.0",
+    "@mui/icons-material": "^7.3.1",
     "@mui/material": "^7.3.0",
-
     "@mui/x-date-pickers": "6.13.0",
     "@portone/browser-sdk": "^0.0.24",
-
- 
-
     "@reduxjs/toolkit": "^2.8.2",
     "@testing-library/dom": "^10.4.0",
     "@testing-library/jest-dom": "^6.6.3",

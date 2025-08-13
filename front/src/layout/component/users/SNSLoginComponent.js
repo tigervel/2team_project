@@ -2,28 +2,31 @@ import { Link } from "react-router-dom";
 import { getKakaoLogin } from "../../../api/getKakaoLoginLink";
 import { Button } from "@mui/material";
 import { getNaverLogin } from "../../../api/getNaverLoginLink";
+import { getGoogleLogin } from "../../../api/getGoogleLoginLink";
 
 const naverLoginData = getNaverLogin(); // { url, state }
-    const kakaoLoginUrl = getKakaoLogin();  // 문자열 URL
 
-    const socialSignIn = (providerId) => {
-        let url = "";
-        switch (providerId) {
-            case "google":
-                // 구글은 별도 처리 (필요시 URL 작성)
-                url = "http://localhost:3000/oauth2/authorization/google";
-                break;
-            case "kakao":
-                url = kakaoLoginUrl;
-                break;
-            case "naver":
-                url = naverLoginData.url;
-                break;
-            default:
-                break;
-        }
-        window.location.href = url;
-    };
+const kakaoLoginUrl = getKakaoLogin();  // 문자열 URL
+
+const googleLoginData = getGoogleLogin(); // { url, state }
+
+const socialSignIn = (providerId) => {
+    let url = "";
+    switch (providerId) {
+        case "google":
+            url = googleLoginData.url;
+            break;
+        case "kakao":
+            url = kakaoLoginUrl;
+            break;
+        case "naver":
+            url = naverLoginData.url;
+            break;
+        default:
+            break;
+    }
+    window.location.href = url;
+};
 
 
 const ButtonStyle = {
@@ -39,6 +42,7 @@ const ButtonStyle = {
 const SNSLoginComponent = () => {
     const kakaolink = getKakaoLogin();
     const naverlink = getNaverLogin();
+    const googlelink = getGoogleLogin();
 
     return(
         <>
@@ -72,7 +76,7 @@ const SNSLoginComponent = () => {
                 sx={ButtonStyle}
                 onClick={() => socialSignIn('google')}
             >
-                <Link to={naverlink} style={{ display: 'flex', alignItems: 'center', gap: 8, textDecoration: 'none', color: 'inherit' }}>
+                <Link to={googlelink} style={{ display: 'flex', alignItems: 'center', gap: 8, textDecoration: 'none', color: 'inherit' }}>
                     <img src="/assets/google-icon.png" alt="Google" style={{ width: 20, height: 20 }} />
                     <span>Sign in with Google</span>
                 </Link>

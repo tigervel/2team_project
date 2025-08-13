@@ -3,6 +3,7 @@ package com.giproject.controller;
 import com.giproject.dto.member.MemberDTO;
 import com.giproject.entity.member.Member;
 import com.giproject.repository.member.MemberRepository;
+import com.giproject.service.member.GoogleOAuthService;
 import com.giproject.service.member.MemberService;
 import com.giproject.service.member.NaverOAuthService;
 import com.giproject.utils.JWTUtil;
@@ -27,6 +28,7 @@ public class MemberController {
     private final MemberRepository memberRepository;
     private final MemberService memberService;
     private final NaverOAuthService naverOAuthService;
+    private final GoogleOAuthService googleOAuthService;
 
     // 로그인된 사용자 정보 조회
     @GetMapping("/info")
@@ -82,5 +84,24 @@ public class MemberController {
         // 3) 회원가입 / 로그인 처리 로직 추가 가능
 
         return userProfile; // 임시로 사용자 정보 반환
+    }
+    
+    @GetMapping("/google/callback")
+    public Map<String, Object> googleCallback(@RequestParam("code") String code) {
+        // 1) 인가 코드로 액세스 토큰 발급
+        String accessToken = googleOAuthService.getAccessToken(code);
+
+        // 2) 액세스 토큰으로 회원 정보 조회 및 DTO 반환
+        MemberDTO dto = memberService.getGoogleMember(accessToken);
+
+        // 3) JWT 토큰 생성
+        Map<String, Object> claims = dto.getClaims();
+        String jwtAccessToken = JWTUtil.generateToken(claims, 10 * 6);
+        String jwtRefreshToken = JWTUtil.generateToken(claims, 60 * 24);
+
+        claims.put("accessToken", jwtAccessToken);
+        claims.put("refreshToken", jwtRefreshToken);
+
+        return claims;
     }
 }
