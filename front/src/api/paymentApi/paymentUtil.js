@@ -5,10 +5,9 @@ export const requestPayment = async (orderData) => {
     const base = {
         storeId: "store-23f6498b-4582-4677-8d04-a3da559439f0",
         channelKey: orderData.channelKey,
-        paymentId: `${crypto.randomUUID()}`,
+        paymentId: orderData.paymentId,
         orderName: orderData.orderName,
         totalAmount: Number(orderData.totalAmount),
-    
         currency: "KRW",
         payMethod: orderData.payMethod,
         customer: {

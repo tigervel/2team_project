@@ -15,12 +15,13 @@ import {
 import { requestPayment } from "../../../api/paymentApi/paymentUtil";
 import useCustomMove from "../../../hooks/useCustomMove";
 import { postOrderCreate } from "../../../api/orderAPI/orderApi";
+import { acceptedPayment } from "../../../api/paymentApi/paymentApi";
+import { useNavigate } from "react-router-dom";
 
 const CHANNELS = {
-    CARD: "channel-key-3d19f1f1-7177-4ed0-addd-cf0e2f225912",
+    TOSSPAYMENTS: "channel-key-3d19f1f1-7177-4ed0-addd-cf0e2f225912",
     TOSS: "channel-key-480547ae-0d47-46fb-bd42-b41a7c102111",
     KAKAO: "channel-key-aaecd5d1-a431-49b8-b800-930a6fdb89c1",
-    PAYCO: "channel-key-7890bbb8-e709-49e4-b2a2-3e11cae3fe54",
 }
 const iniState = {
     payMethod: "",
@@ -29,53 +30,56 @@ const iniState = {
 }
 
 
+
 const OrderPaymentSelect = ({ serverData, orderSheet }) => {
-    const { moveToHome } = useCustomMove();
-    const [orderNo, setOrderNo] = useState("")
+    const navigate = useNavigate();
     const [paymentType, setPaymentType] = useState(null);
-      const [orderType, setOrderType] = useState(iniState);
+    const [orderType, setOrderType] = useState(iniState);
 
     const handleClick = async () => {
         try {
             // 1) 선택 검증
-            if (!orderType.channelKey || !orderType.payMethod) {
-                alert("결제 수단을 선택해주세요.");
-                return;
-            }
-            if (!serverData?.totalCost) {
-                alert("결제 금액이 유효하지 않습니다.");
-                return;
-            }
-        
+            if (!orderType.channelKey || !orderType.payMethod) return alert("결제 수단을 선택해주세요.");
+            if (!serverData?.totalCost) return alert("결제 금액이 유효하지 않습니다.");
+
+            const paymentId = crypto.randomUUID()
             // 3) 결제 요청
             const orderData = {
+                paymentId,
                 orderName: serverData.ordererName,
                 totalAmount: Number(serverData.totalCost ?? 0),
                 channelKey: orderType.channelKey,
                 payMethod: orderType.payMethod,
-                provider:orderType.provider,
+                provider: orderType.provider,
                 customerName: serverData.ordererName,
                 customerPhone: serverData.ordererPhone,
                 customerEmail: serverData.ordererEmail,
-
             };
             const res = await requestPayment(orderData)
-
-            const isSuccess =
-                (res?.status && String(res.status).toUpperCase() === "PAID") ||
-                (res?.code && String(res.code).startsWith("2")); // 예: 2xxx 성공 코드
-
-            if (!isSuccess) {
-                alert("결제가 취소되었거나 실패했습니다.");
+            if (res?.code !== undefined) {
+                alert(res.message || "결제가 취소되었거나 실패했습니다.");
                 return;
             }
-            console.log("결제 완료:", res);
+
             const payload = { ...orderSheet, matchingNo: Number(serverData.matchingNo) };
-            const newOrder = await postOrderCreate(payload);
-            const orderSheetNo = newOrder?.orderSheetNo ?? newOrder;
-            setOrderNo(orderSheetNo);
+            const orderNo = await postOrderCreate(payload);
+            if (!orderNo) {
+                console.error("create response:", orderNo);
+                alert("주문서 번호를 받지 못했습니다.");
+                return;
+            }
+            const paymentDTO = {
+                orderSheetNo:orderNo,
+                paymentId:paymentId,
+                paymentMethod: orderType.payMethod,
+                easyPayProvider: orderType.payMethod === "EASY_PAY" ? orderType.provider : null,
+                currency: "KRW",
+            }
+            const paymentNo = await acceptedPayment(paymentDTO);
+            console.log(paymentNo)
             alert("주문이 완료되었습니다.");
-            moveToHome();
+            navigate(`/order/payment`, { state:{paymentNo}})
+         
         } catch (err) {
             if (err?.code === "USER_CANCEL" || /cancel/i.test(err?.message || "")) {
                 alert("결제를 취소하셨습니다.");
@@ -86,20 +90,18 @@ const OrderPaymentSelect = ({ serverData, orderSheet }) => {
         }
     };
 
-  
+
 
     const handleSelectMethod = (e) => {
 
-        const key = e.currentTarget.name; 
+        const key = e.currentTarget.name;
         setPaymentType(key)
         if (key === "CARD") {
-            setOrderType({ payMethod: "CARD", channelKey: CHANNELS.CARD, provider: "CARD" });
+            setOrderType({ payMethod: "CARD", channelKey: CHANNELS.TOSSPAYMENTS, });
         } else if (key === "TOSS") {
             setOrderType({ payMethod: "EASY_PAY", channelKey: CHANNELS.TOSS, provider: "TOSSPAY" });
         } else if (key === "KAKAO") {
             setOrderType({ payMethod: "EASY_PAY", channelKey: CHANNELS.KAKAO, provider: "KAKAOPAY" });
-        } else if (key === "PAYCO") {
-            setOrderType({ payMethod: "EASY_PAY", channelKey: CHANNELS.PAYCO, provider: "PAYCO" });
         }
     };
 
@@ -137,12 +139,6 @@ const OrderPaymentSelect = ({ serverData, orderSheet }) => {
                                 style={{ width: 80, height: 30, borderRadius: 7 }}
                             />
                         </Button>
-                        <Button name="PAYCO" variant={paymentType === 'PAYCO' ? "contained" : "outlined"}sx={{ width: 100, px: 3, py: 1.5, borderRadius: 2 }} onClick={handleSelectMethod}>
-                            <img
-                                src="../../image/logo/logo_navergr_small.svg"
-                                style={{ width: 70, height: 20, borderRadius: 7 }}
-                            />
-                        </Button>
                     </Box>
                 </Box>
             </Grid>
@@ -151,7 +147,7 @@ const OrderPaymentSelect = ({ serverData, orderSheet }) => {
             <Grid item xs={12} md={5} sx={{ minWidth: 0 }}>
                 <Paper
                     variant="outlined"
-                    sx={{minWidth:300, p: 3, borderRadius: 3, height: "100%", display: "flex", flexDirection: "column", gap: 2 }}
+                    sx={{ minWidth: 300, p: 3, borderRadius: 3, height: "100%", display: "flex", flexDirection: "column", gap: 2 }}
                 >
                     <Typography variant="h6" sx={{ fontWeight: 700 }}>총 결제금액</Typography>
 
