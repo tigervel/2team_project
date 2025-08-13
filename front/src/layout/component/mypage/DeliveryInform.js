@@ -16,7 +16,7 @@ const initState = {
   totalCount: 0,
   prevPage: 0,
   nextPage: 0,
-  totalPage: 0, 
+  totalPage: 0,
   current: 1,
 };
 
@@ -30,40 +30,40 @@ const DeliveryInfoPage = () => {
   };
 
 
-useEffect(() => {
-  getMyAllEstimateList(pageParams)
-    .then((data) => {
-      const totalCount = data.length;
-      const totalPage = Math.ceil(totalCount / pageParams.size);
-      const current = pageParams.page;
-      const startIdx = (current - 1) * pageParams.size;
-      const endIdx = startIdx + pageParams.size;
-      const pageData = data.slice(startIdx, endIdx);
+  useEffect(() => {
+    getMyAllEstimateList(pageParams)
+      .then((data) => {
+        const totalCount = data.length;
+        const totalPage = Math.ceil(totalCount / pageParams.size);
+        const current = pageParams.page;
+        const startIdx = (current - 1) * pageParams.size;
+        const endIdx = startIdx + pageParams.size;
+        const pageData = data.slice(startIdx, endIdx);
 
-      // 페이지 번호 최대 5개 제한
-      const startPage = Math.max(1, current - 2);
-      const endPage = Math.min(totalPage, startPage + 4);
-      const pageNumList = Array.from(
-        { length: endPage - startPage + 1 },
-        (_, i) => startPage + i
-      );
+        // 페이지 번호 최대 5개 제한
+        const startPage = Math.max(1, current - 2);
+        const endPage = Math.min(totalPage, startPage + 4);
+        const pageNumList = Array.from(
+          { length: endPage - startPage + 1 },
+          (_, i) => startPage + i
+        );
 
-      setServerData({
-        dtoList: pageData,
-        pageNumList,
-        prev: current > 1,
-        next: current < totalPage,
-        totalCount,
-        totalPage,
-        prevPage: current > 1 ? current - 1 : 1,
-        nextPage: current < totalPage ? current + 1 : totalPage,
-        current,
+        setServerData({
+          dtoList: pageData,
+          pageNumList,
+          prev: current > 1,
+          next: current < totalPage,
+          totalCount,
+          totalPage,
+          prevPage: current > 1 ? current - 1 : 1,
+          nextPage: current < totalPage ? current + 1 : totalPage,
+          current,
+        });
+      })
+      .catch((err) => {
+        console.error("견적 목록 로딩 실패:", err);
       });
-    })
-    .catch((err) => {
-      console.error("견적 목록 로딩 실패:", err);
-    });
-}, [pageParams]);
+  }, [pageParams]);
 
   const movePage = (pageObj) => {
     setPageParams((prev) => ({
@@ -73,16 +73,16 @@ useEffect(() => {
   };
 
   const tableColgroup = (
-  <colgroup>
-    <col style={{ width: '10%' }} />  {/* 화물명 */}
-    <col style={{ width: '10%' }} />  {/* 무게 */}
-    <col style={{ width: '26%' }} />  {/* 출발지 - 넓게 */}
-    <col style={{ width: '26%' }} />  {/* 도착지 - 넓게 */}
-    <col style={{ width: '12%' }} />  {/* 배송 시작일 */}
-    <col style={{ width: '8%'  }} />  {/* 운전 기사 */}
-    <col style={{ width: '8%'  }} />  {/* 승인 여부 */}
-  </colgroup>
-);
+    <colgroup>
+      <col style={{ width: '10%' }} />  {/* 화물명 */}
+      <col style={{ width: '10%' }} />  {/* 무게 */}
+      <col style={{ width: '26%' }} />  {/* 출발지 - 넓게 */}
+      <col style={{ width: '26%' }} />  {/* 도착지 - 넓게 */}
+      <col style={{ width: '12%' }} />  {/* 배송 시작일 */}
+      <col style={{ width: '8%' }} />  {/* 운전 기사 */}
+      <col style={{ width: '8%' }} />  {/* 승인 여부 */}
+    </colgroup>
+  );
 
   const renderTableRows = () =>
     serverData.dtoList.length === 0 ? (
@@ -132,8 +132,16 @@ useEffect(() => {
           <Typography variant="h6" fontWeight="bold" gutterBottom>
             견적 의뢰 진행 상황
           </Typography>
-          <TableContainer component={Paper} elevation={1}>
-            <Table>
+          <TableContainer
+            component={Paper}
+            elevation={1}
+            sx={{ height: 470, position: 'relative', pb: 0 }} // pb는 페이지네이션 높이만큼
+          >
+            <Table
+              sx={{
+                '& .MuiTableCell-root': { height: 60, py: 0 }
+              }}
+            >
               {tableColgroup}
 
               <TableHead>
@@ -149,7 +157,16 @@ useEffect(() => {
               </TableHead>
               <TableBody>{renderTableRows()}</TableBody>
             </Table>
-            <Box mt={2} display="flex" justifyContent="center" gap={1} sx={{ paddingBottom: 5 }}>
+            <Box
+              sx={{
+                position: 'absolute',
+                left: 0, right: 0, bottom: 0,
+                py: 1.5,
+                display: 'flex',
+                justifyContent: 'center',
+                bgcolor: 'background.paper' // 겹칠 때 깔끔하게
+              }}
+            >
               <PageComponent serverData={serverData} movePage={movePage} />
             </Box>
           </TableContainer>
@@ -203,7 +220,7 @@ useEffect(() => {
               </TableHead>
               <TableBody>{renderTableRows()}</TableBody>
             </Table>
-            <Box mt={2} display="flex" justifyContent="center" gap={1} sx={{ paddingBottom: 5 }}>
+            <Box mt={2} display="flex" justifyContent="center" gap={1} sx={{ paddingBottom: 5  }}>
               <PageComponent serverData={serverData} movePage={movePage} />
             </Box>
           </TableContainer>
