@@ -45,6 +45,8 @@ public class Member {
     @ElementCollection(fetch = FetchType.LAZY)
     @Builder.Default
     private List<String> memberRoleList = new ArrayList<>();
+    
+    private boolean social;
 
     // ===== 권한 메서드 =====
     public void addRole(String role) {

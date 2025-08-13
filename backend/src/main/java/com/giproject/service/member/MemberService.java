@@ -17,6 +17,8 @@ public interface MemberService {
 	MemberDTO getKakaoMember(String accessToken);
 	
     MemberDTO getNaverMember(String accessToken);
+    
+    MemberDTO getGoogleMember(String accessToken);
 	
 		
 	default MemberDTO entityToDTO(Member member)

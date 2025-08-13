@@ -18,7 +18,7 @@ const useCustomLogin = ()=>{
 
 
 
-    
+   
     // 권한 확인 함수들
     const isAdmin = loginState.role === 'ADMIN'; // 관리자 권한 확인
     const isUser = loginState.role === 'USER'; // 일반 사용자 권한 확인
@@ -44,24 +44,21 @@ const moveToLogin = () => {
    navigate('/member/login', { replace: true });
 };
 
-     const moveToLoginReturn =()=>{//로그인 페이지로 이동하는 컴포넌트
-        return <Navigate replace to={"/member/login"}/>
-     }
-     return{
-        loginState,
-        isLogin,
-        doLogin,
-        doLogout,
-        moveToLogin,
-        moveToPath,
-        moveToLoginReturn,
-        // 새로 추가된 권한 관련 함수들
-        isAdmin,
-        isUser,
-        currentUserId
-     }
-
-  
-
+   const moveToLoginReturn =()=>{//로그인 페이지로 이동하는 컴포넌트
+      return <Navigate replace to={"/member/login"}/>
+   }
+   return{
+      loginState,
+      isLogin,
+      doLogin,
+      doLogout,
+      moveToLogin,
+      moveToPath,
+      moveToLoginReturn,
+      // 새로 추가된 권한 관련 함수들
+      isAdmin,
+      isUser,
+      currentUserId
+   }
 }
 export default useCustomLogin;
