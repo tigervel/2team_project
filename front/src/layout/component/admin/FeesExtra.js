@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
     Box,
     Typography,
@@ -7,8 +7,11 @@ import {
     TextField,
     Pagination,
     CircularProgress,
+    Button,
 } from "@mui/material";
-import SearchIcon from "@mui/icons-material/Search";
+import axios from "axios";
+import { API_SERVER_HOST } from "../../../api/serverConfig";
+import { fetchFeesExtra, saveFeeCell, saveFeeExtraCell } from "../../../api/adminApi/adminApi";
 
 const FeesExtra = () => {
     const [activeTab, setActiveTab] = useState(0);
@@ -33,31 +36,9 @@ const FeesExtra = () => {
     return (
         <Box flexGrow={1} p={4}>
             <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
-                <Box>
-                    <Typography variant="h5" fontWeight="bold" mb={1}>
-                        운송료
-                    </Typography>
-                    <Tabs
-                        value={activeTab}
-                        onChange={handleTabChange}
-                        textColor="primary"
-                        indicatorColor="primary"
-                    >
-                        <Tab label="기본요금" />
-                        <Tab label="추가요금" />
-                    </Tabs>
-                </Box>
-
-                <TextField
-                    variant="outlined"
-                    placeholder="Search"
-                    size="small"
-                    value={searchKeyword}
-                    onChange={handleSearchChange}
-                    InputProps={{
-                        startAdornment: <SearchIcon fontSize="small" sx={{ mr: 1, color: "grey.500" }} />,
-                    }}
-                />
+                < Typography variant="h4" fontWeight="bold" gutterBottom>
+                    추가요금
+                </Typography >
             </Box>
 
             {isLoading ? (
@@ -65,28 +46,52 @@ const FeesExtra = () => {
                     <CircularProgress />
                 </Box>
             ) : (
-                <FeesExtraTable />
+                <FeesExtraTable activeTab={activeTab} />
             )}
-
-            <Box display="flex" justifyContent="center" mt={3}>
-                <Pagination count={11} page={currentPage} onChange={handlePageChange} color="primary" />
-            </Box>
         </Box>
     );
 };
 
 const FeesExtraTable = () => {
-    const rows = ["0.5톤", "1톤", "2톤", "3톤", "4톤", "5톤이상"];
-    const columns = ["거리1", "거리2", "거리3", "거리4", "거리5", "거리6"];
-
+    const rows = ["냉동식품", "유제품", "위험물", "파손주의"];
+    const columns = ["추가요금"];
     const [tableData, setTableData] = useState(
         Array(rows.length).fill(0).map(() => Array(columns.length).fill(""))
     );
 
-    const handleChange = (rowIdx, colIdx, value) => {
-        const updatedData = [...tableData];
-        updatedData[rowIdx][colIdx] = value;
-        setTableData(updatedData);
+    const type = "extra";
+
+    const fetchGrid = useCallback(async () => {
+        try {
+            const res = await fetchFeesExtra();
+            setTableData(Array.isArray(res.data) ? res.data : tableData);
+        } catch (e) {
+            console.error("[EXTRA] Fetch failed", e?.response?.status, e?.response?.data || e.message);
+        }
+    }, []);
+
+    useEffect(() => { fetchGrid(); }, [fetchGrid]);
+
+    const handleChange = (r, c, v) => {
+        const next = tableData.map(row => [...row]);
+        next[r][c] = v;
+        setTableData(next);
+    };
+
+    const handleSave = async (rowIdx, colIdx) => {
+        try {
+            await saveFeeExtraCell({
+                type,
+                category: rows[rowIdx],
+                distance: columns[colIdx],
+                price: Number(tableData[rowIdx][colIdx] || 0),
+            });
+            await fetchGrid();
+            alert("저장 성공");
+        } catch (e) {
+            console.error("[EXTRA] Save failed", e?.response?.status, e?.response?.data || e.message);
+            alert("저장 실패");
+        }
     };
 
     return (
@@ -114,6 +119,14 @@ const FeesExtraTable = () => {
                                         }
                                         style={inputStyle}
                                     />
+                                    <Button
+                                        variant="contained"
+                                        color="primary"
+                                        onClick={() => handleSave(rowIdx, colIdx)}
+                                        style={{ marginTop: "16px" }}
+                                    >
+                                        저장
+                                    </Button>
                                 </td>
                             ))}
                         </tr>
@@ -142,16 +155,6 @@ const inputStyle = {
     textAlign: "center",
     padding: "4px",
     border: "1px solid #ddd",
-    borderRadius: "4px",
-};
-
-const buttonStyle = {
-    padding: "8px 16px",
-    fontSize: "14px",
-    cursor: "pointer",
-    backgroundColor: "#1976d2",
-    color: "#fff",
-    border: "none",
     borderRadius: "4px",
 };
 

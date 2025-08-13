@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
     Box,
     Typography,
@@ -16,59 +16,77 @@ import {
     CircularProgress,
 } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
+import axios from "axios";
+import { API_SERVER_HOST } from "../../../api/serverConfig";
+
+const prefix = `${API_SERVER_HOST}/api/admin/users`;
 
 const MemberAll = () => {
-    const [activeTab, setActiveTab] = useState(0);
+    const [activeTab, setActiveTab] = useState(0);     // 0=전체, 1=물주, 2=차주
     const [currentPage, setCurrentPage] = useState(1);
+    const [pageSize] = useState(10);
     const [users, setUsers] = useState([]);
-    const [searchKeyword, setSearchKeyword] = useState("");
+    const [totalPages, setTotalPages] = useState(1);
     const [isLoading, setIsLoading] = useState(false);
+    const [error, setError] = useState("");
+    const [searchKeyword, setSearchKeyword] = useState("");
 
-    const handleTabChange = (e, newValue) => {
-        setActiveTab(newValue);
-        setCurrentPage(1);
-    };
-
-    const handlePageChange = (e, value) => setCurrentPage(value);
-
-    const handleSearchChange = (e) => setSearchKeyword(e.target.value);
+    const page = currentPage - 1;
 
     useEffect(() => {
-        const fetchUsers = async () => {
+        const fetchList = async () => {
             setIsLoading(true);
-            setTimeout(() => {
-                setUsers([
-                    {
-                        name: "이름1",
-                        email: "mail_1@aa.com",
-                        phone: "010-1234-5678",
-                        leaveDate: "2025.08.01",
-                        OrderNum: "1회",
-                        reports: 1,
-                    },
-                    {
-                        name: "이름2",
-                        email: "mail_2@aa.com",
-                        phone: "010-1234-5678",
-                        leaveDate: "2025.08.01",
-                        OrderNum: "2회",
-                        reports: 0,
-                    },
-                    {
-                        name: "이름3",
-                        email: "mail_3@aa.com",
-                        phone: "010-1234-5678",
-                        leaveDate: "2025.08.01",
-                        OrderNum: "3회",
-                        reports: 0,
-                    },
-                ]);
+            setError("");
+            try {
+                if (activeTab === 1) {
+                    const res = await axios.get(`${prefix}/Owners`, {
+                        params: { page, size: pageSize, sort: "memCreateIdDateTime,desc" }
+                    });
+                    const { content = [], totalPages = 1 } = res.data ?? {};
+                    setUsers(content.map(toRow));
+                    setTotalPages(Math.max(totalPages, 1));
+                } else if (activeTab === 2) {
+                    const res = await axios.get(`${prefix}/Cowners`, {
+                        params: { page, size: pageSize, sort: "cargoCreateidDateTime,desc" }
+                    });
+                    const { content = [], totalPages = 1 } = res.data ?? {};
+                    setUsers(content.map(toRow));
+                    setTotalPages(Math.max(totalPages, 1));
+                } else {
+                    const [owners, cowners] = await Promise.all([
+                        axios.get(`${prefix}/Owners`, { params: { page, size: pageSize, sort: "memCreateIdDateTime,desc" } }),
+                        axios.get(`${prefix}/Cowners`, { params: { page, size: pageSize, sort: "cargoCreateidDateTime,desc" } }),
+                    ]);
+                    const merged = [...(owners.data?.content ?? []), ...(cowners.data?.content ?? [])]
+                        .sort((a, b) => new Date(b.memCreateIdDateTime || b.cargoCreateidDateTime) - new Date(a.memCreateIdDateTime || a.cargoCreateidDateTime));
+                    setUsers(merged.map(toRow));
+                    setTotalPages(Math.max(owners.data?.totalPages || 1, cowners.data?.totalPages || 1));
+                }
+            } catch (e) {
+                console.error(e);
+                setUsers([]);
+                setTotalPages(1);
+                setError("목록을 불러오지 못했습니다.");
+            } finally {
                 setIsLoading(false);
-            }, 500);
+            }
         };
 
-        fetchUsers();
-    }, [currentPage, activeTab, searchKeyword]);
+        fetchList();
+    }, [activeTab, page, pageSize]);
+
+    const toRow = (u) => ({
+        name: u.memName || u.cargoName,
+        email: u.memEmail || u.cargoEmail,
+        phone: u.memPhone || u.cargoPhone,
+        leaveDate: (u.memCreateIdDateTime || u.cargoCreateidDateTime || "").toString().replace("T", " ").slice(0, 16),
+        OrderNum: "-",
+        reports: 0,    // 아직 백엔드에 없으니 임시
+    });
+
+    const handleTabChange = (_, v) => { setActiveTab(v); setCurrentPage(1); };
+    const handlePageChange = (_, v) => setCurrentPage(v);
+    const handleSearchChange = (e) => setSearchKeyword(e.target.value); // 추후 서버 검색 붙일 때 사용
 
     return (
         <Box flexGrow={1} p={4}>
@@ -101,6 +119,8 @@ const MemberAll = () => {
                 <Box display="flex" justifyContent="center" alignItems="center" height="300px">
                     <CircularProgress />
                 </Box>
+            ) : error ? (
+                <Typography color="error">{error}</Typography>
             ) : (
                 <Table sx={{ minWidth: 800 }}>
                     <TableHead>
@@ -139,7 +159,7 @@ const MemberAll = () => {
             )}
 
             <Box display="flex" justifyContent="center" mt={3}>
-                <Pagination count={11} page={currentPage} onChange={handlePageChange} color="primary" />
+                <Pagination count={Math.max(totalPages, 1)} page={currentPage} onChange={handlePageChange} color="primary" />
             </Box>
         </Box>
     );
