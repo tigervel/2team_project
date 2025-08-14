@@ -4,6 +4,7 @@ import java.util.List;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -26,6 +27,11 @@ public class SecurityConfig {
         .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
         .oauth2Login(oauth2 -> oauth2.defaultSuccessUrl("/", true).failureUrl("/login?error"))
         .authorizeHttpRequests(auth -> auth
+        	// CORS preflight 허용
+            .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+            // 아이디 중복 확인 API 허용
+            .requestMatchers(HttpMethod.GET, "/api/signup/check-id").permitAll()
+            .requestMatchers("/api/email/**").permitAll()
             .requestMatchers("/api/test").permitAll()
             .requestMatchers("/api/qaboard/**").permitAll() // QABoard API 임시 허용 (JWT 구현 전)
             .requestMatchers("/h2-console/**").permitAll() // H2 Console 허용 (개발 환경용)

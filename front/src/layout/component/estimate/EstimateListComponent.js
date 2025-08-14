@@ -64,7 +64,7 @@ const EstimateListComponent = () => {
             <TableRow key={est.eno}>
               <TableCell align="center">No.{est.eno}</TableCell>
               <TableCell align="center">{est.route}</TableCell>
-              <TableCell align="center">{est.distanceKM}</TableCell>
+              <TableCell align="center">{est.distanceKm}</TableCell>
               <TableCell align="center">{est.cargoWeight}</TableCell>
               <TableCell align="center">{est.startTime}</TableCell>
               <TableCell align="center">{est.cargoType}</TableCell>

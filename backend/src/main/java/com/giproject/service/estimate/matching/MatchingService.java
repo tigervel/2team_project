@@ -36,6 +36,7 @@ public interface MatchingService {
 				.isAccepted(matching.isAccepted())
 				.acceptedTime(matching.getAcceptedTime())
 				.route(makeShortRoute(e.getStartAddress(), e.getEndAddress()))
+				.cargoWeight(e.getCargoWeight())
 				.distanceKm(e.getDistanceKm()+"KM")
 				.cargoType(e.getCargoType())
 				.startTime(e.getStartTime().toLocalDate().toString())

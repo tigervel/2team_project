@@ -56,6 +56,7 @@ const PaymentComponent = () => {
   useEffect(() => {
 
     if (!paymentNo) {
+      alert("잘못된 접근 방식 입니다.")
       navigate("/")
       return;
     }
@@ -132,7 +133,7 @@ const PaymentComponent = () => {
         variant="contained"
         size="large"
         sx={{ mt: 4, minWidth: 260, borderRadius: 2 }}
-
+        onClick={()=>(navigate("/"))}
       >
         홈으로 가기
       </Button>

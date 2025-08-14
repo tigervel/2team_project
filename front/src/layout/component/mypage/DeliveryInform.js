@@ -5,6 +5,7 @@ import {
 } from '@mui/material';
 import PageComponent from '../common/PageComponent';
 import { getMyAllEstimateList } from '../../../api/estimateApi/estimateApi';
+import { getMyUnpaidEstimateList } from '../../../api/estimateApi/estimateApi';
 import { useNavigate } from "react-router-dom";
 
 
@@ -31,7 +32,7 @@ const DeliveryInfoPage = () => {
 
 
   useEffect(() => {
-    getMyAllEstimateList(pageParams)
+    getMyUnpaidEstimateList(pageParams)
       .then((data) => {
         const totalCount = data.length;
         const totalPage = Math.ceil(totalCount / pageParams.size);
@@ -127,10 +128,54 @@ const DeliveryInfoPage = () => {
           배송 정보 관리
         </Typography>
 
-        {/* 1. 견적 의뢰 진행 상황 */}
+        {/* 2. 견적 의뢰 진행 상황(결제됨) */}
         <Box mt={6}>
           <Typography variant="h6" fontWeight="bold" gutterBottom>
-            견적 의뢰 진행 상황
+            견적 의뢰 진행 상황 (결제됨)
+          </Typography>
+          <TableContainer
+            component={Paper}
+            elevation={1}
+            sx={{ height: 470, position: 'relative', pb: 0 }} // pb는 페이지네이션 높이만큼
+          >
+            <Table
+              sx={{
+                '& .MuiTableCell-root': { height: 60, py: 0 }
+              }}
+            >
+              {tableColgroup}
+
+              <TableHead>
+                <TableRow>
+                  <TableCell align="center">화물명</TableCell>
+                  <TableCell align="center">무게</TableCell>
+                  <TableCell align="center">출발지</TableCell>
+                  <TableCell align="center">도착지</TableCell>
+                  <TableCell align="center">배송 시작일</TableCell>
+                  <TableCell align="center">운전 기사</TableCell>
+                  <TableCell align="center">승인 여부</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>{renderTableRows()}</TableBody>
+            </Table>
+            <Box
+              sx={{
+                position: 'absolute',
+                left: 0, right: 0, bottom: 0,
+                py: 1.5,
+                display: 'flex',
+                justifyContent: 'center',
+                bgcolor: 'background.paper' // 겹칠 때 깔끔하게
+              }}
+            >
+              <PageComponent serverData={serverData} movePage={movePage} />
+            </Box>
+          </TableContainer>
+        </Box>
+
+          <Box mt={6}>
+          <Typography variant="h6" fontWeight="bold" gutterBottom>
+            견적 의뢰 진행 상황 (미결제)
           </Typography>
           <TableContainer
             component={Paper}

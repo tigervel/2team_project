@@ -1,7 +1,8 @@
-import React, { useState } from "react";
-import { Box, Typography, Grid, Button, TextField, Card, CardContent, CardMedia, InputAdornment, IconButton } from "@mui/material";
+import React, { useEffect, useState } from "react";
+import { Box, Typography, Grid, Button, TextField, Card, CardContent, CardMedia, InputAdornment, IconButton, FormControl, InputLabel, Select, MenuItem } from "@mui/material";
 import Carousel from "react-material-ui-carousel";
 import SearchIcon from "@mui/icons-material/Search";
+import { postSearchFeesBasic } from "../api/estimateApi/estimateApi";
 import { calculateDistanceBetweenAddresses } from "../layout/component/common/calculateDistanceBetweenAddresses";
 const initState = {
   startAddress: '',
@@ -14,6 +15,43 @@ const initState = {
 }
 const HomePage = () => {
   const [estimate, setEstimate] = useState(initState);
+  const [fees, setFees] = useState([]);
+  const [baseCost, setBaseCost] = useState(0);
+  const [distanceCost, setDistanceCost] = useState(0);
+  const [exPrice, setExprice] = useState(0);
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const data = await postSearchFeesBasic();
+        setFees(data);
+      } catch (error) {
+        console.log("API 호출 실패", error)
+      }
+    };
+    fetchData()
+  }, []);
+
+  useEffect(() => {
+    const fee = fees.find(f => f.weight === estimate.cargoWeight) || null
+    const dist = Number(estimate.distanceKm ?? 0);
+    const base = Number(fee?.initialCharge ?? 0);
+    const rate = Number(fee?.ratePerKm ?? 0);
+    const distCost = dist * rate;
+    const total = base + distCost;
+    setBaseCost(base);
+    setDistanceCost(distCost);
+
+    setEstimate(prev => ({
+      ...prev,
+      totalCost: total,
+      baseCost: base,
+      distanceCost: distCost,
+
+    }))
+
+    setExprice(total);
+  }, [estimate.cargoWeight, estimate.distanceKm, fees]);
+
   const vehicleTypes = [
     { id: 1, name: "소형", image: "/images/small-truck.png" },
     { id: 2, name: "중형", image: "/images/medium-truck.png" },
@@ -47,7 +85,7 @@ const HomePage = () => {
     }
   };
 
-  const price = (estimate.distanceKm * 1000) +(estimate.cargoWeight !== ''?((estimate.cargoWeight)>1000? 350000:250000):0)
+  //const price = baseCost+distanceCost;
   return (
     <Box>
       <Carousel animation="fade" indicators={false} >
@@ -153,18 +191,27 @@ const HomePage = () => {
                     />
                   </Grid>
                 </Grid>
-                <TextField label="화물무게(KG)" name="cargoWeight"
-                  value={estimate.cargoWeight}
-                  onChange={(e) => {
-                    const value = Number(e.target.value);
-                    setEstimate((prev) => ({
-                      ...prev,
-                      cargoWeight: value >= 0 ? value : '',
-                    }))
-                  }}
-                  fullWidth sx={{ mt: 2 }} />
-                <TextField label="화물특수" fullWidth sx={{ mt: 2 }} />
-                <Typography variant="caption" sx={{ mt: 1, mb: 2 }}>*예상단가표 {price}원</Typography>
+                <FormControl fullWidth sx={{ mt: 2 }}>
+                  <InputLabel id="cargo-fee-label">화물 무게</InputLabel>
+                  <Select
+                    labelId="cargo-fee-label"
+                    label="화물 무게"
+                    name="cargoWeight"
+                    value={estimate.cargoWeight || ''}
+                    onChange={(e) => {
+                      const weightLabel = e.target.value;
+                      setEstimate(prev => ({ ...prev, cargoWeight: weightLabel }));
+                    }}
+                  >
+                    {fees.map(fee => (
+                      <MenuItem key={fee.tno} value={fee.weight}>
+                        {fee.weight} {/* 예: 1톤, 2톤 */}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+                {/* <TextField label="화물특수" fullWidth sx={{ mt: 2 }} /> */}
+                <Typography variant="caption" sx={{ mt: 1, mb: 2 }}>*예상단가표 {Number(exPrice)}원</Typography>
                 <Box sx={{ mt: 'auto', display: 'flex', justifyContent: 'flex-end' }}>
                   <Button variant="contained" onClick={calculateDistance} >
                     조회하기

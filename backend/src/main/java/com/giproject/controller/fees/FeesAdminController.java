@@ -18,7 +18,7 @@ import java.util.*;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/g2i4/admin/fees")
-@CrossOrigin(origins = { "http://localhost:3000", "http://localhost:3002" })
+//@CrossOrigin(origins = { "http://localhost:3000", "http://localhost:3002" })
 public class FeesAdminController {
 
 	private final FeesBasicRepository feesBasicRepository;

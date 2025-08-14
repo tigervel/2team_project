@@ -3,6 +3,8 @@ package com.giproject.service.estimate;
 import java.util.List;
 
 import com.giproject.dto.estimate.EstimateDTO;
+import com.giproject.dto.fees.FeesBasicDTO;
+import com.giproject.dto.fees.FeesExtraDTO;
 import com.giproject.entity.estimate.Estimate;
 import com.giproject.entity.member.Member;
 
@@ -56,5 +58,9 @@ public interface EstimateService {
 	
 	List<EstimateDTO> myEstimateList(String memberId);
 
+	List<FeesBasicDTO> searchFees();
 	
+	List<FeesExtraDTO> searchExtra();
+	
+	List<EstimateDTO> findMyEstimatesWithoutPayment(String memberId);
 }

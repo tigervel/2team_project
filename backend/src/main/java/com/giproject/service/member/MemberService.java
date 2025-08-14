@@ -10,6 +10,7 @@ import com.giproject.entity.member.Member;
 import jakarta.servlet.http.HttpSession;
 import jakarta.transaction.Transactional;
 
+
 @Transactional
 public interface MemberService {
     UserResponseDTO getSessionUserInfo(HttpSession session);
@@ -19,6 +20,8 @@ public interface MemberService {
     MemberDTO getNaverMember(String accessToken);
     
     MemberDTO getGoogleMember(String accessToken);
+    
+    boolean isIdAvailable(String memId);
 	
 		
 	default MemberDTO entityToDTO(Member member)

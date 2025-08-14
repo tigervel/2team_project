@@ -8,6 +8,7 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -34,9 +35,9 @@ public class Payment {
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Long paymentNo;
 	
-	@OneToOne
-	@JoinColumn(name = "orderSheetNo")
-	private OrderSheet orderSheet;
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "order_sheet_no", nullable = false, unique = true) // 컬럼명 맞춤 수정
+    private OrderSheet orderSheet;
 	
 	@Enumerated(EnumType.STRING)
 	@Column(nullable = false,length = 32)

@@ -24,7 +24,7 @@ class BackendApplicationTests {
 	void test() {
 		EstimateDTO dto =  EstimateDTO.builder().startAddress("서울시")
 		.endAddress("김포시")
-		.cargoWeight(9999)
+
 		.cargoType("물류")
 		.startTime(LocalDateTime.of(2025, 11,1,15,30))
 		.totalCost(1000000)

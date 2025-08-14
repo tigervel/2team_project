@@ -14,6 +14,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.giproject.dto.estimate.EstimateDTO;
+import com.giproject.dto.fees.FeesBasicDTO;
+import com.giproject.dto.fees.FeesExtraDTO;
 import com.giproject.dto.matching.MatchingDTO;
 import com.giproject.dto.matching.PageRequestDTO;
 import com.giproject.dto.matching.PageResponseDTO;
@@ -130,4 +132,22 @@ public class EstimateController {
 
 	    return ResponseEntity.ok(dtoList);
 	}
+	@GetMapping("/unpaidlist")
+	public ResponseEntity<List<EstimateDTO>> getMyUnpaidEstimateList() {
+	    // TODO: 인증 연동 시 SecurityContext에서 user 추출
+	    String user = "user";
+	    List<EstimateDTO> dtoList = estimateService.findMyEstimatesWithoutPayment(user);
+	    return ResponseEntity.ok(dtoList);
+	}
+	@PostMapping("/searchfeesbasic")
+	public ResponseEntity<List<FeesBasicDTO>> getFeesBasic(){
+		System.out.println(estimateService.searchFees());
+		return ResponseEntity.ok(estimateService.searchFees());
+	}
+	
+	@PostMapping("searchfeesextra")
+	public ResponseEntity<List<FeesExtraDTO>> getFeesExtra(){
+		return ResponseEntity.ok(estimateService.searchExtra());
+	}
+	
 }

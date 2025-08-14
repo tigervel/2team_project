@@ -4,13 +4,16 @@ import java.time.LocalDateTime;
 
 import com.giproject.entity.cargo.CargoOwner;
 import com.giproject.entity.estimate.Estimate;
+import com.giproject.entity.order.OrderSheet;
 
 import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -50,5 +53,8 @@ public class Matching {
 	}
 	public void changeCargoOwner(CargoOwner cargoOwner) {
 		this.cargoOwner = cargoOwner;
-	}	
+	}
+	
+	@OneToOne(mappedBy = "matching", fetch = FetchType.LAZY)
+	private OrderSheet orderSheet; 
 }

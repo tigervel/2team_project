@@ -1,17 +1,22 @@
 package com.giproject.entity.estimate;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 
+import com.giproject.entity.matching.Matching;
 import com.giproject.entity.member.Member;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -36,7 +41,7 @@ public class Estimate {
 	private String startAddress;
 	private String endAddress;
 	private double distanceKm;
-	private int cargoWeight;
+	private String cargoWeight;
 	private String cargoType;
 	private LocalDateTime  startTime;
 	private int totalCost;
@@ -64,7 +69,7 @@ public class Estimate {
 	public void changeEndAddress(String endAddress) {
 		this.endAddress = endAddress;
 	}
-	public void changeCargoWeight(int cargoWeight) {
+	public void changeCargoWeight(String cargoWeight) {
 		this.cargoWeight = cargoWeight;
 	}
 	public void changeCargoType(String cargoType) {
@@ -86,5 +91,6 @@ public class Estimate {
 	public void changeIsOrdered(boolean isOrdered) {
 		this.isOrdered = isOrdered;
 	}
-
+	@OneToMany(mappedBy = "estimate", fetch = FetchType.LAZY)
+    private List<Matching> matchings = new ArrayList<>();
 }
