@@ -130,4 +130,11 @@ public class EstimateController {
 
 	    return ResponseEntity.ok(dtoList);
 	}
+	@GetMapping("/unpaidlist")
+	public ResponseEntity<List<EstimateDTO>> getMyUnpaidEstimateList() {
+	    // TODO: 인증 연동 시 SecurityContext에서 user 추출
+	    String user = "user";
+	    List<EstimateDTO> dtoList = estimateService.findMyEstimatesWithoutPayment(user);
+	    return ResponseEntity.ok(dtoList);
+	}
 }

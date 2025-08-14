@@ -3,6 +3,7 @@ package com.giproject.entity.order;
 import java.time.LocalDateTime;
 
 import com.giproject.entity.matching.Matching;
+import com.giproject.entity.payment.Payment;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -32,9 +33,12 @@ public class OrderSheet {
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Long orderNo;
 	
-	@OneToOne(fetch = FetchType.LAZY)
-	@JoinColumn(name = "matchingNo" ,nullable = false)
-	private Matching matching;
+	 @OneToOne(fetch = FetchType.LAZY)
+	    @JoinColumn(name = "matching_no", nullable = false) // 스키마와 일치
+	    private Matching matching;
+
+	    @OneToOne(mappedBy = "orderSheet", fetch = FetchType.LAZY)
+	    private Payment payment; // 역참조 추가
 	
 	@Column(nullable = false , unique = true)
 	private String orderUuid;
