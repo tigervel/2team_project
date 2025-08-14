@@ -32,7 +32,6 @@ const initState = {
   endAddress: '',
   cargoType: '',
   cargoWeight: '',
-  feeTno:null,
   startTime: tomorrowStart,
   totalCost: 0,
   distanceKm: '',
@@ -64,7 +63,7 @@ const EstimateComponent = () => {
       }
     };
     fetchData()
-  });
+  },[]);
   useEffect(() => {
     const fee = fees.find(f=> f.weight === estimate.cargoWeight) ||null
     const base = fee? Number(fee.initialCharge):0;
