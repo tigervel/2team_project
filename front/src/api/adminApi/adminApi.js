@@ -13,7 +13,7 @@ export const fetchFeesBasicFull = () => axios.get(`${FEES_PREFIX}/basic/full`);
 export const saveFeeBasicCell = ({ category, distance, price }) =>
   axios.post(`${FEES_PREFIX}/basic`, { category, distance, price });
 
-// 행 목록/추가/삭제
+// 행 목록 추가/삭제
 export const getBasicRows = () => axios.get(`${FEES_PREFIX}/basic/rows`);
 export const addBasicRow = (name) => axios.post(`${FEES_PREFIX}/basic/rows`, { name });
 
