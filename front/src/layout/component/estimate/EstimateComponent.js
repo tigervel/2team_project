@@ -14,7 +14,7 @@ import { DateTimePicker, LocalizationProvider } from "@mui/x-date-pickers";
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs'
 import dayjs from "dayjs";
 import KakaoMapViewer from "./KakaoMapViewer";
-import { postAdd, postSaveEs } from "../../../api/estimateApi/estimateApi";
+import { postAdd, postSaveEs, postSearchFeesBasic } from "../../../api/estimateApi/estimateApi";
 import useCustomMove from "../../../hooks/useCustomMove";
 import { calculateDistanceBetweenAddresses } from "../common/calculateDistanceBetweenAddresses";
 
@@ -32,18 +32,18 @@ const initState = {
   endAddress: '',
   cargoType: '',
   cargoWeight: '',
+  feeTno:null,
   startTime: tomorrowStart,
   totalCost: 0,
   distanceKm: '',
-  baseCost:0,
-  distanceCost:0,
-  specialOption:0
+  baseCost: 0,
+  distanceCost: 0,
+  specialOption: 0
 }
 
 const EstimateComponent = () => {
-
+  const [fees, setFees] = useState([]);
   const [estimate, setEstimate] = useState(initState);
-
   const [specialNotes, setSpecialNotes] = useState([]);
   const [specialNoteCost, setSpecialNoteCost] = useState(0);
   const [baseCost, setBaseCost] = useState(0);
@@ -54,9 +54,21 @@ const EstimateComponent = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
 
+  useEffect(()=>{
+     const fetchData = async () => {
+      try {
+        const data = await postSearchFeesBasic();
+        setFees(data);
+      } catch (error) {
+        console.log("API 호출 실패", error)
+      }
+    };
+    fetchData()
+  });
   useEffect(() => {
-    const base = estimate.cargoWeight <= 1000 ? 250000 : 350000;
-    const distCost = estimate.distanceKm * 1000;
+    const fee = fees.find(f=> f.weight === estimate.cargoWeight) ||null
+    const base = fee? Number(fee.initialCharge):0;
+    const distCost = estimate.distanceKm * (fee?Number(fee.ratePerKm):0);
     const extra = specialNotes.reduce((sum, n) => sum + n.cost, 0);
     setBaseCost(base);
     setDistanceCost(distCost);
@@ -64,13 +76,14 @@ const EstimateComponent = () => {
     setEstimate(prev => ({
       ...prev,
       totalCost: base + distCost + extra,
-      baseCost:base,
-      distanceCost:distCost,
-      specialOption:extra
+      baseCost: base,
+      distanceCost: distCost,
+      specialOption: extra
     }))
 
+   
 
-  }, [estimate.cargoWeight, estimate.distanceKm, specialNotes]);
+  }, [estimate.cargoWeight, estimate.distanceKm, specialNotes,fees]);
 
   const handleSpecialNoteChange = (e) => {
     const selectedLabels = e.target.value;
@@ -238,19 +251,25 @@ const EstimateComponent = () => {
               onChange={handleChangeEstimate}
               fullWidth
             />
-            <TextField
-              label="화물 무게(kg)"
-              type="number"
-              value={estimate.cargoWeight}
-              onChange={(e) => {
-                const value = Number(e.target.value);
-                setEstimate((prev) => ({
-                  ...prev,
-                  cargoWeight: value >= 0 ? value : '',
-                }))
-              }}
-              fullWidth
-            />
+            <FormControl fullWidth>
+              <InputLabel id="cargo-fee-label">화물 무게</InputLabel>
+              <Select
+                labelId="cargo-fee-label"
+                label="화물 무게"
+                name="cargoWeight"
+                value={estimate.cargoWeight || ''}
+                onChange={(e) => {
+                  const weightLabel = e.target.value;
+                  setEstimate(prev => ({ ...prev, cargoWeight: weightLabel }));
+                }}
+              >
+                {fees.map(fee => (
+                  <MenuItem key={fee.tno} value={fee.weight}>
+                    {fee.weight} {/* 예: 1톤, 2톤 */}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
             <LocalizationProvider dateAdapter={AdapterDayjs}>
               <DateTimePicker
                 label="예약 시간"

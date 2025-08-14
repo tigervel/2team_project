@@ -48,6 +48,10 @@ export const getMyUnpaidEstimateList = async ({ page, size }) => {
   return res.data; // List<EstimateDTO>
 };
 
+export const postSearchFeesBasic= async ()=>{
+  const res = await axios.post(`${prefix}/searchfeesbasic`)
+  return res.data;
+}
 export const getMyPaidList = async ({page, size}) => {
     const res = await axios.get(`${prefix}/paidlist`, {
         params : {page, size},

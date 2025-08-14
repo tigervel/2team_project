@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.giproject.dto.estimate.EstimateDTO;
+import com.giproject.dto.fees.FeesBasicDTO;
 import com.giproject.dto.matching.MatchingDTO;
 import com.giproject.dto.matching.PageRequestDTO;
 import com.giproject.dto.matching.PageResponseDTO;
@@ -137,12 +138,14 @@ public class EstimateController {
 	    List<EstimateDTO> dtoList = estimateService.findMyEstimatesWithoutPayment(user);
 	    return ResponseEntity.ok(dtoList);
 	}
-	
+	@PostMapping("/searchfeesbasic")
+	public ResponseEntity<List<FeesBasicDTO>> getFeesBasic(){
+		System.out.println(estimateService.searchFees());
+		return ResponseEntity.ok(estimateService.searchFees());
+	}
+
 	@GetMapping("/paidlist")
 	public ResponseEntity<List<EstimateDTO>> getMyPaidList() {
 	    String user = "user";
 	    List<EstimateDTO> dtoList = estimateService.findMyPaidEstimates(user);
-
-	    return ResponseEntity.ok(estimateService.findMyPaidEstimates(memberId));
-	}
 }
