@@ -226,4 +226,10 @@ public class MemberServiceImpl implements MemberService {
             member.getMemberRoleList()
         );
     }
+
+	 @Override
+	 public boolean isIdAvailable(String memId) {
+		 if (memId == null || memId.isBlank()) return false;
+		 return !memberRepository.existsById(memId.trim()); 
+	}
 }
