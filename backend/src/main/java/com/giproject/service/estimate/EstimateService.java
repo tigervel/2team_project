@@ -3,6 +3,7 @@ package com.giproject.service.estimate;
 import java.util.List;
 
 import com.giproject.dto.estimate.EstimateDTO;
+import com.giproject.dto.fees.FeesDTO;
 import com.giproject.entity.estimate.Estimate;
 import com.giproject.entity.member.Member;
 
@@ -56,5 +57,6 @@ public interface EstimateService {
 	
 	List<EstimateDTO> myEstimateList(String memberId);
 
+	List<FeesDTO> searchFees();
 	
 }

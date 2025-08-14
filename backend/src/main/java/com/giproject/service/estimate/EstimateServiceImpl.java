@@ -7,10 +7,13 @@ import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 
 import com.giproject.dto.estimate.EstimateDTO;
+import com.giproject.dto.fees.FeesDTO;
 import com.giproject.entity.estimate.Estimate;
+import com.giproject.entity.fees.FeesBasic;
 import com.giproject.entity.matching.Matching;
 import com.giproject.entity.member.Member;
 import com.giproject.repository.estimate.EsmateRepository;
+import com.giproject.repository.fees.FeesBasicRepository;
 import com.giproject.repository.matching.MatchingRepository;
 import com.giproject.service.estimate.matching.MatchingService;
 
@@ -24,6 +27,7 @@ import lombok.extern.log4j.Log4j2;
 public class EstimateServiceImpl implements EstimateService{
 	private final EsmateRepository esmateRepository;
 	private final MatchingRepository matchingRepository;
+	private final FeesBasicRepository basicRepository;
 
 	
 	@Override
@@ -98,6 +102,12 @@ public class EstimateServiceImpl implements EstimateService{
 	        dto.setMatchingNo(matchingNoOpt.orElse(null));
 	        return dto;
 	    }).collect(Collectors.toList());
+	}
+	@Override
+	public List<FeesDTO> searchFees() {
+		List<FeesBasic> basic =  basicRepository.findAll();
+		
+		return null;
 	}
 	
 
