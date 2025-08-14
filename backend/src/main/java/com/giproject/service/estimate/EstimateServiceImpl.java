@@ -110,5 +110,31 @@ public class EstimateServiceImpl implements EstimateService{
 		return null;
 	}
 	
+	@Override
+	public List<EstimateDTO> findMyEstimatesWithoutPayment(String memberId) {
+	    List<Estimate> esList = esmateRepository.findMyEstimatesWithoutPayment(memberId);
+	    log.info("myEstimateList() 진입 - (결제 없는) 조회 결과 수: {}", esList.size());
+
+	    return esList.stream().map(estimate -> {
+	        if (estimate.getMember() == null) {
+	            log.warn("estimate {} 의 member가 null입니다", estimate.getEno());
+	        }
+
+	        EstimateDTO dto = entityToDTO(estimate);
+
+	        // matching 여부 조회
+	        Optional<Boolean> isAcceptedOpt =
+	                matchingRepository.findIsAcceptedByEstimateNo(estimate.getEno());
+	        dto.setAccepted(isAcceptedOpt.orElse(false));
+
+	        Optional<Long> matchingNoOpt =
+	                matchingRepository.findMatchingNoByEstimateNo(estimate.getEno());
+	        dto.setMatchingNo(matchingNoOpt.orElse(null));
+
+	        log.info("DTO 변환 성공: {} (isAccepted: {}, matchingNo: {})",
+	                 dto.getEno(), dto.isAccepted(), dto.getMatchingNo());
+	        return dto;
+	    }).collect(Collectors.toList());
+	}
 
 }

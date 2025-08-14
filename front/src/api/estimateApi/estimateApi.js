@@ -39,4 +39,12 @@ export const getMyAllEstimateList = async ({ page, size }) => {
   });
   return res.data;
 };
+// 결제 없는 내 견적 리스트 (GET)
+export const getMyUnpaidEstimateList = async ({ page, size }) => {
+  const res = await axios.get(`${prefix}/unpaidlist`, {
+    params: { page, size },
+    withCredentials: true,
+  });
+  return res.data; // List<EstimateDTO>
+};
 
