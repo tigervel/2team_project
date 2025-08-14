@@ -137,4 +137,12 @@ public class EstimateController {
 	    List<EstimateDTO> dtoList = estimateService.findMyEstimatesWithoutPayment(user);
 	    return ResponseEntity.ok(dtoList);
 	}
+	
+	@GetMapping("/paidlist")
+	public ResponseEntity<List<EstimateDTO>> getMyPaidList() {
+	    String user = "user";
+	    List<EstimateDTO> dtoList = estimateService.findMyPaidEstimates(user);
+
+	    return ResponseEntity.ok(estimateService.findMyPaidEstimates(memberId));
+	}
 }

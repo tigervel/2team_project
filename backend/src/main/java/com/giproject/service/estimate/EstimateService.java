@@ -60,4 +60,6 @@ public interface EstimateService {
 	List<FeesBasicDTO> searchFees();
 	
 	List<EstimateDTO> findMyEstimatesWithoutPayment(String memberId);
+	
+	 List<EstimateDTO> findMyPaidEstimates(String memberId);
 }

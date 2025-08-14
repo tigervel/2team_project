@@ -48,3 +48,9 @@ export const getMyUnpaidEstimateList = async ({ page, size }) => {
   return res.data; // List<EstimateDTO>
 };
 
+export const getMyPaidList = async ({page, size}) => {
+    const res = await axios.get(`${prefix}/paidlist`, {
+        params : {page, size},
+        withCredentials: true,
+    });
+}
