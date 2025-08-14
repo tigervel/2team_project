@@ -23,18 +23,32 @@ const CHANNELS = {
     TOSS: "channel-key-480547ae-0d47-46fb-bd42-b41a7c102111",
     KAKAO: "channel-key-aaecd5d1-a431-49b8-b800-930a6fdb89c1",
 }
+
 const iniState = {
     payMethod: "",
     channelKey: "",
     provider: ""
 }
 
-
-
 const OrderPaymentSelect = ({ serverData, orderSheet }) => {
     const navigate = useNavigate();
     const [paymentType, setPaymentType] = useState(null);
     const [orderType, setOrderType] = useState(iniState);
+    const handleCheck = () => {
+        if (String(orderSheet.addressee ?? "").trim() === "") {
+            alert("받는분 이름을 입력해주세요");
+            return;
+        }
+        if (String(orderSheet.phone ?? "").trim() === "") {
+            alert("받는분 전화번호을 입력해주세요");
+            return;
+        }
+        if (String(orderSheet.addresseeEmail ?? "").trim() === "") {
+            alert("받는분 이메일을 입력해주세요");
+            return;
+        }
+        handleClick()//체크 다 되었을시 결제함수 호출
+    }
 
     const handleClick = async () => {
         try {
@@ -69,8 +83,8 @@ const OrderPaymentSelect = ({ serverData, orderSheet }) => {
                 return;
             }
             const paymentDTO = {
-                orderSheetNo:orderNo,
-                paymentId:paymentId,
+                orderSheetNo: orderNo,
+                paymentId: paymentId,
                 paymentMethod: orderType.payMethod,
                 easyPayProvider: orderType.payMethod === "EASY_PAY" ? orderType.provider : null,
                 currency: "KRW",
@@ -78,8 +92,8 @@ const OrderPaymentSelect = ({ serverData, orderSheet }) => {
             const paymentNo = await acceptedPayment(paymentDTO);
             console.log(paymentNo)
             alert("주문이 완료되었습니다.");
-            navigate(`/order/payment`, { state:{paymentNo}})
-         
+            navigate(`/order/payment`, { state: { paymentNo } })
+
         } catch (err) {
             if (err?.code === "USER_CANCEL" || /cancel/i.test(err?.message || "")) {
                 alert("결제를 취소하셨습니다.");
@@ -109,15 +123,12 @@ const OrderPaymentSelect = ({ serverData, orderSheet }) => {
         <Grid
             container
             spacing={3}
-            sx={{ maxWidth: 850, mx: "auto", mt: 4 }}   // 위 섹션과 같은 컨테이너 폭
+            sx={{ maxWidth: 850, mx: "auto", mt: 4 }} 
             alignItems="stretch"
             justifyContent={"space-between"}
             wrap="nowrap"
-
         >
-            {/* ===== 결제 섹션 ===== */}
-
-            {/* 좌측: 결제 방법 (밑줄만, Paper X) */}
+            {/*  결제 섹션 */}
             <Grid item xs={12} md={7} sx={{ minWidth: 0 }}>
                 <Box sx={{ p: 3, borderRadius: 3 }}>
                     <Typography variant="h6" sx={{ fontWeight: 700, mb: 1.5 }}>
@@ -142,16 +153,13 @@ const OrderPaymentSelect = ({ serverData, orderSheet }) => {
                     </Box>
                 </Box>
             </Grid>
-
-            {/* 우측: 총 결제금액 (깨짐 방지 카드) */}
+            {/* 요금 결제 창 */}
             <Grid item xs={12} md={5} sx={{ minWidth: 0 }}>
                 <Paper
                     variant="outlined"
                     sx={{ minWidth: 300, p: 3, borderRadius: 3, height: "100%", display: "flex", flexDirection: "column", gap: 2 }}
                 >
                     <Typography variant="h6" sx={{ fontWeight: 700 }}>총 결제금액</Typography>
-
-                    {/* 라벨 / 금액 / '원' → 3열 고정 */}
                     <Box sx={{ display: "grid", gridTemplateColumns: "1fr auto auto", rowGap: 1, columnGap: 1 }}>
                         <Typography color="text.secondary">기본 운송 요금</Typography>
                         <Typography sx={{ textAlign: "right", minWidth: 80 }}>
@@ -181,7 +189,7 @@ const OrderPaymentSelect = ({ serverData, orderSheet }) => {
                         <Typography variant="h6" sx={{ fontWeight: 800 }}>원</Typography>
                     </Box>
 
-                    <Button variant="contained" size="large" sx={{ mt: "auto", borderRadius: 2 }} onClick={() => handleClick()}>
+                    <Button variant="contained" size="large" sx={{ mt: "auto", borderRadius: 2 }} onClick={() => handleCheck()}>
                         결제하기
                     </Button>
                 </Paper>

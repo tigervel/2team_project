@@ -11,6 +11,7 @@ import {
   Divider,
   ToggleButtonGroup,
   ToggleButton,
+  OutlinedInput,
 } from "@mui/material";
 import { useLocation } from "react-router-dom";
 import { postOrderPome } from "../../../api/orderAPI/orderApi";
@@ -261,6 +262,7 @@ const OrderComponent = () => {
             <TextField size="small" 
               sx={{ flex: 1 }} value={emailDomain === "custom" ? customDomain : emailDomain}
               onChange={(e) => setCustomDomain(e.target.value.replace(/\s/g, ""))}
+              placeholder="이메일을 입력해주세요"
               disabled={emailDomain !== "custom"} />
             <Select
               size="small"

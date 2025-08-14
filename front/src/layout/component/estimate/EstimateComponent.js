@@ -14,7 +14,7 @@ import { DateTimePicker, LocalizationProvider } from "@mui/x-date-pickers";
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs'
 import dayjs from "dayjs";
 import KakaoMapViewer from "./KakaoMapViewer";
-import { postAdd, postSaveEs, postSearchFeesBasic } from "../../../api/estimateApi/estimateApi";
+import { postAdd, postSaveEs, postSearchFeesBasic, postSearchFeesExtra } from "../../../api/estimateApi/estimateApi";
 import useCustomMove from "../../../hooks/useCustomMove";
 import { calculateDistanceBetweenAddresses } from "../common/calculateDistanceBetweenAddresses";
 
@@ -42,6 +42,7 @@ const initState = {
 
 const EstimateComponent = () => {
   const [fees, setFees] = useState([]);
+  const [extra,setExtra] = useState([]);
   const [estimate, setEstimate] = useState(initState);
   const [specialNotes, setSpecialNotes] = useState([]);
   const [specialNoteCost, setSpecialNoteCost] = useState(0);
@@ -49,6 +50,8 @@ const EstimateComponent = () => {
   const [distanceCost, setDistanceCost] = useState(0);
   const [showMap, setShowMap] = useState(false);
   const [openCancelDialog, setOpenCancelDialog] = useState(false);
+  const [openEstimateSend,setOpenEstimateSend] = useState(false)
+  const [specialMenuOpen, setSpecialMenuOpen] = useState(false);
   const { moveToHome } = useCustomMove();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
@@ -63,12 +66,22 @@ const EstimateComponent = () => {
       }
     };
     fetchData()
+
+    const extraFetchData = async ()=>{
+      try{
+        const data = await postSearchFeesExtra()
+        setExtra(data)
+      }catch(error){
+        console.log("Extra API 호출 실패",error)
+      }
+    }
+    extraFetchData();
   },[]);
   useEffect(() => {
     const fee = fees.find(f=> f.weight === estimate.cargoWeight) ||null
     const base = fee? Number(fee.initialCharge):0;
     const distCost = estimate.distanceKm * (fee?Number(fee.ratePerKm):0);
-    const extra = specialNotes.reduce((sum, n) => sum + n.cost, 0);
+    const extra = specialNotes.reduce((sum, n) => sum + n.extraCharge, 0);
     setBaseCost(base);
     setDistanceCost(distCost);
     setSpecialNoteCost(extra);
@@ -86,9 +99,10 @@ const EstimateComponent = () => {
 
   const handleSpecialNoteChange = (e) => {
     const selectedLabels = e.target.value;
-    const selected = SPECIAL_NOTE_OPTIONS.filter((n) =>
-      selectedLabels.includes(n.label)
+    const selected = extra.filter((n) =>
+      selectedLabels.includes(n.extraChargeTitle)
     );
+    setSpecialMenuOpen(false)
     setSpecialNotes(selected);
   };
 
@@ -123,12 +137,15 @@ const EstimateComponent = () => {
             })
         } else {
           alert('화물무게를 입력해주세요')
+          setOpenEstimateSend(false)
         }
       } else {
         alert('화물종류를 입력해주세요')
+        setOpenEstimateSend(false)
       }
     } else {
       alert('예상거리를 입력헤주세요')
+      setOpenEstimateSend(false)
     }
   }
   const handleChangeEstimate = (e) => {
@@ -155,9 +172,13 @@ const EstimateComponent = () => {
     setOpenCancelDialog(false);
     moveToHome();  // 실제 이동 처리
   };
+  const handleClickEstimateSend = ()=>{
+    setOpenEstimateSend(true)
+  }
 
   const handleCancelClose = () => {
     setOpenCancelDialog(false);  // 모달만 닫기
+    setOpenEstimateSend(false)
   };
 
   const tomorrow = dayjs().add(24, 'hour')
@@ -297,16 +318,19 @@ const EstimateComponent = () => {
               <InputLabel>특이사항 선택</InputLabel>
               <Select
                 multiple
-                value={specialNotes.map((n) => n.label)}
-                onChange={handleSpecialNoteChange}
                 input={<OutlinedInput label="특이사항 선택" />}
+                value={specialNotes.map((n) => n.extraChargeTitle)}
+                open={specialMenuOpen}
+                onOpen={()=>setSpecialMenuOpen(true)}
+                onClose={()=>setSpecialMenuOpen(false)}
+                onChange={handleSpecialNoteChange}
                 renderValue={(selected) => selected.join(", ")}
               >
-                {SPECIAL_NOTE_OPTIONS.map((opt) => (
-                  <MenuItem key={opt.label} value={opt.label}>
-                    <Checkbox checked={specialNotes.some((n) => n.label === opt.label)} />
+                {extra.map((opt) => (
+                  <MenuItem key={opt.extraChargeTitle} value={opt.extraChargeTitle}>
+                    <Checkbox checked={specialNotes.some((n) => n.extraChargeTitle === opt.extraChargeTitle)} />
                     <ListItemText
-                      primary={`${opt.label} +${opt.cost.toLocaleString()}원`}
+                      primary={`${opt.extraChargeTitle} +${opt.extraCharge.toLocaleString()}원`}
                     />
                   </MenuItem>
                 ))}
@@ -315,8 +339,8 @@ const EstimateComponent = () => {
             {specialNotes.length > 0 && (
               <Box bgcolor="#f1f1f1" borderRadius={2} p={2}>
                 {specialNotes.map((note) => (
-                  <Typography key={note.label} fontSize={14}>
-                    {note.label}: +{note.cost.toLocaleString()}원
+                  <Typography key={note.extraChargeTitle} fontSize={14}>
+                    {note.extraChargeTitle}: +{note.extraCharge.toLocaleString()}원
                   </Typography>
                 ))}
               </Box>
@@ -386,7 +410,7 @@ const EstimateComponent = () => {
         <Button variant="contained" fullWidth onClick={handleClickSave}>
           임시 저장
         </Button>
-        <Button variant="contained" fullWidth onClick={handleClickAdd}>
+        <Button variant="contained" fullWidth onClick={handleClickEstimateSend}>
           견적서 제출
         </Button>
         <Button variant="contained" fullWidth onClick={handleClickCancel}>
@@ -403,8 +427,6 @@ const EstimateComponent = () => {
             height: 150,
             borderRadius: 2,
             p: 2,
-
-
           },
         }}
       >
@@ -414,6 +436,34 @@ const EstimateComponent = () => {
         </DialogContent>
         <DialogActions>
           <Button onClick={handleCancelConfirm} color="error">
+            확인
+          </Button>
+          <Button onClick={handleCancelClose} color="inherit">
+            아니요
+          </Button>
+
+        </DialogActions>
+      </Dialog>
+
+      <Dialog
+        open={openEstimateSend}
+        onClose={handleCancelClose}
+        PaperProps={{
+          sx: {
+            width: 400,
+            height: 150,
+            borderRadius: 2,
+            p: 2,
+          },
+        }}
+      >
+
+        <DialogContent >
+          <Typography fontSize={20} fontWeight='bold'>견적을 제출하시겠습니까?</Typography>
+          <Typography fontSize={15} fontWeight='bold'>견적 내용과 틀리면 배송이 거절될 수 있습니다.</Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleClickAdd} color="error">
             확인
           </Button>
           <Button onClick={handleCancelClose} color="inherit">

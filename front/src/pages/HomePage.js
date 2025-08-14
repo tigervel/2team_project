@@ -210,7 +210,7 @@ const HomePage = () => {
                     ))}
                   </Select>
                 </FormControl>
-                <TextField label="화물특수" fullWidth sx={{ mt: 2 }} />
+                {/* <TextField label="화물특수" fullWidth sx={{ mt: 2 }} /> */}
                 <Typography variant="caption" sx={{ mt: 1, mb: 2 }}>*예상단가표 {Number(exPrice)}원</Typography>
                 <Box sx={{ mt: 'auto', display: 'flex', justifyContent: 'flex-end' }}>
                   <Button variant="contained" onClick={calculateDistance} >

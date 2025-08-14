@@ -52,3 +52,8 @@ export const postSearchFeesBasic= async ()=>{
   const res = await axios.post(`${prefix}/searchfeesbasic`)
   return res.data;
 }
+
+export const postSearchFeesExtra= async ()=>{
+  const res = await axios.post(`${prefix}/searchfeesextra`)
+  return res.data;
+}
