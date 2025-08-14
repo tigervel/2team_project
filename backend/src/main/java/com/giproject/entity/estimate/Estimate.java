@@ -41,7 +41,7 @@ public class Estimate {
 	private String startAddress;
 	private String endAddress;
 	private double distanceKm;
-	private int cargoWeight;
+	private String cargoWeight;
 	private String cargoType;
 	private LocalDateTime  startTime;
 	private int totalCost;
@@ -69,7 +69,7 @@ public class Estimate {
 	public void changeEndAddress(String endAddress) {
 		this.endAddress = endAddress;
 	}
-	public void changeCargoWeight(int cargoWeight) {
+	public void changeCargoWeight(String cargoWeight) {
 		this.cargoWeight = cargoWeight;
 	}
 	public void changeCargoType(String cargoType) {

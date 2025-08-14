@@ -59,3 +59,8 @@ export const getMyPaidEstimateList = async ({page, size}) => {
     });
      return res.data;    
 }
+
+export const postSearchFeesExtra= async ()=>{
+  const res = await axios.post(`${prefix}/searchfeesextra`)
+  return res.data;
+}

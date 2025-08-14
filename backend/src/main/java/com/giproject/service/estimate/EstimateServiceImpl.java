@@ -8,14 +8,18 @@ import org.springframework.stereotype.Service;
 
 import com.giproject.dto.estimate.EstimateDTO;
 import com.giproject.dto.fees.FeesBasicDTO;
+import com.giproject.dto.fees.FeesExtraDTO;
 import com.giproject.entity.estimate.Estimate;
 import com.giproject.entity.fees.FeesBasic;
 import com.giproject.entity.matching.Matching;
 import com.giproject.entity.member.Member;
 import com.giproject.repository.estimate.EsmateRepository;
 import com.giproject.repository.fees.FeesBasicRepository;
+import com.giproject.repository.fees.FeesExtraRepository;
 import com.giproject.repository.matching.MatchingRepository;
 import com.giproject.service.estimate.matching.MatchingService;
+import com.giproject.service.fees.FeesBasicService;
+import com.giproject.service.fees.FeesExtraService;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
@@ -28,7 +32,9 @@ public class EstimateServiceImpl implements EstimateService{
 	private final EsmateRepository esmateRepository;
 	private final MatchingRepository matchingRepository;
 	private final FeesBasicRepository basicRepository;
-
+	private final FeesBasicService basicService;
+	private final FeesExtraRepository extraRepository;
+	private final FeesExtraService extraService;
 	
 	@Override
 	public Long sendEstimate(EstimateDTO dto) {
@@ -109,6 +115,13 @@ public class EstimateServiceImpl implements EstimateService{
 		
 		return null;
 	}
+	@Override
+	public List<FeesExtraDTO> searchExtra() {
+		return extraRepository.findAll()
+				.stream()
+				.map(list -> extraService.entityToDTO(list))
+				.collect(Collectors.toList());
+	}
 	
 	@Override
 	public List<EstimateDTO> findMyEstimatesWithoutPayment(String memberId) {
@@ -153,4 +166,5 @@ public class EstimateServiceImpl implements EstimateService{
 	        return dto;
 	    }).toList();
 	}
+
 }

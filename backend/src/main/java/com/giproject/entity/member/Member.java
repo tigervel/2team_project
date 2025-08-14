@@ -8,45 +8,46 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Entity
-@Table(name = "Member") // 첫번째 코드에 있었음
-@Getter
-@Setter
-@NoArgsConstructor
-@AllArgsConstructor
+@Table(name = "member") // 소문자 권장
+@Getter 
+@Setter 
+@NoArgsConstructor 
+@AllArgsConstructor 
 @Builder
-@ToString(exclude = "memberRoleList") // 첫번째 코드에 있었던 toString exclude 반영
+@ToString(exclude = "memberRoleList")
 public class Member {
 
-    // 일반 로그인 ID
-    @Id
-    @Column(length = 50)
+	@Id
+    @Column(name = "mem_id", length = 50, nullable = false)
     private String memId;
 
-    // 소셜 로그인 이메일 (중복 불가)
-    @Column(unique = true, length = 100)
-    private String memEmail;
+	@Column(name = "mem_email")
+	private String memEmail;
 
-    // 비밀번호
-    private String memPw;
+	@Column(name = "mem_pw")
+	private String memPw;
 
-    // 이름
-    private String memName;
+	@Column(name = "mem_name")
+	private String memName;
 
-    // 전화번호 (첫번째 코드에만 있음)
-    private String memPhone;
+ 	@Column(name = "mem_phone")
+ 	private String memPhone;
 
-    // 주소 (첫번째 코드에만 있음)
-    private String memAddress;
+ 	@Column(name = "mem_address")
+ 	private String memAddress;
 
-    // 생성일시 (첫번째 코드에서는 필드명이 memCreateIdDateTime, 두번째 코드도 동일)
-    private LocalDateTime memCreateIdDateTime;
+ 	@Column(name = "mem_create_id_datetime")
+ 	private java.time.LocalDateTime memCreateIdDateTime;
 
-    // 권한 목록
-    @ElementCollection(fetch = FetchType.LAZY)
-    @Builder.Default
-    private List<String> memberRoleList = new ArrayList<>();
-    
-    private boolean social;
+ 	@ElementCollection(fetch = FetchType.LAZY)
+  	@CollectionTable(name = "member_roles",
+      	joinColumns = @JoinColumn(name = "mem_id"))
+ 	@Column(name = "role")
+ 	@Builder.Default
+ 	private java.util.List<String> memberRoleList = new java.util.ArrayList<>();
+
+ 	private boolean social;
+
 
     // ===== 권한 메서드 =====
     public void addRole(String role) {
