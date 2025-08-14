@@ -148,4 +148,6 @@ public class EstimateController {
 	public ResponseEntity<List<EstimateDTO>> getMyPaidList() {
 	    String user = "user";
 	    List<EstimateDTO> dtoList = estimateService.findMyPaidEstimates(user);
+		return ResponseEntity.ok(dtoList);
+	}
 }

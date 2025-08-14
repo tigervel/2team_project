@@ -1,6 +1,5 @@
 package com.giproject.service.estimate;
 
-import java.text.Collator;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -17,7 +16,6 @@ import com.giproject.repository.estimate.EsmateRepository;
 import com.giproject.repository.fees.FeesBasicRepository;
 import com.giproject.repository.matching.MatchingRepository;
 import com.giproject.service.estimate.matching.MatchingService;
-import com.giproject.service.fees.FeesBasicService;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
@@ -30,7 +28,7 @@ public class EstimateServiceImpl implements EstimateService{
 	private final EsmateRepository esmateRepository;
 	private final MatchingRepository matchingRepository;
 	private final FeesBasicRepository basicRepository;
-	private final FeesBasicService basicService;
+
 	
 	@Override
 	public Long sendEstimate(EstimateDTO dto) {
@@ -107,10 +105,9 @@ public class EstimateServiceImpl implements EstimateService{
 	}
 	@Override
 	public List<FeesBasicDTO> searchFees() {
-		return basicRepository.findAll()
-				.stream()
-				.map(list -> basicService.entityToDTO(list))
-				.collect(Collectors.toList());
+		List<FeesBasic> basic =  basicRepository.findAll();
+		
+		return null;
 	}
 	
 	@Override
@@ -140,4 +137,20 @@ public class EstimateServiceImpl implements EstimateService{
 	    }).collect(Collectors.toList());
 	}
 
+	@Override
+	public List<EstimateDTO> findMyPaidEstimates(String memberId) {
+	    List<Estimate> list = esmateRepository.findMyPaidEstimates(memberId);
+	    return list.stream().map(e -> {
+	        EstimateDTO dto = entityToDTO(e);
+
+	        // 매칭 여부/매칭번호(있으면 넣기)
+	        dto.setAccepted(
+	            matchingRepository.findIsAcceptedByEstimateNo(e.getEno()).orElse(false)
+	        );
+	        dto.setMatchingNo(
+	            matchingRepository.findMatchingNoByEstimateNo(e.getEno()).orElse(null)
+	        );
+	        return dto;
+	    }).toList();
+	}
 }

@@ -52,9 +52,10 @@ export const postSearchFeesBasic= async ()=>{
   const res = await axios.post(`${prefix}/searchfeesbasic`)
   return res.data;
 }
-export const getMyPaidList = async ({page, size}) => {
+export const getMyPaidEstimateList = async ({page, size}) => {
     const res = await axios.get(`${prefix}/paidlist`, {
         params : {page, size},
         withCredentials: true,
     });
+     return res.data;    
 }
