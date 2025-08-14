@@ -1,17 +1,47 @@
 package com.giproject.service.fees;
 
+import com.giproject.dto.fees.FeesBasicDTO;
+import com.giproject.entity.fees.FeesBasic;
+
+import jakarta.transaction.Transactional;
+
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
 
+@Transactional
 public interface FeesBasicService {
 
-	List<String> getAllWeights();
+    default FeesBasicDTO entityToDTO(FeesBasic entity) {
+        if (entity == null) return null;
+        return FeesBasicDTO.builder()
+                .tno(entity.getTno())
+                .weight(entity.getWeight())
+                .ratePerKm(entity.getRatePerKm())
+                .initialCharge(entity.getInitialCharge())
+                .updatedAt(entity.getUpdatedAt())
+                .build();
+    }
 
-	List<List<String>> getFeeGrid();
-
-	void saveOrUpdate(String weight, String distance, BigDecimal price);
-
-	void addWeight(String weight);
-
-	void deleteWeight(String weight);
+    default FeesBasic dtoToEntity(FeesBasicDTO dto) {
+        if (dto == null) return null;
+        return FeesBasic.builder()
+                .tno(dto.getTno())
+                .weight(dto.getWeight())
+                .ratePerKm(dto.getRatePerKm())
+                .initialCharge(dto.getInitialCharge())
+                .updatedAt(dto.getUpdatedAt() == null ? LocalDateTime.now() : dto.getUpdatedAt())
+                .build();
+    }
+    
+	List<String> getRowNames();
+		
+	List<List<String>> getGrid();
+	
+	FeesBasicDTO saveCell(String weight, String column, BigDecimal price);
+	
+	void addRow(String weight);
+	void deleteRow(String weight);//행 추가삭제
+	
+	List<FeesBasicDTO> findAllAsDto();
 }
