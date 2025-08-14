@@ -7,6 +7,7 @@ import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 
 import com.giproject.dto.estimate.EstimateDTO;
+import com.giproject.dto.fees.FeesBasicDTO;
 import com.giproject.dto.fees.FeesDTO;
 import com.giproject.entity.estimate.Estimate;
 import com.giproject.entity.fees.FeesBasic;
@@ -104,7 +105,7 @@ public class EstimateServiceImpl implements EstimateService{
 	    }).collect(Collectors.toList());
 	}
 	@Override
-	public List<FeesDTO> searchFees() {
+	public List<FeesBasicDTO> searchFees() {
 		List<FeesBasic> basic =  basicRepository.findAll();
 		
 		return null;
