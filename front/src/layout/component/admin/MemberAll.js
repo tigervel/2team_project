@@ -19,10 +19,10 @@ import SearchIcon from "@mui/icons-material/Search";
 import axios from "axios";
 import { API_SERVER_HOST } from "../../../api/serverConfig";
 
-const prefix = `${API_SERVER_HOST}/api/admin/users`;
+const prefix = `${API_SERVER_HOST}/g2i4/admin/users`;
 
 const MemberAll = () => {
-    const [activeTab, setActiveTab] = useState(0);     // 0=전체, 1=물주, 2=차주
+    const [activeTab, setActiveTab] = useState(0);     // 0=전체, 1=물주, 2=차주, 3=신고내역(아직 구현 x), 4=관리자
     const [currentPage, setCurrentPage] = useState(1);
     const [pageSize] = useState(10);
     const [users, setUsers] = useState([]);
@@ -33,35 +33,38 @@ const MemberAll = () => {
 
     const page = currentPage - 1;
 
+    const apiType = (() => {
+        switch (activeTab) {
+            case 1: return "OWNER";
+            case 2: return "COWNER";
+            case 4: return "ADMIN";
+            // case 3: return "REPORTED";
+            default: return "ALL";
+        }
+    })();
+
+    const sort = "memCreateidDateTime,desc";
+
     useEffect(() => {
         const fetchList = async () => {
             setIsLoading(true);
             setError("");
             try {
-                if (activeTab === 1) {
-                    const res = await axios.get(`${prefix}/Owners`, {
-                        params: { page, size: pageSize, sort: "memCreateIdDateTime,desc" }
-                    });
-                    const { content = [], totalPages = 1 } = res.data ?? {};
-                    setUsers(content.map(toRow));
-                    setTotalPages(Math.max(totalPages, 1));
-                } else if (activeTab === 2) {
-                    const res = await axios.get(`${prefix}/Cowners`, {
-                        params: { page, size: pageSize, sort: "cargoCreateidDateTime,desc" }
-                    });
-                    const { content = [], totalPages = 1 } = res.data ?? {};
-                    setUsers(content.map(toRow));
-                    setTotalPages(Math.max(totalPages, 1));
-                } else {
-                    const [owners, cowners] = await Promise.all([
-                        axios.get(`${prefix}/Owners`, { params: { page, size: pageSize, sort: "memCreateIdDateTime,desc" } }),
-                        axios.get(`${prefix}/Cowners`, { params: { page, size: pageSize, sort: "cargoCreateidDateTime,desc" } }),
-                    ]);
-                    const merged = [...(owners.data?.content ?? []), ...(cowners.data?.content ?? [])]
-                        .sort((a, b) => new Date(b.memCreateIdDateTime || b.cargoCreateidDateTime) - new Date(a.memCreateIdDateTime || a.cargoCreateidDateTime));
-                    setUsers(merged.map(toRow));
-                    setTotalPages(Math.max(owners.data?.totalPages || 1, cowners.data?.totalPages || 1));
+                const params = {
+                    type: apiType,
+                    page,
+                    size: pageSize,
+                    sort,
+                };
+                if (searchKeyword && searchKeyword.trim()) {
+                    params.keyword = searchKeyword.trim();
                 }
+
+                const res = await axios.get(prefix, { params });
+                console.log("[/g2i4/admin/members] params:", params, "res:", res.data);
+                const { content = [], totalPages = 1 } = res.data ?? {};
+                setUsers(content.map(toRow));
+                setTotalPages(Math.max(totalPages, 1));
             } catch (e) {
                 console.error(e);
                 setUsers([]);
@@ -73,20 +76,24 @@ const MemberAll = () => {
         };
 
         fetchList();
-    }, [activeTab, page, pageSize]);
+    }, [apiType, page, pageSize, searchKeyword, sort]);
 
+    // AdminMemberDTO: { type, memId, memName, memEmail, memPhone, memAdress, memCreateidDateTime }
     const toRow = (u) => ({
-        name: u.memName || u.cargoName,
-        email: u.memEmail || u.cargoEmail,
-        phone: u.memPhone || u.cargoPhone,
-        leaveDate: (u.memCreateIdDateTime || u.cargoCreateidDateTime || "").toString().replace("T", " ").slice(0, 16),
-        OrderNum: "-",
-        reports: 0,    // 아직 백엔드에 없으니 임시
+        name: u.memName || "",
+        email: u.memEmail || "",
+        phone: u.memPhone || "",
+        leaveDate: (u.memCreateidDateTime || "")
+            .toString()
+            .replace("T", " ")
+            .slice(0, 16),
+        OrderNum: "-", // 임시(백엔드 x)
+        reports: 0,    // 임시(백엔드 x)
     });
 
     const handleTabChange = (_, v) => { setActiveTab(v); setCurrentPage(1); };
     const handlePageChange = (_, v) => setCurrentPage(v);
-    const handleSearchChange = (e) => setSearchKeyword(e.target.value); // 추후 서버 검색 붙일 때 사용
+    const handleSearchChange = (e) => setSearchKeyword(e.target.value);
 
     return (
         <Box flexGrow={1} p={4}>

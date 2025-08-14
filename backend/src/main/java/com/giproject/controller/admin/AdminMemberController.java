@@ -1,45 +1,62 @@
 package com.giproject.controller.admin;
 
-import java.util.List;
-
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
-
-import com.giproject.dto.member.MemberDTO;
+import com.giproject.dto.admin.AdminMemberDTO;
 import com.giproject.service.admin.AdminMemberService;
-
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
+import org.springframework.data.domain.*;
+import org.springframework.data.web.PageableDefault;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 @RestController
-@Log4j2
 @RequiredArgsConstructor
-@RequestMapping("/api/admin/members")
+@Log4j2
+@RequestMapping("/g2i4/admin/members")
 public class AdminMemberController {
 
 	private final AdminMemberService adminMemberService;
-	
+
 	@GetMapping
-    public ResponseEntity<List<MemberDTO>> getMembersByRole(@RequestParam(defaultValue = "all") String role) {
-        log.info("회원 조회 - 역할: " + role);
-        List<MemberDTO> members;
+	public ResponseEntity<Page<AdminMemberDTO>> list(
+			@RequestParam(name = "type", required = false, defaultValue = "ALL") String type,
+			@RequestParam(name = "keyword", required = false) String keyword,
+			@PageableDefault(size = 10, sort = "memCreateidDateTime", direction = Sort.Direction.DESC) Pageable pageable) {
+		log.info("[/g2i4/admin/members] IN type={}, keyword={}, page={}, size={}, sort={}", type, keyword,
+				pageable.getPageNumber(), pageable.getPageSize(), pageable.getSort());
 
-        if ("all".equalsIgnoreCase(role)) {
-            members = adminMemberService.getAllMembers();
-        } else {
-            members = adminMemberService.getMembersByRole(role);
-        }
+		try {
+			Page<AdminMemberDTO> result = adminMemberService.list(type, keyword, pageable);
+			log.info("[/g2i4/admin/members] OUT totalElements={}, totalPages={}", result.getTotalElements(),
+					result.getTotalPages());
+			return ResponseEntity.ok(result);
+		} catch (Exception e) {
+			log.error("[/g2i4/admin/members] ERROR type={}, keyword={}, pageable={}", type, keyword, pageable, e);
+			// 프론트에서 원인 보이게 500 그대로 던지되 메시지 포함
+			throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
+					"AdminMemberService.list failed: " + e.getClass().getSimpleName() + ": " + e.getMessage(), e);
+		}
+	}
 
-        return ResponseEntity.ok(members);
-    }
+	
+	
+	@GetMapping("/owners")
+	public Page<AdminMemberDTO> owners(@RequestParam(required = false) String keyword,
+			@PageableDefault(size = 20, sort = "memCreateidDateTime", direction = Sort.Direction.DESC) Pageable pageable) {
+		return adminMemberService.owners(keyword, pageable);
+	}
 
-    @GetMapping("/search")
-    public ResponseEntity<List<MemberDTO>> searchMembers(@RequestParam String keyword) {
-        log.info("회원 검색 요청 - 키워드: " + keyword);
-        List<MemberDTO> members = adminMemberService.searchMembers(keyword);
-        return ResponseEntity.ok(members);
-    }
+	@GetMapping("/cowners")
+	public Page<AdminMemberDTO> cowners(@RequestParam(required = false) String keyword,
+			@PageableDefault(size = 20, sort = "memCreateidDateTime", direction = Sort.Direction.DESC) Pageable pageable) {
+		return adminMemberService.cowners(keyword, pageable);
+	}
+
+	@GetMapping("/admin")
+	public Page<AdminMemberDTO> admins(@RequestParam(required = false) String keyword,
+			@PageableDefault(size = 20, sort = "memCreateidDateTime", direction = Sort.Direction.DESC) Pageable pageable) {
+		return adminMemberService.admins(keyword, pageable);
+	}
 }
