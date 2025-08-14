@@ -1,5 +1,6 @@
 package com.giproject.service.estimate;
 
+import java.text.Collator;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -16,6 +17,7 @@ import com.giproject.repository.estimate.EsmateRepository;
 import com.giproject.repository.fees.FeesBasicRepository;
 import com.giproject.repository.matching.MatchingRepository;
 import com.giproject.service.estimate.matching.MatchingService;
+import com.giproject.service.fees.FeesBasicService;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
@@ -28,7 +30,7 @@ public class EstimateServiceImpl implements EstimateService{
 	private final EsmateRepository esmateRepository;
 	private final MatchingRepository matchingRepository;
 	private final FeesBasicRepository basicRepository;
-
+	private final FeesBasicService basicService;
 	
 	@Override
 	public Long sendEstimate(EstimateDTO dto) {
@@ -105,9 +107,10 @@ public class EstimateServiceImpl implements EstimateService{
 	}
 	@Override
 	public List<FeesBasicDTO> searchFees() {
-		List<FeesBasic> basic =  basicRepository.findAll();
-		
-		return null;
+		return basicRepository.findAll()
+				.stream()
+				.map(list -> basicService.entityToDTO(list))
+				.collect(Collectors.toList());
 	}
 	
 	@Override
