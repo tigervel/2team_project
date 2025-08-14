@@ -1,5 +1,6 @@
 package com.giproject.service.fees;
 
+import com.giproject.dto.fees.FeesExtraDTO;
 import com.giproject.entity.fees.FeesExtra;
 import com.giproject.repository.fees.FeesExtraRepository;
 import lombok.RequiredArgsConstructor;
@@ -15,86 +16,82 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 @Log4j2
+@Transactional
 public class FeesExtraServiceImpl implements FeesExtraService {
 
-    private final FeesExtraRepository feesExtraRepository;
+	private final FeesExtraRepository extraRepository;
+
+    private static String trim(String s) { return s == null ? "" : s.trim(); }
 
     @Override
     @Transactional(readOnly = true)
-    public List<String> getAllTitles() {
-        return feesExtraRepository.findAll()
-                .stream()
-                .map(FeesExtra::getExtraChargeTitle)
+    public List<String> getRowNames() {
+        return extraRepository.findDistinctTitles().stream()
                 .filter(Objects::nonNull)
                 .map(String::trim)
                 .filter(s -> !s.isEmpty())
-                .distinct()
+                .sorted()
                 .collect(Collectors.toList());
     }
 
     @Override
     @Transactional(readOnly = true)
-    public List<List<String>> getFeeGrid() {
-        List<String> titles = getAllTitles();
-        String col = "추가요금";
-
-        Map<String, BigDecimal> map = feesExtraRepository.findAll().stream()
-                .filter(f -> f.getExtraChargeTitle() != null)
-                .collect(Collectors.toMap(
-                        f -> f.getExtraChargeTitle().trim(),
-                        FeesExtra::getExtraCharge,
-                        (a, b) -> b
-                ));
+    public List<List<String>> getGrid() {
+        List<String> rows = getRowNames();
+        Map<String, FeesExtra> byTitle = extraRepository.findAll().stream()
+                .filter(e -> e.getExtraChargeTitle() != null)
+                .collect(Collectors.toMap(e -> e.getExtraChargeTitle().trim(), e -> e, (a, b) -> a));
 
         List<List<String>> grid = new ArrayList<>();
-        for (String t : titles) {
-            BigDecimal price = map.get(t);
-            String cell = (price == null) ? "" : price.stripTrailingZeros().toPlainString();
-            grid.add(new ArrayList<>(List.of(cell)));
+        for (String t : rows) {
+            FeesExtra fe = byTitle.get(t);
+            String price = (fe != null && fe.getExtraCharge() != null) ? fe.getExtraCharge().stripTrailingZeros().toPlainString() : "";
+            grid.add(new ArrayList<>(List.of(price)));
         }
         return grid;
     }
 
     @Override
-    @Transactional
-    public void saveOrUpdate(String title, String distance, BigDecimal price) {
-        String key = trim(title);
-        if (key.isEmpty()) throw new IllegalArgumentException("title is blank");
+    public FeesExtraDTO saveCell(String title, BigDecimal price) {
+        String t = trim(title);
+        if (t.isEmpty()) throw new IllegalArgumentException("title is required");
 
-        FeesExtra row = feesExtraRepository.findByExtraChargeTitle(key)
+        FeesExtra fe = extraRepository.findByExtraChargeTitle(t)
                 .orElseGet(() -> FeesExtra.builder()
-                        .extraChargeTitle(key)
+                        .extraChargeTitle(t)
                         .extraCharge(BigDecimal.ZERO)
                         .build());
 
-        row.setExtraCharge(price == null ? BigDecimal.ZERO : price);
-        row.setUpdatedAt(LocalDateTime.now());
-        feesExtraRepository.save(row);
+        fe.setExtraCharge(price == null ? BigDecimal.ZERO : price);
+        fe.setUpdatedAt(LocalDateTime.now());
+        return entityToDTO(extraRepository.save(fe));
     }
 
     @Override
-    @Transactional
-    public void addTitle(String title) {
-        String key = trim(title);
-        if (key.isEmpty()) throw new IllegalArgumentException("title is blank");
-
-        feesExtraRepository.findByExtraChargeTitle(key).orElseGet(() -> {
-            FeesExtra fe = FeesExtra.builder()
-                    .extraChargeTitle(key)
-                    .extraCharge(BigDecimal.ZERO)
-                    .updatedAt(LocalDateTime.now())
-                    .build();
-            return feesExtraRepository.save(fe);
-        });
+    public void addRow(String title) {
+        String t = trim(title);
+        if (t.isEmpty()) return;
+        extraRepository.findByExtraChargeTitle(t).orElseGet(() ->
+        extraRepository.save(FeesExtra.builder()
+                        .extraChargeTitle(t)
+                        .extraCharge(BigDecimal.ZERO)
+                        .updatedAt(LocalDateTime.now())
+                        .build())
+        );
     }
 
     @Override
-    @Transactional
-    public void deleteTitle(String title) {
-        String key = trim(title);
-        if (key.isEmpty()) return;
-        feesExtraRepository.deleteByExtraChargeTitle(key);
+    public void deleteRow(String title) {
+        String t = trim(title);
+        if (t.isEmpty()) return;
+        extraRepository.deleteByExtraChargeTitle(t);
     }
 
-    private static String trim(String s) { return s == null ? "" : s.trim(); }
+    @Override
+    @Transactional(readOnly = true)
+    public List<FeesExtraDTO> findAllAsDto() {
+        return extraRepository.findAll().stream()
+                .map(this::entityToDTO)
+                .collect(Collectors.toList());
+    }
 }

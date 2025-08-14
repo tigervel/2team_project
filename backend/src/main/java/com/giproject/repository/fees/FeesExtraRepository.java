@@ -1,18 +1,16 @@
 package com.giproject.repository.fees;
 
-import java.util.List;
-import java.util.Optional;
-
+import com.giproject.entity.fees.FeesExtra;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 
-import com.giproject.entity.fees.FeesExtra;
+import java.util.*;
 
 public interface FeesExtraRepository extends JpaRepository<FeesExtra, Long> {
 	Optional<FeesExtra> findByExtraChargeTitle(String extraChargeTitle);
 
-	@Query("select distinct f.extraChargeTitle from FeesExtra f")
+	@Query("select distinct f.extraChargeTitle from FeesExtra f order by f.extraChargeTitle asc")
 	List<String> findDistinctTitles();
-	
-	void deleteByExtraChargeTitle(String extraChargeTitle);
+
+	void deleteByExtraChargeTitle(String title);
 }
