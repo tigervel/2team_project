@@ -22,7 +22,7 @@ import { API_SERVER_HOST } from "../../../api/serverConfig";
 const prefix = `${API_SERVER_HOST}/g2i4/admin/users`;
 
 const MemberAll = () => {
-    const [activeTab, setActiveTab] = useState(0);     // 0=전체, 1=물주, 2=차주, 3=신고내역(아직 구현 x), 4=관리자
+    const [activeTab, setActiveTab] = useState(0);     // 0=전체, 1=물주, 2=차주, 3=신고내역, 4=관리자
     const [currentPage, setCurrentPage] = useState(1);
     const [pageSize] = useState(10);
     const [users, setUsers] = useState([]);
@@ -38,7 +38,7 @@ const MemberAll = () => {
             case 1: return "OWNER";
             case 2: return "COWNER";
             case 4: return "ADMIN";
-            // case 3: return "REPORTED";
+            case 3: return "REPORTED";
             default: return "ALL";
         }
     })();
@@ -78,7 +78,6 @@ const MemberAll = () => {
         fetchList();
     }, [apiType, page, pageSize, searchKeyword, sort]);
 
-    // AdminMemberDTO: { type, memId, memName, memEmail, memPhone, memAdress, memCreateidDateTime }
     const toRow = (u) => ({
         name: u.memName || "",
         email: u.memEmail || "",
@@ -87,8 +86,8 @@ const MemberAll = () => {
             .toString()
             .replace("T", " ")
             .slice(0, 16),
-        OrderNum: "-", // 임시(백엔드 x)
-        reports: 0,    // 임시(백엔드 x)
+        OrderNum: "-",
+        reports: 0,
     });
 
     const handleTabChange = (_, v) => { setActiveTab(v); setCurrentPage(1); };

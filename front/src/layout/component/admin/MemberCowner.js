@@ -1,13 +1,19 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import {
   Box, Typography, Table, TableHead, TableRow, TableCell, TableBody,
-  Checkbox, Chip, Pagination, CircularProgress, TextField
+  Checkbox, Chip, Pagination, CircularProgress, TextField, Tabs, Tab
 } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
+import { useNavigate, useLocation } from "react-router-dom";
 import { fetchMembers } from "../../../api/adminApi/adminMembersApi";
 
 const MemberCowner = () => {
-  const [page, setPage] = useState(1);       // UI용 1-base
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  const [activeTab, setActiveTab] = useState(2);
+
+  const [page, setPage] = useState(1);
   const [size] = useState(10);
   const [rows, setRows] = useState([]);
   const [totalPages, setTotalPages] = useState(1);
@@ -15,14 +21,39 @@ const MemberCowner = () => {
   const [keyword, setKeyword] = useState("");
   const [error, setError] = useState("");
 
+  const sort = useMemo(() => "memCreateidDateTime,desc", []);
+
+  useEffect(() => {
+    if (location.pathname.includes("/admins")) setActiveTab(4);
+    else if (location.pathname.includes("/owners")) setActiveTab(1);
+    else if (location.pathname.includes("/cowners")) setActiveTab(2);
+    else if (location.pathname.includes("/reports")) setActiveTab(3);
+    else setActiveTab(0);
+  }, [location.pathname]);
+
+  const handleTabChange = (_e, v) => {
+    setActiveTab(v);
+    setPage(1);
+    if (v === 0) navigate("/g2i4/admin/members/all");
+    if (v === 1) navigate("/g2i4/admin/members/owners");
+    if (v === 2) navigate("/g2i4/admin/members/cowners");
+    if (v === 3) navigate("/g2i4/admin/members/reports");
+    if (v === 4) navigate("/g2i4/admin/members/admins");
+  };
+
+  const handleSearchChange = (e) => setKeyword(e.target.value);
+
+  const fmt = (dt) => (dt ? dt.toString().replace("T", " ").slice(0, 16) : "");
+
   const load = async () => {
     setLoading(true); setError("");
     try {
       const data = await fetchMembers({
         type: "COWNER",
-        page: page - 1, size,
-        sort: "memCreateidDateTime,desc",
-        keyword
+        page: page - 1,
+        size,
+        sort,
+        keyword: keyword?.trim() || undefined,
       });
       setRows(data.content ?? []);
       setTotalPages(Math.max(data.totalPages || 1, 1));
@@ -35,26 +66,35 @@ const MemberCowner = () => {
     }
   };
 
-  useEffect(() => { load(); /* eslint-disable-next-line */ }, [page, size]);
-  // 검색 즉시 반영하려면 아래처럼:
-  // useEffect(() => { setPage(1); load(); }, [keyword]);
-
-  const fmt = (dt) => (dt ? dt.toString().replace("T", " ").slice(0,16) : "");
+  useEffect(() => { load();}, [page, keyword, sort]);
 
   return (
-    <Box p={4}>
+    <Box flexGrow={1} p={4}>
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
-        <Typography variant="h5" fontWeight="bold">차주 목록</Typography>
+        <Box>
+          <Typography variant="h5" fontWeight="bold" mb={1}>차주</Typography>
+          <Tabs value={activeTab} onChange={handleTabChange} textColor="primary" indicatorColor="primary">
+            <Tab label="전체 회원" />
+            <Tab label="물주" />
+            <Tab label="차주" />
+            <Tab label="신고내역" />
+            <Tab label="관리자" />
+          </Tabs>
+        </Box>
         <TextField
-          size="small" placeholder="Search"
-          value={keyword} onChange={(e)=>setKeyword(e.target.value)}
-          InputProps={{ startAdornment: <SearchIcon fontSize="small" sx={{ mr:1, color:"grey.500" }}/> }}
-          onKeyDown={(e)=>{ if(e.key==='Enter'){ setPage(1); load(); }}}
+          variant="outlined"
+          placeholder="Search"
+          size="small"
+          value={keyword}
+          onChange={handleSearchChange}
+          InputProps={{
+            startAdornment: <SearchIcon fontSize="small" sx={{ mr: 1, color: "grey.500" }} />,
+          }}
         />
       </Box>
 
       {loading ? (
-        <Box display="flex" justifyContent="center" alignItems="center" height={300}><CircularProgress/></Box>
+        <Box display="flex" justifyContent="center" alignItems="center" height={300}><CircularProgress /></Box>
       ) : error ? (
         <Typography color="error">{error}</Typography>
       ) : (
@@ -72,24 +112,27 @@ const MemberCowner = () => {
             </TableRow>
           </TableHead>
           <TableBody>
-            {rows.map((u, i)=>(
+            {rows.map((u, i) => (
               <TableRow key={i}>
-                <TableCell padding="checkbox"><Checkbox/></TableCell>
+                <TableCell padding="checkbox"><Checkbox /></TableCell>
                 <TableCell>{u.memName}</TableCell>
                 <TableCell>{u.memEmail}</TableCell>
                 <TableCell>{u.memPhone}</TableCell>
                 <TableCell>{fmt(u.memCreateidDateTime)}</TableCell>
                 <TableCell>-</TableCell>
-                <TableCell><Chip label="0" size="small"/></TableCell>
+                <TableCell><Chip label="0" size="small" /></TableCell>
                 <TableCell>⋯</TableCell>
               </TableRow>
             ))}
+            {rows.length === 0 && (
+              <TableRow><TableCell colSpan={8} align="center">데이터가 없습니다</TableCell></TableRow>
+            )}
           </TableBody>
         </Table>
       )}
 
       <Box display="flex" justifyContent="center" mt={3}>
-        <Pagination count={totalPages} page={page} onChange={(_,v)=>setPage(v)} color="primary"/>
+        <Pagination count={totalPages} page={page} onChange={(_, v) => setPage(v)} color="primary" />
       </Box>
     </Box>
   );
