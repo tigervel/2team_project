@@ -1,5 +1,6 @@
 package com.giproject.repository.matching;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -22,13 +23,14 @@ public interface MatchingRepository extends JpaRepository<Matching, Long> {
 		      AND m.estimate.isTemp = false
 		      And m.estimate.matched = false
 		      And m.estimate.isOrdered = false
+		      And m.estimate.startTime >=:now
 		      AND NOT EXISTS (
 		        SELECT 1 FROM RejectedMatching r
 		        WHERE r.cargoOwner = :cargoOwner
 		          AND r.estimate = m.estimate
 		      )
 		    """)
-	Page<Matching> findValidMatchingList(@Param("cargoOwner") CargoOwner cargoOwner, Pageable pageable);
+	Page<Matching> findValidMatchingList(@Param("cargoOwner") CargoOwner cargoOwner,@Param("now")LocalDateTime now, Pageable pageable);
 	
 	@Query("SELECT COUNT(m) > 0 FROM Matching m WHERE m.estimate.eno = :estimateNo AND m.estimate.matched = true")
 	boolean checkMached(@Param("estimateNo") Long estimateNo);
