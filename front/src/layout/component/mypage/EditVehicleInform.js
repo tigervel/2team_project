@@ -30,7 +30,7 @@ const EditVehicleInform = () => {
         address: cargo.cargoType,
         weight: cargo.cargoCapacity,
         imagePath: cargo.cargoImage,
-        preview: cargo.cargoImage ? `http://localhost:8080/g2i4${cargo.cargoImage}` : null
+        preview: cargo.cargoImage ? `http://localhost:8080${cargo.cargoImage}` : null
       }));
       setVehicles(data);
     } catch (err) {

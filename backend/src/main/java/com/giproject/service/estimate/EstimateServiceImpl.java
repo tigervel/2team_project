@@ -1,6 +1,5 @@
 package com.giproject.service.estimate;
 
-import java.text.Collator;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -152,5 +151,21 @@ public class EstimateServiceImpl implements EstimateService{
 	    }).collect(Collectors.toList());
 	}
 
+	@Override
+	public List<EstimateDTO> findMyPaidEstimates(String memberId) {
+	    List<Estimate> list = esmateRepository.findMyPaidEstimates(memberId);
+	    return list.stream().map(e -> {
+	        EstimateDTO dto = entityToDTO(e);
+
+	        // 매칭 여부/매칭번호(있으면 넣기)
+	        dto.setAccepted(
+	            matchingRepository.findIsAcceptedByEstimateNo(e.getEno()).orElse(false)
+	        );
+	        dto.setMatchingNo(
+	            matchingRepository.findMatchingNoByEstimateNo(e.getEno()).orElse(null)
+	        );
+	        return dto;
+	    }).toList();
+	}
 
 }
