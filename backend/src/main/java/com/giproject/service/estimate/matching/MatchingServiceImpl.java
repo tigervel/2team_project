@@ -46,7 +46,8 @@ public class MatchingServiceImpl implements MatchingService{
 		
 		
 		Pageable pageable= PageRequest.of(requestDTO.getPage()-1, requestDTO.getSize(),Sort.by("matchingNo").descending());
-		Page<Matching> result = matchingRepository.findValidMatchingList(owner,pageable);
+		LocalDateTime now = LocalDateTime.now();
+		Page<Matching> result = matchingRepository.findValidMatchingList(owner,now,pageable);
 		System.out.println(result);
 		List<MatchingDTO> dtoList = result.getContent().stream().map(this::entityToDTO).collect(Collectors.toList());
 		System.out.println(dtoList);
