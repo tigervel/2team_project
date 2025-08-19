@@ -1,74 +1,96 @@
-import { createAsyncThunk, createSlice } from "@reduxjs/toolkit"
-import { loginPost } from "../api/memberApi";
+// src/slice/loginSlice.js
+import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
+import axios from "axios";
 
-//인증시 사용되는 기본 데이터를 초기화 합니다. 우린 email 을  id 로 사용했으니 email 로 
-const initState={
-    email:'',
-    role: 'USER', // 기본값 USER, 관리자는 ADMIN
-    memberId: null, // 로그인된 사용자의 ID
+// 백엔드 베이스 URL
+const API_BASE =
+    import.meta?.env?.VITE_API_BASE ||
+    process.env.REACT_APP_API_BASE ||
+    "http://localhost:8080";
 
+// 초기 상태 (기존 필드 유지 + 상태/토큰 필드 추가)
+const initState = {
+    email: "",
+    role: "USER",
+    memberId: null,
+
+    status: "idle",      // 'idle' | 'loading' | 'succeeded' | 'failed'
+    error: null,         // 에러 메시지
+    tokens: null,        // { tokenType, accessToken, refreshToken, expiresIn }
+};
+
+// ✅ 로그인 API 호출 (정규화해서 loginId/password 추출)
+async function loginApi(param) {
+    const loginId =
+        param?.loginId ?? param?.id ?? param?.email ?? param?.memId ?? "";
+    const password =
+        param?.password ?? param?.pw ?? param?.password1 ?? "";
+
+    const { data } = await axios.post(
+        `${API_BASE}/api/auth/login`,
+        { loginId, password },
+        { headers: { "Content-Type": "application/json" } }
+    );
+    // data: { tokenType, accessToken, refreshToken, expiresIn }
+    return data;
 }
-//여기서는 리덕스의 비동기통신 함수를 이용해서 API 의 서버전송 함수를 호출하고, 이에 따른 결과를
-//비동기적으로 처리하는 extraReducers 를 통해 제어 한다
-//API 를 호출하고,결과를 기다리는 함수 객체 생성
-export const loginPostAsync = createAsyncThunk('loginPostAsync',(param)=>{
-    return loginPost(param)
-})
 
-
-
-//slice 생성은 createSlice 함수를 통해서 한다
-//내부에는 슬라이스 이름, 초기상태값, reducers(상태를 가지고 어떤 action 을 처리할지를 정의한다. 즉 컴포넌트에
-//호출할 액션등을 선언함)
-
-const loginSlice = createSlice({ 
-    name : 'LoginSlice',
-    initialState:initState,
-    reducers:{
-        login:(state,action)=>{
-            console.log("로그인 수행됨")
-            console.log(state)
-           
-            //action 파라미터는 속성으로 payload 가 있다.. 애는 전달 되는 데이터를 담고 있다
-            //애를 이용해서 화면에서 전달된 email 을 새로운 상태값으로 변경해봄 
-            console.log(action.payload)
-            const data= action.payload;
- 
-            return {
-                email: data.email,
-                nickname: data.nickname,
-                pw: data.pw,
-                role: data.role || 'USER',
-                memberId: data.memberId || data.id
-            }
-
-             //전달된 상태값을 받아서 이를 새로운 상태로 리턴시켜줍니다
-        },
-        logout:(state,action)=>{
-            console.log('로그아웃 수행됨')
-            return {...initState}
-        }  
-    },
-    extraReducers:(builder)=>{
-        builder.addCase(loginPostAsync.fulfilled,(state,action)=>{
-            console.log('fulfilld')
-            const data = action.payload;
-            return {
-                ...data,
-                role: data.role || 'USER',
-                memberId: data.memberId || data.id
-            }
-            
-        })
-        .addCase(loginPostAsync.pending,(state,action)=>{
-            console.log('pending')
-        })
-        .addCase(loginPostAsync.rejected,(state,action)=>{
-            console.log("rejected")
-        })
-        
+// 비동기 thunk (이름은 기존 유지)
+export const loginPostAsync = createAsyncThunk(
+    "loginPostAsync",
+    async (param, { rejectWithValue }) => {
+        try {
+            const data = await loginApi(param);
+            return data;
+        } catch (err) {
+            const msg =
+                err?.response?.data?.message ??
+                err?.response?.data?.error ??
+                err?.message ??
+                "로그인 실패";
+            return rejectWithValue(msg);
+        }
     }
+);
+
+// slice
+const loginSlice = createSlice({
+    name: "LoginSlice",
+    initialState: initState,
+    reducers: {
+        // (선택) 수동 로그인 상태 세팅 - 기존 호환 유지
+        login: (state, action) => {
+            const d = action.payload || {};
+            return {
+                ...state,
+                email: d.email ?? state.email ?? "",
+                role: d.role ?? state.role ?? "USER",
+                memberId: d.memberId ?? d.id ?? state.memberId ?? null,
+            };
+        },
+        logout: () => {
+            // 토큰은 훅(useCustomLogin)에서 지우고, 상태만 리셋
+            return { ...initState };
+        },
+    },
+    extraReducers: (builder) => {
+        builder
+            .addCase(loginPostAsync.pending, (state) => {
+                state.status = "loading";
+                state.error = null;
+            })
+            .addCase(loginPostAsync.fulfilled, (state, action) => {
+                state.status = "succeeded";
+                state.error = null;
+                state.tokens = action.payload; // { tokenType, accessToken, refreshToken, expiresIn }
+                // 이메일/역할 정보는 토큰 응답에 없으므로 유지
+            })
+            .addCase(loginPostAsync.rejected, (state, action) => {
+                state.status = "failed";
+                state.error = action.payload || action.error?.message || "로그인 실패";
+            });
+    },
 });
 
-export const{login,logout} =loginSlice.actions;
+export const { login, logout } = loginSlice.actions;
 export default loginSlice.reducer;

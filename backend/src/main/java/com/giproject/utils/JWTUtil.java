@@ -80,7 +80,7 @@ public class JWTUtil {
 		{
 			SecretKey key = Keys.hmacShaKeyFor(JWTUtil.Key.getBytes("UTF-8"));
 			
-			claim = Jwts.parserBuilder()
+			claim = Jwts.parser()
 					.setSigningKey(key)
 					.build()
 					.parseClaimsJws(token)

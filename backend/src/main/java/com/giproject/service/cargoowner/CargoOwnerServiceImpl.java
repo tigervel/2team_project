@@ -22,7 +22,7 @@ public class CargoOwnerServiceImpl implements CargoOwnerService{
 	            owner.getCargoEmail(),
 	            owner.getCargoPhone(),
 	            owner.getCargoAddress(),
-	            owner.getCargoCreateidDateTime()
+	            owner.getCargoCreatedDateTime()
 	        );
 	    }
 }

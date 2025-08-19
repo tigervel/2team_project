@@ -3,8 +3,8 @@ package com.giproject.service.member;
 import java.util.stream.Collectors;
 
 import com.giproject.dto.common.UserResponseDTO;
-import com.giproject.dto.member.MemberDTO;
 import com.giproject.dto.secure.MemberModifyDTO;
+import com.giproject.dto.member.MemberDTO;
 import com.giproject.entity.member.Member;
 
 import jakarta.servlet.http.HttpSession;
@@ -15,7 +15,7 @@ import jakarta.transaction.Transactional;
 public interface MemberService {
     UserResponseDTO getSessionUserInfo(HttpSession session);
     
-	MemberDTO getKakaoMember(String accessToken);
+    MemberDTO getKakaoMember(String accessToken);
 	
     MemberDTO getNaverMember(String accessToken);
     
