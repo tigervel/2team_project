@@ -169,7 +169,7 @@ public class AdminMemberServiceImpl implements AdminMemberService {
 		return AdminMemberDTO.builder().type("COWNER").memId(nullToEmpty(c.getCargoId()))
 				.memName(nullToEmpty(c.getCargoName())).memEmail(nullToEmpty(c.getCargoEmail()))
 				.memPhone(nullToEmpty(c.getCargoPhone())).memAdress(nullToEmpty(c.getCargoAddress()))
-				.memCreateidDateTime(c.getCargoCreateidDateTime()).build();
+				.memCreateidDateTime(c.getCargoCreatedDateTime()).build();
 	}
 
 	private static String nullToEmpty(String s) {
