@@ -1,53 +1,126 @@
-//이 훅은 로그인이나 로그인 상태의 체크등, 다른 컴포넌트에서 공통으로 사용할 수 있는기능을 정의 한다
-//로그인처리, 로그인 상태여부, 로그아웃 처리등을 정의함..
+// src/hooks/useCustomLogin.js
+// 이 훅은 로그인/로그아웃, 로그인 상태 체크를 공통으로 제공합니다.
 
 import { useDispatch, useSelector } from "react-redux";
 import { Navigate, useNavigate } from "react-router-dom";
-import { loginPostAsync, logout } from "../slice/loginSlice";
-import { loginPost } from "../api/memberApi";
+import axios from "axios";
+import { logout as logoutAction } from "../slice/loginSlice";
 
-const useCustomLogin = ()=>{
-    //로그인 로그아웃 후 페이지 이동을 위한 함수 선언
+// 백엔드 베이스 URL
+const API_BASE =
+   import.meta?.env?.VITE_API_BASE ||
+   process.env.REACT_APP_API_BASE ||
+   "http://localhost:8080";
+
+// 토큰 유틸
+const saveTokens = ({ accessToken, refreshToken }, remember = true) => {
+   const store = remember ? localStorage : sessionStorage;
+   store.setItem("accessToken", accessToken);
+   store.setItem("refreshToken", refreshToken);
+};
+const clearTokens = () => {
+   localStorage.removeItem("accessToken");
+   localStorage.removeItem("refreshToken");
+   sessionStorage.removeItem("accessToken");
+   sessionStorage.removeItem("refreshToken");
+};
+const hasToken = () =>
+   Boolean(localStorage.getItem("accessToken") || sessionStorage.getItem("accessToken"));
+
+// ✅ 실제 로그인 API 호출 (경로 고정: /api/auth/login)
+async function loginApi({ loginId, password }) {
+   try {
+      const { data } = await axios.post(
+         `${API_BASE}/api/auth/login`,
+         { loginId, password },
+         {
+            headers: { "Content-Type": "application/json" },
+            withCredentials: false, // 세션/쿠키 기반이면 true
+         }
+      );
+      // { tokenType, accessToken, refreshToken, expiresIn }
+      return data;
+   } catch (err) {
+      // response가 없을 수도 있으니 안전하게 파싱
+      const msg =
+         err?.response?.data?.message ??
+         err?.response?.data?.error ??
+         err?.message ??
+         "로그인 실패";
+      throw new Error(msg);
+   }
+}
+
+const useCustomLogin = () => {
    const navigate = useNavigate();
-
-    //앱 상태관리를 위한 dispatch 선언
    const dispatch = useDispatch();
 
-    //로그인 상태 변수 선언
-   const loginState= useSelector(state=> state.login);
+   // 리덕스 상태 (이메일/역할 등 기존 로직 유지)
+   const loginState = useSelector((state) => state.login);
 
+   // 권한/식별자 (기존 필드 유지)
+   const isAdmin = loginState?.role === "ADMIN";
+   const isUser = loginState?.role === "USER";
+   const currentUserId = loginState?.memberId;
 
+   // 로그인 여부: 토큰 존재 OR 기존 email 필드
+   const isLogin = hasToken() || Boolean(loginState?.email);
 
-   
-    // 권한 확인 함수들
-    const isAdmin = loginState.role === 'ADMIN'; // 관리자 권한 확인
-    const isUser = loginState.role === 'USER'; // 일반 사용자 권한 확인
-    const currentUserId = loginState.memberId; // 현재 로그인한 사용자 ID
+   // ✅ 로그인 처리
+   // loginParam 키가 달라도 유연하게 매핑 (loginId/password가 정식)
+   const doLogin = async (loginParam) => {
+      const loginId =
+         loginParam?.loginId ??
+         loginParam?.id ??
+         loginParam?.memId ??
+         "";
+      const password =
+         loginParam?.password ??
+         loginParam?.pw ??
+         loginParam?.password1 ??
+         "";
+      const remember = loginParam?.remember ?? true;
 
-   const isLogin = loginState.email?true:false;//로그인 여부
+      // 백엔드 호출
+      const tokens = await loginApi({ loginId, password });
 
+      // 토큰 저장 (스토리지 선택)
+      saveTokens(
+         { accessToken: tokens.accessToken, refreshToken: tokens.refreshToken },
+         remember
+      );
 
-    //로그인 처리 함수 정의
-   const doLogin= async(loginParam)=>{
-      const action = await dispatch(loginPostAsync(loginParam))
-      return action.payload;
-   } 
+      // 필요 시: 리덕스 상태 초기화/동기화(선택)
+      // dispatch(loginSuccess({ ... }))
 
-   const doLogout = ()=>{
-      dispatch(logout())
-   }
-   const moveToPath = (path) => {
-      navigate(path, { replace: true });
-};
+      return tokens;
+   };
 
-const moveToLogin = () => {
-   navigate('/member/login', { replace: true });
-};
+   // ✅ 로그아웃 처리 (토큰 삭제 + 서버 알림(있으면))
+   const doLogout = async () => {
+      clearTokens();
+      try {
+         await axios.post(
+            `${API_BASE}/api/auth/logout`,
+            { reason: "user_logout" },
+            { withCredentials: true }
+         );
+      } catch {
+         /* 서버 엔드포인트 없어도 무시 */
+      }
+      try {
+         dispatch(logoutAction());
+      } catch {
+         /* slice에 액션 없으면 무시 */
+      }
+   };
 
-   const moveToLoginReturn =()=>{//로그인 페이지로 이동하는 컴포넌트
-      return <Navigate replace to={"/member/login"}/>
-   }
-   return{
+   // 네비게이션 유틸
+   const moveToPath = (path) => navigate(path, { replace: true });
+   const moveToLogin = () => navigate("/login", { replace: true });
+   const moveToLoginReturn = () => <Navigate replace to={"/member/login"} />;
+
+   return {
       loginState,
       isLogin,
       doLogin,
@@ -55,10 +128,10 @@ const moveToLogin = () => {
       moveToLogin,
       moveToPath,
       moveToLoginReturn,
-      // 새로 추가된 권한 관련 함수들
       isAdmin,
       isUser,
-      currentUserId
-   }
-}
+      currentUserId,
+   };
+};
+
 export default useCustomLogin;

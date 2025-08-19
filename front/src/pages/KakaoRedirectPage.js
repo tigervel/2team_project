@@ -1,48 +1,26 @@
 import { useEffect } from "react";
-import { useSearchParams } from "react-router-dom";
-import { getAccessToken, getMemberWithAccessToken } from "../api/getKakaoLoginLink";
-import { useDispatch } from "react-redux";
-import { login } from "../slice/loginSlice";
-import useCustomLogin from "../hooks/useCustomLogin";
 
-const KakaoRedirectPage = () => {
-    // 파라미터로 오는 토큰 값을 get
-    const[searchParams] = useSearchParams();
+const API_BASE =
+    (typeof import.meta !== "undefined" && import.meta.env?.VITE_API_BASE) ||
+    process.env.REACT_APP_API_BASE ||
+    "http://localhost:8080";
 
-    const authCode = searchParams.get('code')
+/**
+ * 카카오 OAuth 콜백 (프론트)
+ * - 카카오가 전달한 ?code=...&state=... 쿼리를
+ *   백엔드 표준 콜백(/login/oauth2/code/kakao)으로 그대로 포워딩합니다.
+ * - 실제 토큰 교환/연결 판별/리다이렉트는 백엔드 SuccessHandler가 수행합니다.
+ */
+export default function KakaoRedirectPage() {
+    useEffect(() => {
+        const qs = window.location.search || "";
+        window.location.replace(`${API_BASE}/login/oauth2/code/kakao${qs}`);
+    }, []);
 
-    //slice 의 login 에게 요청전달을 통한 로그인 실현을 함..
-    const dispatch = useDispatch();
-
-    const { moveToPath } = useCustomLogin();
-
-    useEffect(()=>{
-        getAccessToken(authCode)
-        .then(data =>{
-            console.log(data)
-
-            getMemberWithAccessToken(data)
-            .then(result=>{
-                console.log(result);
-                dispatch(login(result))
-
-                // 소셜 회원인지 기존 회원인지 검증
-                if(result && !result.social){
-                    // 기존 회원
-                    moveToPath("/")
-                } else {
-                    moveToPath("/member/modify")
-                    // 정보 수정하는 페이지로 리턴
-                }
-            })
-        })
-    },[authCode])
-
-    return(
-        <div>
-            <div>Kakao Login Redirect</div>
-            <div>{authCode}</div>
+    return (
+        <div style={{ padding: "2rem", textAlign: "center" }}>
+            <h2>카카오 로그인 처리 중...</h2>
+            <p>잠시만 기다려 주세요.</p>
         </div>
-    )
+    );
 }
-export default KakaoRedirectPage;

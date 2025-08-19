@@ -1,47 +1,21 @@
-import React, { useEffect } from "react";
-import { useSearchParams } from "react-router-dom";
-import { useDispatch } from "react-redux";
-import { login } from "../slice/loginSlice"; // Redux slice 경로 확인
-import useCustomLogin from "../hooks/useCustomLogin"; // 커스텀 훅 경로 확인
-import { getGoogleAccessToken, getMemberWithGoogleAccessToken } from "../api/getGoogleLoginLink"; // API 함수 경로 확인
+import { useEffect } from "react";
 
-const GoogleRedirectPage = () => {
-    const [searchParams] = useSearchParams();
-    const dispatch = useDispatch();
-    const { moveToPath } = useCustomLogin();
+const API_BASE =
+    (typeof import.meta !== "undefined" && import.meta.env?.VITE_API_BASE) ||
+    process.env.REACT_APP_API_BASE ||
+    "http://localhost:8080";
 
+/**
+ * 구글 OAuth 콜백 (프론트)
+ * - 구글이 전달한 ?code=...&state=... 쿼리를
+ *   백엔드 표준 콜백(/login/oauth2/code/google)으로 그대로 포워딩.
+ * - 실제 토큰 교환/연결 판별/리다이렉트는 백엔드 SuccessHandler가 수행.
+ */
+export default function GoogleRedirectPage() {
     useEffect(() => {
-        const handleGoogleLogin = async () => {
-            const authCode = searchParams.get("code");
-
-            if (!authCode) {
-                console.error("구글 로그인: code 값이 없습니다.");
-                moveToPath("/login");
-                return;
-            }
-
-            try {
-                const accessToken = await getGoogleAccessToken(authCode);
-                console.log("구글 액세스 토큰:", accessToken);
-
-                const memberData = await getMemberWithGoogleAccessToken(accessToken);
-                console.log("구글 회원 정보:", memberData);
-
-                dispatch(login(memberData));
-
-                if (memberData && !memberData.social) {
-                    moveToPath("/");
-                } else {
-                    moveToPath("/member/modify");
-                }
-            } catch (err) {
-                console.error("구글 로그인 처리 중 오류:", err);
-                moveToPath("/login");
-            }
-        };
-
-        handleGoogleLogin();
-    }, [searchParams, dispatch, moveToPath]);
+        const qs = window.location.search || "";
+        window.location.replace(`${API_BASE}/login/oauth2/code/google${qs}`);
+    }, []);
 
     return (
         <div style={{ padding: "2rem", textAlign: "center" }}>
@@ -49,6 +23,4 @@ const GoogleRedirectPage = () => {
             <p>잠시만 기다려 주세요.</p>
         </div>
     );
-};
-
-export default GoogleRedirectPage;
+}

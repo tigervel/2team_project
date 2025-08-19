@@ -1,11 +1,14 @@
+// com.giproject.entity.cargo.CargoOwner
 package com.giproject.entity.cargo;
 
+import com.fasterxml.jackson.annotation.JsonManagedReference;
+import com.giproject.entity.account.UserIndex;
 import jakarta.persistence.*;
 import lombok.*;
-import java.time.LocalDateTime;
-import java.util.List;
 
-import com.fasterxml.jackson.annotation.JsonManagedReference;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "cargo_owner")
@@ -13,33 +16,59 @@ import com.fasterxml.jackson.annotation.JsonManagedReference;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
+@Builder
+@ToString(exclude = { "cargoList", "cargoPw", "userIndex" })
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
 public class CargoOwner {
 
+    /** 전역 login_id와 동일 값 (PK) */
     @Id
-    @Column(name = "cargo_id") // ← 컬럼 이름 명시
-    private String cargoId;
+    @EqualsAndHashCode.Include
+    @Column(name = "cargo_id", length = 50, nullable = false)
+    private String cargoId; // ★ 문자열 PK (로그인 ID)
 
-    @Column(name = "cargo_pw")
+    /** user_index.login_id 와 읽기 전용으로 연결 */
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(
+        name = "cargo_id",                 // 이 엔티티의 FK(=PK)
+        referencedColumnName = "login_id", // user_index의 UNIQUE/PK 컬럼
+        insertable = false, updatable = false
+    )
+    private UserIndex userIndex;
+
+    /** 반드시 해시 저장(BCrypt) */
+    @Column(name = "cargo_pw", nullable = false, length = 200)
     private String cargoPw;
 
-    @Column(name = "cargo_email")
+    @Column(name = "cargo_email", nullable = false, length = 120)
     private String cargoEmail;
 
-    @Column(name = "cargo_name")
+    @Column(name = "cargo_name", nullable = false, length = 60)
     private String cargoName;
 
-    @Column(name = "cargo_phone")
+    @Column(name = "cargo_phone", length = 30)
     private String cargoPhone;
 
-    @Column(name = "cargo_address")
+    @Column(name = "cargo_address", length = 255)
     private String cargoAddress;
 
-    @Column(name = "cargo_created_datetime")
-    private LocalDateTime cargoCreateidDateTime;
-    @Column(name = "profile_image")
+    /** 생성 시각 (NOT NULL) — Member와 컬럼명 일관화 */
+    @Column(name = "cargo_created_date_time", nullable = false)
+    private LocalDateTime cargoCreatedDateTime;
+
+    @Column(name = "profile_image", length = 255)
     private String profileImage;
-    
+
     @OneToMany(mappedBy = "cargoOwner", cascade = CascadeType.ALL, orphanRemoval = true)
     @JsonManagedReference
-    private List<Cargo> cargoList;
+    @Builder.Default
+    private List<Cargo> cargoList = new ArrayList<>();
+
+    // 생성 시각 자동 세팅
+    @PrePersist
+    protected void onCreate() {
+        if (cargoCreatedDateTime == null) {
+            cargoCreatedDateTime = LocalDateTime.now();
+        }
+    }
 }

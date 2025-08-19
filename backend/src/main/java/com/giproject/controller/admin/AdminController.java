@@ -47,7 +47,7 @@ public class AdminController {
                 c.getCargoName(),
                 c.getCargoEmail(),
                 c.getCargoPhone(),
-                c.getCargoCreateidDateTime()
+                c.getCargoCreatedDateTime()
         );
     }
 }
