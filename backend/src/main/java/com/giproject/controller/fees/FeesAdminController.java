@@ -1,19 +1,24 @@
 package com.giproject.controller.fees;
 
+import com.giproject.dto.fees.FeesBasicDTO;
 import com.giproject.entity.fees.FeesBasic;
 import com.giproject.entity.fees.FeesExtra;
 import com.giproject.repository.fees.FeesBasicRepository;
 import com.giproject.repository.fees.FeesExtraRepository;
+import com.giproject.service.fees.FeesBasicService;
+
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import org.springframework.http.ResponseEntity;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @RestController
 @RequiredArgsConstructor
@@ -23,6 +28,7 @@ public class FeesAdminController {
 
 	private final FeesBasicRepository feesBasicRepository;
 	private final FeesExtraRepository feesExtraRepository;
+	private final FeesBasicService basicService;
 
 	private static final List<String> BASIC_ROWS_DEFAULT = List.of("0.5톤", "1톤", "2톤", "3톤", "4톤", "5톤이상");
 	private static final List<String> BASIC_COLS = List.of("거리별 요금", "기본 요금");
@@ -215,4 +221,12 @@ public class FeesAdminController {
 	public static class RowRequest {
 		private String name;
 	}
+	
+	@PutMapping("/imageupload/{tno}")
+	public ResponseEntity<Map<String,String>> imageupload(@PathVariable("tno") Long tno, @RequestPart("image") MultipartFile file){
+			Map<String, String> response = basicService.uploadImg(tno, file);
+		return ResponseEntity.ok(response);
+	}
+	
+
 }

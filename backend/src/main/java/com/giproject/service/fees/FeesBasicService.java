@@ -8,6 +8,9 @@ import jakarta.transaction.Transactional;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
+
+import org.springframework.web.multipart.MultipartFile;
 
 @Transactional
 public interface FeesBasicService {
@@ -20,6 +23,7 @@ public interface FeesBasicService {
                 .ratePerKm(entity.getRatePerKm())
                 .initialCharge(entity.getInitialCharge())
                 .updatedAt(entity.getUpdatedAt())
+                .cargoImage(entity.getCargoImage())
                 .build();
     }
 
@@ -31,6 +35,7 @@ public interface FeesBasicService {
                 .ratePerKm(dto.getRatePerKm())
                 .initialCharge(dto.getInitialCharge())
                 .updatedAt(dto.getUpdatedAt() == null ? LocalDateTime.now() : dto.getUpdatedAt())
+                .cargoImage(dto.getCargoImage())
                 .build();
     }
     
@@ -44,4 +49,6 @@ public interface FeesBasicService {
 	void deleteRow(String weight);//행 추가삭제
 	
 	List<FeesBasicDTO> findAllAsDto();
+	
+	Map<String,String> uploadImg(Long tno,MultipartFile file);
 }
