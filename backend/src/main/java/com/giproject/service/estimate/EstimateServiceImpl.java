@@ -112,7 +112,7 @@ public class EstimateServiceImpl implements EstimateService{
 	}
 	@Override
 	public List<FeesBasicDTO> searchFees() {
-		return basicRepository.findAll()
+		return basicRepository.findAllAsc()
 				.stream()
 				.map(list -> basicService.entityToDTO(list))
 				.collect(Collectors.toList());

@@ -4,6 +4,8 @@ import Carousel from "react-material-ui-carousel";
 import SearchIcon from "@mui/icons-material/Search";
 import { postSearchFeesBasic } from "../api/estimateApi/estimateApi";
 import { calculateDistanceBetweenAddresses } from "../layout/component/common/calculateDistanceBetweenAddresses";
+import { basicList } from "../api/adminApi/adminApi";
+import MainFeesUtil from "../layout/component/common/MainFeesUtil";
 const initState = {
   startAddress: '',
   endAddress: '',
@@ -13,12 +15,21 @@ const initState = {
   distanceKm: ''
 
 }
+
 const HomePage = () => {
   const [estimate, setEstimate] = useState(initState);
   const [fees, setFees] = useState([]);
   const [baseCost, setBaseCost] = useState(0);
   const [distanceCost, setDistanceCost] = useState(0);
   const [exPrice, setExprice] = useState(0);
+  const [showAll, setShowAll] = useState(false);
+  const visibleFees = showAll ? fees : fees.slice(0, 3);
+
+  const DEFAULT_TRUCK_IMG = "/image/placeholders/truck.svg";
+  const normalizeUrl = (p) =>
+    !p ? null : p.startsWith("http") ? p : p.startsWith("/") ? p : `/uploads/trucks/${p}`;
+
+
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -52,10 +63,10 @@ const HomePage = () => {
     setExprice(total);
   }, [estimate.cargoWeight, estimate.distanceKm, fees]);
 
-  const vehicleTypes = [
+  const vehicleTypes = [(
     { id: 1, name: "소형", image: "/images/small-truck.png" },
     { id: 2, name: "중형", image: "/images/medium-truck.png" },
-    { id: 3, name: "대형", image: "/images/large-truck.png" }
+    { id: 3, name: "대형", image: "/images/large-truck.png" })
   ];
 
   const notices = [
@@ -120,21 +131,34 @@ const HomePage = () => {
       {/* 🚚 차량 종류 */}
       <Box sx={{ py: 5, textAlign: "center" }}>
         <Typography variant="h5" fontWeight="bold" gutterBottom>차량 종류</Typography>
-        <Grid container spacing={2} justifyContent="center">
-          {vehicleTypes.map(vehicle => (
-            <Grid item key={vehicle.id}>
-              <Card sx={{ width: 350, height: 250 }}>
-                <CardMedia component="img" height="120" image={vehicle.image} alt={vehicle.name} />
-                <CardContent>
-                  <Typography align="center">{vehicle.name}</Typography>
-                </CardContent>
-              </Card>
-            </Grid>
-          ))}
-        </Grid>
-        <Button variant="contained" sx={{ mt: 2 }}>더보기</Button>
-      </Box>
 
+        <Grid container spacing={2} justifyContent="center">
+          {visibleFees.map((basic) => {
+            const img = normalizeUrl(basic.cargoImage) || DEFAULT_TRUCK_IMG;
+            return (
+              <Grid item key={basic.tno}>
+                <Card sx={{ width: 350, height: 250 }} >
+                   <MainFeesUtil key={basic.tno} tno={basic.tno} />
+        
+                  <CardContent>
+                    <Typography align="center">{basic.weight}</Typography>
+                  </CardContent>
+                </Card>
+              </Grid>
+            );
+          })}
+        </Grid>
+
+        {fees.length > 3 && (
+          <Button
+            variant="contained"
+            sx={{ mt: 2 }}
+            onClick={() => setShowAll((prev) => !prev)}
+          >
+            {showAll ? "접기" : "더보기"}
+          </Button>
+        )}
+      </Box>
 
       <Box sx={{ width: '100%', display: 'flex', justifyContent: 'center', py: 6 }}>
         <Box sx={{ width: '100%', maxWidth: '1200px', px: 2 }}>

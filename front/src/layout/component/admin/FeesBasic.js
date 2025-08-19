@@ -33,6 +33,18 @@ const FeesBasicTable = () => {
   const [newRow, setNewRow] = useState("");
   const [error, setError] = useState("");
 
+    const [vehicles, setVehicles] = useState([]);
+    const [open, setOpen] = useState(false);
+    const [editingIndex, setEditingIndex] = useState(null);
+    const [formData, setFormData] = useState({
+      tno: "",
+      image: null,
+      preview: null
+    });
+  
+
+    
+
   const fetchFull = useCallback(async () => {
     setError("");
     try {
