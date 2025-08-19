@@ -21,6 +21,8 @@ public interface MemberRepository extends JpaRepository<Member, String> {
 	List<Member> findByRole(@Param("role") String role);
 	
     Optional<Member> findByMemEmail(String memEmail);
+    
+    Optional<Member> findByMemId(String memId);
 	
     List<Member> findByMemIdContainingOrMemNameContaining(String memIdKeyword, String memNameKeyword);
 

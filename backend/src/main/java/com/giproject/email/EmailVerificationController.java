@@ -18,7 +18,7 @@ public class EmailVerificationController {
         this.svc = svc;
     }
 
-    // 요청 DTO (record)
+    // 요청 DTO (컨트롤러 내부 record라 파일 분리 불필요)
     public record SendReq(@Email @NotBlank String email) {}
     public record VerifyReq(@Email @NotBlank String email, @NotBlank String code) {}
 

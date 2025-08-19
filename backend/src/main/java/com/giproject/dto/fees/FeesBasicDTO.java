@@ -25,4 +25,6 @@ public class FeesBasicDTO {
 	private BigDecimal initialCharge;
 
 	private LocalDateTime updatedAt;
+	
+	private String cargoImage;
 }

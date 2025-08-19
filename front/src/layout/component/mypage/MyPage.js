@@ -5,24 +5,57 @@ import {
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow
 } from '@mui/material';
 
+import { getMonthlyRevenue } from '../../../api/adminApi/adminApi';
+import { useSelector } from 'react-redux';
+import { useState } from 'react';
+
 const MyPage = () => {
   const chartRef = useRef(null);
   const chartInstanceRef = useRef(null);
+  const [revenueData, setRevenueData] = useState([]);
+  const loginInfo = useSelector((state) => state.loginSlice); // Redux에서 로그인 정보 가져오기
 
+  // 1. API를 통해 월별 수익 데이터 가져오기
   useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const data = await getMonthlyRevenue();
+        // 현재 로그인한 사용자의 cargoId로 데이터 필터링 (loginInfo.id가 cargoId라고 가정)
+        const filteredData = data.filter(item => item.cargoId === loginInfo.id);
+        setRevenueData(filteredData);
+      } catch (error) {
+        console.error("월별 수익 데이터를 가져오는데 실패했습니다.", error);
+      }
+    };
+
+    if (loginInfo.id) { // 로그인 정보가 있을 때만 데이터 요청
+      fetchData();
+    }
+  }, [loginInfo.id]);
+
+  // 2. 가져온 데이터로 차트 그리기
+  useEffect(() => {
+    if (!chartRef.current || revenueData.length === 0) return;
+
     const ctx = chartRef.current.getContext('2d');
-    if (chartInstanceRef.current) chartInstanceRef.current.destroy();
+    if (chartInstanceRef.current) {
+      chartInstanceRef.current.destroy();
+    }
+
+    // 차트 데이터 포맷에 맞게 가공
+    const labels = revenueData.map(item => `${item.year}-${String(item.month).padStart(2, '0')}`);
+    const data = revenueData.map(item => item.totalRevenue);
 
     chartInstanceRef.current = new Chart(ctx, {
-      type: 'bar',
+      type: 'line', // 선 그래프로 변경
       data: {
-        labels: ['1월', '2월', '3월', '4월', '5월', '6월'],
+        labels: labels,
         datasets: [{
-          label: '수익',
-          data: [300, 500, 400, 600, 700, 550],
-          borderColor: 'rgba(124, 58, 237, 1)',
-          borderWidth: 2,
-          backgroundColor: 'rgba(124, 58, 237, 0.1)',
+          label: '월별 수익 (원)',
+          data: data,
+          borderColor: 'rgba(75, 192, 192, 1)',
+          backgroundColor: 'rgba(75, 192, 192, 0.2)',
+          fill: true,
         }]
       },
       options: {
@@ -30,20 +63,22 @@ const MyPage = () => {
         scales: {
           y: {
             beginAtZero: true,
-            ticks: {
-              callback: (value) => `${value} 만`,
-            },
           },
         },
+        plugins: {
+            legend: {
+                display: false // 범례는 외부에서 표시하므로 차트 내에서는 숨김
+            }
+        }
       }
     });
 
     return () => {
-      if (chartInstanceRef.current) chartInstanceRef.current.destroy();
+      if (chartInstanceRef.current) {
+        chartInstanceRef.current.destroy();
+      }
     };
-  }, []);
-
-  const ownerId = 1; // 예시: 차량 관리 노출 조건
+  }, [revenueData]); // revenueData가 변경될 때마다 차트를 다시 그림
 
   return (
     <Box sx={{ display: 'flex' }}>
@@ -76,10 +111,10 @@ const MyPage = () => {
           <Grid container spacing={2} mb={4}>
             <Grid item xs={12} md={6}>
               <Paper sx={{ p: 2 }}>
-                <Typography variant="body2" color="text.secondary" mb={2}>월별 수익률</Typography>
+                <Typography variant="body2" color="text.secondary" mb={2}>월별 수익 현황</Typography>
                 <Box display="flex" width={648} alignItems="center" mb={1}>
-                  <Box sx={{ width: 12, height: 12, bgcolor: 'purple', borderRadius: '50%', mr: 1 }} />
-                  <Typography variant="caption" color="purple">수익</Typography>
+                  <Box sx={{ width: 12, height: 12, bgcolor: 'rgba(75, 192, 192, 1)', borderRadius: '50%', mr: 1 }} />
+                  <Typography variant="caption" sx={{ color: 'rgba(75, 192, 192, 1)' }}>월별 수익 (원)</Typography>
                 </Box>
                 <canvas ref={chartRef} height="150" />
               </Paper>

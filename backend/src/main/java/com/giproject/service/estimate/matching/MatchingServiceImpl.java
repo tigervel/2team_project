@@ -8,6 +8,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import com.giproject.dto.matching.MatchingDTO;
@@ -38,9 +40,9 @@ public class MatchingServiceImpl implements MatchingService{
 
 	@Override
 	public PageResponseDTO<MatchingDTO> getList(PageRequestDTO requestDTO) {
-		 //Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-		    //String memId = auth.getName(); // 로그인된 사용자 ID
-		  //CargoOwner cargoOwner =cargoOwnerRepository.findById(memId).orElseThrow();
+		// Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+		   // String memId = auth.getName(); // 로그인된 사용자 ID
+		 // CargoOwner cargoOwner =cargoOwnerRepository.findById(memId).orElseThrow();
 		String testOwner = "cargo123";
 		CargoOwner owner = cargoOwnerRepository.findById(testOwner).orElseThrow(() -> new RuntimeException("기사정보 없음"));
 		

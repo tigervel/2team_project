@@ -26,7 +26,7 @@ public class Cargo {
     private String cargoType;      // 차량 종류
 
     @Column(name = "cargo_capacity")
-    private Double cargoCapacity;  // 적재 무게
+    private String cargoCapacity;  // 적재 무게
 
     @Column(name = "cargo_created_datetime")
     private LocalDateTime cargoCreateidDateTime = LocalDateTime.now();
