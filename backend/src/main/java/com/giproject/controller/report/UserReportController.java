@@ -4,12 +4,13 @@ import com.giproject.dto.report.UserReportDTO;
 import com.giproject.service.report.UserReportService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.*;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/api/admin/reports")
+@RequestMapping("/g2i4/admin/reports")
 public class UserReportController {
 
     private final UserReportService service;
@@ -19,19 +20,20 @@ public class UserReportController {
         return ResponseEntity.ok(service.countUnread());
     }
 
-    @GetMapping
+    @GetMapping//신고목록 조회
     public ResponseEntity<Page<UserReportDTO>> list(
-            @RequestParam(required = false) Boolean unreadOnly,
-            @RequestParam(required = false) String keyword,
+            @RequestParam(name = "unreadOnly", required = false) Boolean unreadOnly,
+            @RequestParam(name = "keyword", required = false) String keyword,
+            @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC)
             Pageable pageable
     ) {
         return ResponseEntity.ok(service.list(unreadOnly, keyword, pageable));
     }
 
-    @PatchMapping("/{id}/read")//읽음 처리
+    @PatchMapping("/{id}/read")
     public ResponseEntity<UserReportDTO> markRead(
-            @PathVariable Long id,
-            @RequestParam boolean read
+            @PathVariable("id") Long id,
+            @RequestParam(name = "read") boolean read
     ) {
         return ResponseEntity.ok(service.markRead(id, read));
     }
@@ -39,10 +41,5 @@ public class UserReportController {
     @PatchMapping("/read-all")
     public ResponseEntity<Integer> markAllRead() {
         return ResponseEntity.ok(service.markAllRead());
-    }
-
-    @PostMapping
-    public ResponseEntity<UserReportDTO> create(@RequestBody UserReportDTO dto) {
-        return ResponseEntity.ok(service.create(dto));
     }
 }

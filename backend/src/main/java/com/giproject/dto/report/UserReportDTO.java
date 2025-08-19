@@ -16,7 +16,7 @@ import lombok.Setter;
 @AllArgsConstructor
 public class UserReportDTO {
 
-	private Long id;
+	private Long id;//신고 번호
 	private String reporterId;// 신고유저
 	private String targetId;// 신고대상
 	private String content;// 신고내용

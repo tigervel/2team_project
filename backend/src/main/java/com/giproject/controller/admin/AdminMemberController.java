@@ -34,7 +34,6 @@ public class AdminMemberController {
 			return ResponseEntity.ok(result);
 		} catch (Exception e) {
 			log.error("[/g2i4/admin/members] ERROR type={}, keyword={}, pageable={}", type, keyword, pageable, e);
-			// 프론트에서 원인 보이게 500 그대로 던지되 메시지 포함
 			throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
 					"AdminMemberService.list failed: " + e.getClass().getSimpleName() + ": " + e.getMessage(), e);
 		}

@@ -175,8 +175,7 @@ public class AdminMemberServiceImpl implements AdminMemberService {
 	private static String nullToEmpty(String s) {
 		return s == null ? "" : s;
 	}
-
-	// 키워드 포함 여부 체크 (대소문자 무시, null 세이프)
+	
 	private boolean contains(String s, String needleLower) {
 		return s != null && s.toLowerCase(Locale.ROOT).contains(needleLower);
 	}
