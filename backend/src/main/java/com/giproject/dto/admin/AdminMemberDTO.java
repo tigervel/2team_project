@@ -1,18 +1,22 @@
 package com.giproject.dto.admin;
 
 import java.time.LocalDateTime;
+import lombok.*;
 
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-
-@Data
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
+@Builder
 public class AdminMemberDTO {
+    // OWNER(물주) | COWNER(차주) | ADMIN(관리자)
+    private String type;
 
-	private String memName;
+    private String memId;
+
+    private String memName;
     private String memEmail;
     private String memPhone;
-    private LocalDateTime memCreateIdDateTime;
+    private String memAdress;
+    private LocalDateTime memCreateidDateTime;
 }

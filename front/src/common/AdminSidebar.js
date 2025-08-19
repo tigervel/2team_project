@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import {
   Drawer,
@@ -10,6 +10,7 @@ import {
   Box,
   ListItemIcon,
   Avatar,
+  Badge,
 } from "@mui/material";
 import {
   ExpandLess,
@@ -19,41 +20,37 @@ import {
   Notifications as NotificationsIcon,
   AttachMoney as MoneyIcon,
 } from "@mui/icons-material";
-
 import PersonIcon from '@mui/icons-material/Person';
+import { fetchUnreadCount } from "../api/adminApi/adminReportsApi";
 
-//const HEADER_HEIGHT = 100;
 const drawerWidth = 260;
 
 const AdminSidebar = () => {
   const location = useLocation();
-  const [openGroups, setOpenGroups] = useState({});
 
-  const handleToggle = (group) => {
-    setOpenGroups((prev) => ({ ...prev, [group]: !prev[group] }));
-  };
-
-  const groups = [
+  const groups = useMemo(() => ([
     {
       title: "이용 통계",
       icon: <DashboardIcon />,
-      path: "/admin"
+      path: "/admin",
     },
     { title: "배송 조회", icon: <DashboardIcon />, path: "/admin/deliveryPage" },
     {
       title: "회원 관리",
       icon: <PeopleIcon />,
+      id: "members",
       items: [
         { label: "전체 회원", path: "/admin/memberAll" },
         { label: "물주", path: "/admin/memberOwner" },
         { label: "차주", path: "/admin/memberCowner" },
-        { label: "신고내역", path: "/admin/memberReport" },
+        { label: "신고내역", path: "/admin/memberReport", id: "reports" },
         { label: "관리자", path: "/admin/memberAdmin" },
       ],
     },
     {
       title: "공지/문의",
       icon: <NotificationsIcon />,
+      id: "notice",
       items: [
         { label: "공지사항", path: "/admin/notice" },
         { label: "문의사항", path: "/admin/inquirie" },
@@ -62,12 +59,44 @@ const AdminSidebar = () => {
     {
       title: "운송료",
       icon: <MoneyIcon />,
+      id: "fees",
       items: [
         { label: "기본요금", path: "/admin/feesBasic" },
         { label: "추가요금", path: "/admin/feesExtra" },
       ],
     },
-  ];
+  ]), []);
+
+  const initialOpen = useMemo(() => {
+    const map = {};
+    groups.forEach(g => {
+      if (g.items && g.items.some(it => it.path === location.pathname)) {
+        map[g.title] = true;
+      }
+    });
+    return map;
+  }, [groups, location.pathname]);
+
+  const [openGroups, setOpenGroups] = useState(initialOpen);
+
+  const handleToggle = (groupTitle) => {
+    setOpenGroups((prev) => ({ ...prev, [groupTitle]: !prev[groupTitle] }));
+  };
+
+  const [unread, setUnread] = useState(0);
+  useEffect(() => {
+    let mounted = true;
+    const load = async () => {
+      try {
+        const n = await fetchUnreadCount();
+        if (mounted) setUnread(n || 0);
+      } catch (e) {
+      }
+    };
+    load();
+    const t = setInterval(load, 60000); // 60초마다 갱신
+    return () => { mounted = false; clearInterval(t); };
+  }, []);
 
   return (
     <Drawer
@@ -79,27 +108,26 @@ const AdminSidebar = () => {
           width: drawerWidth,
           boxSizing: "border-box",
           backgroundColor: "#f9fafb",
-          
         },
       }}
     >
-    <Box sx={{ paddingTop: "100px" }}>
-      <Box sx={{ p: 2, textAlign: "center"}}>
-        <Typography variant="h6" fontWeight="bold" gutterBottom>
-          관리자 페이지
-        </Typography>
-        <Avatar
-          sx={{
-            bgcolor: "#e5e7eb",
-            width: 56,
-            height: 56,
-            margin: "0 auto",
-            mb: 2,
-          }}
-        >
-          <PersonIcon sx={{ color: "#9ca3af", fontSize: 32 }} />
-        </Avatar>
-      </Box>
+      <Box sx={{ paddingTop: "100px" }}>
+        <Box sx={{ p: 2, textAlign: "center" }}>
+          <Typography variant="h6" fontWeight="bold" gutterBottom>
+            관리자 페이지
+          </Typography>
+          <Avatar
+            sx={{
+              bgcolor: "#e5e7eb",
+              width: 56,
+              height: 56,
+              margin: "0 auto",
+              mb: 2,
+            }}
+          >
+            <PersonIcon sx={{ color: "#9ca3af", fontSize: 32 }} />
+          </Avatar>
+        </Box>
 
         <List disablePadding>
           {groups.map((group) =>
@@ -110,10 +138,26 @@ const AdminSidebar = () => {
                   <ListItemText primary={group.title} />
                   {openGroups[group.title] ? <ExpandLess /> : <ExpandMore />}
                 </ListItemButton>
+
                 <Collapse in={openGroups[group.title]} timeout="auto" unmountOnExit>
                   <List component="div" disablePadding>
                     {group.items.map((item) => {
                       const active = location.pathname === item.path;
+                      const isReports = item.id === "reports";
+                      const primaryNode = isReports ? (
+                        <Box display="flex" alignItems="center" gap={1}>
+                          <span>신고내역</span>
+                          <Badge
+                            color="error"
+                            badgeContent={unread}
+                            max={99}
+                            overlap="circular"
+                          />
+                        </Box>
+                      ) : (
+                        item.label
+                      );
+
                       return (
                         <ListItemButton
                           key={item.label}
@@ -123,7 +167,7 @@ const AdminSidebar = () => {
                           sx={{ pl: 4 }}
                         >
                           <ListItemText
-                            primary={item.label}
+                            primary={primaryNode}
                             primaryTypographyProps={{
                               fontWeight: active ? 700 : 400,
                               color: active ? "primary.main" : "text.primary",
@@ -154,7 +198,7 @@ const AdminSidebar = () => {
             )
           )}
         </List>
-        </Box>
+      </Box>
     </Drawer>
   );
 };
