@@ -1,4 +1,7 @@
+// src/common/ResponsiveAppBar.js
 import * as React from 'react';
+import { useSelector, useDispatch } from 'react-redux';
+import { Link, useNavigate } from 'react-router-dom';
 import AppBar from '@mui/material/AppBar';
 import Box from '@mui/material/Box';
 import Toolbar from '@mui/material/Toolbar';
@@ -7,9 +10,12 @@ import Typography from '@mui/material/Typography';
 import Menu from '@mui/material/Menu';
 import MenuIcon from '@mui/icons-material/Menu';
 import Container from '@mui/material/Container';
+import Avatar from '@mui/material/Avatar';
 import Button from '@mui/material/Button';
+import Tooltip from '@mui/material/Tooltip';
 import MenuItem from '@mui/material/MenuItem';
-import { Link, useNavigate } from 'react-router-dom';
+
+import { login as loginAction, logout as logoutAction } from '../slice/loginSlice'; // ✅ 경로 확인
 
 const pages = [
   { label: '견적서 작성', path: '/estimatepage' },
@@ -18,98 +24,106 @@ const pages = [
   { label: '문의사항', path: '/qaboard' }
 ];
 
-function ResponsiveAppBar() {
+// 요청: settings 삭제하지 않기
+const settings = [
+  { label: '마이페이지', path: '/mypage' },
+  { label: '주문내역 확인', path: '/mypage' },
+  { label: '배송상태', path: '/mypage' },
+  { label: '로그아웃', path: '/logout' }
+];
+
+// 간단한 JWT 디코더
+function decodeJwt(token) {
+  try {
+    const base64Url = token.split('.')[1];
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    const json = decodeURIComponent(
+      atob(base64).split('').map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join('')
+    );
+    return JSON.parse(json);
+  } catch {
+    return null;
+  }
+}
+
+export default function ResponsiveAppBar() {
+  const dispatch = useDispatch();
   const navigate = useNavigate();
 
-  // 모바일 네비게이션 메뉴 상태
-  const [anchorElNav, setAnchorElNav] = React.useState(null);
-  const handleOpenNavMenu = (event) => setAnchorElNav(event.currentTarget);
-  const handleCloseNavMenu = () => setAnchorElNav(null);
+  const loginState = useSelector(state => state?.login);
+  const hasReduxLogin = Boolean(loginState?.email || loginState?.memberId);
 
-  // 로그인 여부 (스토리지 토큰 존재 여부로 판단)
-  const isAuthenticated = Boolean(
-    localStorage.getItem('accessToken') ||
-    sessionStorage.getItem('accessToken')
-  );
+  const accessToken = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+  const hasToken = Boolean(accessToken);
 
-  // 토큰 변경(다른 탭 등) 반영
-  const [, forceRender] = React.useState(0);
+  const isLogin = hasReduxLogin || hasToken;
+
+  // 새로고침 시 토큰으로 하이드레이트
   React.useEffect(() => {
-    const onStorage = () => forceRender((x) => x + 1);
-    window.addEventListener('storage', onStorage);
-    return () => window.removeEventListener('storage', onStorage);
-  }, []);
+    if (!hasReduxLogin && accessToken) {
+      const payload = decodeJwt(accessToken);
+      if (payload) {
+        dispatch(
+          loginAction({
+            email: payload.email || '',
+            nickname: payload.name || '',
+            pw: '',
+            role: (payload.rolenames && payload.rolenames[0]) || payload.role || 'USER',
+            memberId: payload.memId || payload.cargoId || payload.sub || null,
+          })
+        );
+      }
+    }
+  }, [hasReduxLogin, accessToken, dispatch]);
 
-  const API_BASE =
-    import.meta?.env?.VITE_API_BASE ||
-    process.env.REACT_APP_API_BASE ||
-    'http://localhost:8080';
+  const [anchorElNav, setAnchorElNav]   = React.useState(null);
+  const [anchorElUser, setAnchorElUser] = React.useState(null);
 
-  // 로그아웃: 토큰 삭제 → 서버 로그아웃 시도(있으면) → 이동
+  const handleOpenNavMenu  = (e) => setAnchorElNav(e.currentTarget);
+  const handleOpenUserMenu = (e) => setAnchorElUser(e.currentTarget);
+  const handleCloseNavMenu = () => setAnchorElNav(null);
+  const handleCloseUserMenu = () => setAnchorElUser(null);
+
+  // ✅ 즉시 로그아웃 처리: 토큰/Redux 상태 삭제 → 메뉴 닫기 → 이동
   const handleLogout = async () => {
     try {
+      // 클라이언트 토큰 제거
       localStorage.removeItem('accessToken');
       localStorage.removeItem('refreshToken');
-      sessionStorage.removeItem('accessToken');
-      sessionStorage.removeItem('refreshToken');
 
-      try {
-        await fetch(`${API_BASE}/api/auth/logout`, {
-          method: 'POST',
-          credentials: 'include',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ reason: 'user_logout' })
-        });
-      } catch {
-        /* 서버에 엔드포인트가 없어도 무시 */
-      }
+      // (선택) 서버에도 로그아웃 알림을 보내고 싶다면:
+      // await fetch(`${API_BASE}/api/auth/logout`, { method: 'POST', credentials: 'include' });
+
+      // Redux 상태 초기화
+      dispatch(logoutAction());
     } finally {
+      handleCloseUserMenu();
+      // 바로 UI가 로그인/회원가입으로 변경됨
       navigate('/login', { replace: true });
     }
   };
 
   return (
-    <AppBar position="static" sx={{ zIndex: (theme) => theme.zIndex.drawer + 1, bgcolor: '#299AF0' }}>
+    <AppBar position="static" sx={{ zIndex: (t) => t.zIndex.drawer + 1, bgcolor: '#299AF0' }}>
       <Container maxWidth="xl">
         <Toolbar disableGutters>
 
-          {/* 좌측 로고 (데스크탑) */}
+          {/* 데스크톱 로고 (public/image 사용 권장) */}
           <Typography
             variant="h6"
             noWrap
-            component={Link}
-            to="/"
-            sx={{
-              mr: 2,
-              display: { xs: 'none', md: 'flex' },
-              fontFamily: 'bold',
-              fontWeight: 700,
-              letterSpacing: '.3rem',
-              color: 'inherit',
-              textDecoration: 'none',
-            }}
+            component="a"
+            href="/"
+            sx={{ mr: 2, display: { xs: 'none', md: 'flex' }, fontFamily: 'bold', fontWeight: 700, letterSpacing: '.3rem', color: 'inherit', textDecoration: 'none' }}
           >
-            <img
-              src="../../image/logo/KakaoTalk_20250508_113520617.png"
-              alt="Logo"
-              style={{ height: '40px' }}
-            />
+            <img src="/image/logo/KakaoTalk_20250508_113520617.png" alt="Logo" style={{ height: 40 }} />
           </Typography>
 
           {/* 모바일 메뉴 버튼 */}
           <Box sx={{ flexGrow: 1, display: { xs: 'flex', md: 'none' } }}>
-            <IconButton
-              size="large"
-              aria-label="open navigation"
-              aria-controls="menu-appbar"
-              aria-haspopup="true"
-              onClick={handleOpenNavMenu}
-              color="inherit"
-            >
+            <IconButton size="large" aria-label="open navigation" aria-controls="menu-appbar" aria-haspopup="true" onClick={handleOpenNavMenu} color="inherit">
               <MenuIcon />
             </IconButton>
-
-            {/* 모바일 드롭다운 메뉴 */}
             <Menu
               id="menu-appbar"
               anchorEl={anchorElNav}
@@ -121,12 +135,7 @@ function ResponsiveAppBar() {
               sx={{ display: { xs: 'block', md: 'none' } }}
             >
               {pages.map((page) => (
-                <MenuItem
-                  key={page.label}
-                  to={page.path}
-                  component={Link}
-                  onClick={handleCloseNavMenu}
-                >
+                <MenuItem key={page.label} to={page.path} component={Link} onClick={handleCloseNavMenu}>
                   <Typography sx={{ textAlign: 'center' }}>{page.label}</Typography>
                 </MenuItem>
               ))}
@@ -137,76 +146,70 @@ function ResponsiveAppBar() {
           <Typography
             variant="h5"
             noWrap
-            component={Link}
-            to="/"
-            sx={{
-              mr: 2,
-              display: { xs: 'flex', md: 'none' },
-              flexGrow: 1,
-              fontFamily: 'monospace',
-              fontWeight: 700,
-              letterSpacing: '.3rem',
-              color: 'inherit',
-              textDecoration: 'none',
-            }}
+            component="a"
+            href="/"
+            sx={{ mr: 2, display: { xs: 'flex', md: 'none' }, flexGrow: 1, fontFamily: 'monospace', fontWeight: 700, letterSpacing: '.3rem', color: 'inherit', textDecoration: 'none' }}
           >
-            <img
-              src="../../image/logo/KakaoTalk_20250508_113520617.png"
-              alt="Logo"
-              style={{ height: '40px' }}
-            />
+            <img src="/image/logo/KakaoTalk_20250508_113520617.png" alt="Logo" style={{ height: 40 }} />
           </Typography>
 
-          {/* 상단 메뉴 (데스크탑) */}
+          {/* 데스크톱 메뉴 */}
           <Box sx={{ flexGrow: 1, display: { xs: 'none', md: 'flex' } }}>
             {pages.map((page) => (
-              <Button
-                key={page.label}
-                to={page.path}
-                component={Link}
-                onClick={handleCloseNavMenu}
-                sx={{ my: 2, color: 'white', display: 'block', fontSize: '20px', paddingRight: '25px' }}
-              >
+              <Button key={page.label} to={page.path} component={Link} onClick={handleCloseNavMenu} sx={{ my: 2, color: 'white', display: 'block', fontSize: 20, pr: 3 }}>
                 {page.label}
               </Button>
             ))}
           </Box>
 
-          {/* 우측 액션: 로그인 상태에 따라 분기 */}
-          <Box sx={{ flexGrow: 0, display: 'flex', gap: 1 }}>
-            {isAuthenticated ? (
-              <Button
-                onClick={handleLogout}
-                sx={{ fontSize: '18px', color: 'inherit' }}
-                variant="text"
+          {/* 우측 사용자 영역 */}
+          {isLogin ? (
+            <Box sx={{ flexGrow: 0 }}>
+              <Tooltip title="Open settings">
+                <IconButton onClick={handleOpenUserMenu} sx={{ p: 0 }}>
+                  <Avatar alt="User" src="/image/icon/channels4_profile.jpg" sx={{ width: 48, height: 48 }} />
+                </IconButton>
+              </Tooltip>
+              <Menu
+                sx={{ mt: '45px' }}
+                id="menu-appbar"
+                anchorEl={anchorElUser}
+                anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+                keepMounted
+                transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+                open={Boolean(anchorElUser)}
+                onClose={handleCloseUserMenu}
               >
-                로그아웃
+                {settings.map((s) => {
+                  // 🔸 로그아웃만 커스텀 핸들러로 즉시 상태 초기화
+                  if (s.label === '로그아웃') {
+                    return (
+                      <MenuItem key={s.label} onClick={handleLogout}>
+                        <Typography sx={{ textAlign: 'center' }}>{s.label}</Typography>
+                      </MenuItem>
+                    );
+                  }
+                  // 다른 항목은 그대로 링크 이동
+                  return (
+                    <MenuItem key={s.label} onClick={handleCloseUserMenu} component={Link} to={s.path}>
+                      <Typography sx={{ textAlign: 'center' }}>{s.label}</Typography>
+                    </MenuItem>
+                  );
+                })}
+              </Menu>
+            </Box>
+          ) : (
+            <Box sx={{ display: 'flex', gap: 1 }}>
+              <Button to="/login" component={Link} sx={{ fontSize: 18, color: 'inherit' }}>
+                로그인
               </Button>
-            ) : (
-              <>
-                <Button
-                  component={Link}
-                  to="/signup"
-                  sx={{ fontSize: '18px', color: 'inherit' }}
-                  variant="text"
-                >
-                  회원가입
-                </Button>
-                <Button
-                  component={Link}
-                  to="/login"
-                  sx={{ fontSize: '18px', color: 'inherit' }}
-                  variant="text"
-                >
-                  로그인
-                </Button>
-              </>
-            )}
-          </Box>
+              <Button to="/signup" component={Link} sx={{ fontSize: 18, color: 'inherit' }}>
+                회원가입
+              </Button>
+            </Box>
+          )}
         </Toolbar>
       </Container>
     </AppBar>
   );
 }
-
-export default ResponsiveAppBar;
