@@ -145,4 +145,9 @@ public class EstimateController {
 		return ResponseEntity.ok(estimateService.searchFees());
 	}
 	
+	@PostMapping("/searchfeesextra")
+	public ResponseEntity<List<FeesExtraDTO>> getFeesExtra(){
+		return ResponseEntity.ok(estimateService.searchExtra());
+	}
+	
 }
