@@ -14,7 +14,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 public class EmailVerificationService {
-
+	
     private final JavaMailSender mailSender;
     private final SecureRandom random = new SecureRandom();
 
