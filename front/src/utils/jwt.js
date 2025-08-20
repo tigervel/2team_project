@@ -12,3 +12,7 @@ export const hasRole=(token, role)=> {
   const roles = payload?.roles || payload?.authorities || [];
   return Array.isArray(roles) ? roles.includes(role) : roles === role;
 }
+
+export function getAccessToken() {
+  return localStorage.getItem("accessToken") || "";
+}

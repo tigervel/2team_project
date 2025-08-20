@@ -17,6 +17,8 @@ import KakaoMapViewer from "./KakaoMapViewer";
 import { postAdd, postSaveEs, postSearchFeesBasic, postSearchFeesExtra } from "../../../api/estimateApi/estimateApi";
 import useCustomMove from "../../../hooks/useCustomMove";
 import { calculateDistanceBetweenAddresses } from "../common/calculateDistanceBetweenAddresses";
+import { useNavigate } from "react-router-dom";
+import { getAccessToken, parseJwt } from "../../../utils/jwt";
 
 
 
@@ -42,7 +44,7 @@ const initState = {
 
 const EstimateComponent = () => {
   const [fees, setFees] = useState([]);
-  const [extra,setExtra] = useState([]);
+  const [extra, setExtra] = useState([]);
   const [estimate, setEstimate] = useState(initState);
   const [specialNotes, setSpecialNotes] = useState([]);
   const [specialNoteCost, setSpecialNoteCost] = useState(0);
@@ -50,14 +52,26 @@ const EstimateComponent = () => {
   const [distanceCost, setDistanceCost] = useState(0);
   const [showMap, setShowMap] = useState(false);
   const [openCancelDialog, setOpenCancelDialog] = useState(false);
-  const [openEstimateSend,setOpenEstimateSend] = useState(false)
+  const [openEstimateSend, setOpenEstimateSend] = useState(false)
   const [specialMenuOpen, setSpecialMenuOpen] = useState(false);
   const { moveToHome } = useCustomMove();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
+  const navigate = useNavigate();
+  useEffect(() => {
+    // const token = getAccessToken();
+    // const payload = parseJwt(token);
+    // const roles = payload?.roles || payload?.authorities || [];
 
-  useEffect(()=>{
-     const fetchData = async () => {
+    // const isDriver = Array.isArray(roles)
+    //   ? roles.includes("ROLE_SHIPPER")
+    //   : roles === "ROLE_SHIPPER";
+
+    // if (!token || !isDriver) {
+    //   alert("회원만 작성이 가능합니다.");
+    //   navigate("/", { replace: true });
+    // }
+    const fetchData = async () => {
       try {
         const data = await postSearchFeesBasic();
         setFees(data);
@@ -67,20 +81,20 @@ const EstimateComponent = () => {
     };
     fetchData()
 
-    const extraFetchData = async ()=>{
-      try{
+    const extraFetchData = async () => {
+      try {
         const data = await postSearchFeesExtra()
         setExtra(data)
-      }catch(error){
-        console.log("Extra API 호출 실패",error)
+      } catch (error) {
+        console.log("Extra API 호출 실패", error)
       }
     }
     extraFetchData();
-  },[]);
+  }, []);
   useEffect(() => {
-    const fee = fees.find(f=> f.weight === estimate.cargoWeight) ||null
-    const base = fee? Number(fee.initialCharge):0;
-    const distCost = estimate.distanceKm * (fee?Number(fee.ratePerKm):0);
+    const fee = fees.find(f => f.weight === estimate.cargoWeight) || null
+    const base = fee ? Number(fee.initialCharge) : 0;
+    const distCost = estimate.distanceKm * (fee ? Number(fee.ratePerKm) : 0);
     const extra = specialNotes.reduce((sum, n) => sum + n.extraCharge, 0);
     setBaseCost(base);
     setDistanceCost(distCost);
@@ -93,9 +107,9 @@ const EstimateComponent = () => {
       specialOption: extra
     }))
 
-   
 
-  }, [estimate.cargoWeight, estimate.distanceKm, specialNotes,fees]);
+
+  }, [estimate.cargoWeight, estimate.distanceKm, specialNotes, fees]);
 
   const handleSpecialNoteChange = (e) => {
     const selectedLabels = e.target.value;
@@ -172,7 +186,7 @@ const EstimateComponent = () => {
     setOpenCancelDialog(false);
     moveToHome();  // 실제 이동 처리
   };
-  const handleClickEstimateSend = ()=>{
+  const handleClickEstimateSend = () => {
     setOpenEstimateSend(true)
   }
 
@@ -321,8 +335,8 @@ const EstimateComponent = () => {
                 input={<OutlinedInput label="특이사항 선택" />}
                 value={specialNotes.map((n) => n.extraChargeTitle)}
                 open={specialMenuOpen}
-                onOpen={()=>setSpecialMenuOpen(true)}
-                onClose={()=>setSpecialMenuOpen(false)}
+                onOpen={() => setSpecialMenuOpen(true)}
+                onClose={() => setSpecialMenuOpen(false)}
                 onChange={handleSpecialNoteChange}
                 renderValue={(selected) => selected.join(", ")}
               >
@@ -345,7 +359,7 @@ const EstimateComponent = () => {
                 ))}
               </Box>
             )}
-            <Button variant="contained" sx={{maxWidth:200}} onClick={calculateDistance}>
+            <Button variant="contained" sx={{ maxWidth: 200 }} onClick={calculateDistance}>
               거리 계산
             </Button>
           </Stack>
@@ -358,7 +372,7 @@ const EstimateComponent = () => {
             <Stack direction="row" spacing={1}>
               <Button
                 size="small"
-                sx={{minWidth:100}}
+                sx={{ minWidth: 100 }}
                 variant={!showMap ? "contained" : "outlined"}
                 onClick={() => setShowMap(false)}
               >
@@ -366,7 +380,7 @@ const EstimateComponent = () => {
               </Button>
               <Button
                 size="small"
-                sx={{minWidth:100}}
+                sx={{ minWidth: 100 }}
                 variant={showMap ? "contained" : "outlined"}
                 onClick={() => setShowMap(true)}
               >
@@ -408,13 +422,13 @@ const EstimateComponent = () => {
         justifyContent="center"
         alignItems="center"
       >
-        <Button variant="contained" sx={{minWidth:100}} onClick={handleClickSave}>
+        <Button variant="contained" sx={{ minWidth: 100 }} onClick={handleClickSave}>
           임시 저장
         </Button>
-        <Button variant="contained"  sx={{minWidth:100}} onClick={handleClickEstimateSend}>
+        <Button variant="contained" sx={{ minWidth: 100 }} onClick={handleClickEstimateSend}>
           견적서 제출
         </Button>
-        <Button variant="contained" sx={{minWidth:100}}  onClick={handleClickCancel}>
+        <Button variant="contained" sx={{ minWidth: 100 }} onClick={handleClickCancel}>
           취소
         </Button>
       </Stack>

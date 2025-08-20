@@ -8,9 +8,12 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
+
 import com.giproject.controller.order.OrderController;
 import com.giproject.dto.matching.MatchingDTO;
 import com.giproject.dto.matching.PageRequestDTO;
@@ -46,7 +49,11 @@ public class MatchingServiceImpl implements MatchingService{
 
 	@Override
 	public PageResponseDTO<MatchingDTO> getList(PageRequestDTO requestDTO,String cargoId) {
-		CargoOwner owner = cargoOwnerRepository.findById(cargoId).orElseThrow(() -> new RuntimeException("기사정보 없음"));
+		 if (cargoId == null || cargoId.isBlank()) {
+		        throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "인증 정보가 없습니다.");
+		    }
+		CargoOwner owner = cargoOwnerRepository.findById(cargoId).orElseThrow(() -> new ResponseStatusException(HttpStatus.FORBIDDEN,"운전기사만 접근 가능합니다"));
+		
 		Pageable pageable= PageRequest.of(requestDTO.getPage()-1, requestDTO.getSize(),Sort.by("matchingNo").descending());
 		LocalDateTime now = LocalDateTime.now();
 		Page<Matching> result = matchingRepository.findValidMatchingList(owner,now,pageable);
