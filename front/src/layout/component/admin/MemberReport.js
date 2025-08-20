@@ -164,16 +164,30 @@ const MemberReport = () => {
                 <TableCell>{r.content ?? "-"}</TableCell>
                 <TableCell>
                   <Chip
-                    label={r.adminRead ? "확인됨" : "미확인"}
+                    label={r.adminRead ? "처리됨" : "미확인"}
                     color={r.adminRead ? "default" : "warning"}
                     size="small"
                   />
                 </TableCell>
                 <TableCell>
-                  <Switch
-                    checked={!!r.adminRead}
-                    onChange={() => onToggleRead(r.id, !!r.adminRead)}
-                  />
+                  {r.adminRead ? (
+                    <Button
+                      variant="outlined"
+                      size="small"
+                      onClick={() => onToggleRead(r.id, !!r.adminRead)}
+                    >
+                      미확인으로 변경
+                    </Button>
+                  ) : (
+                    <Button
+                      variant="contained"
+                      size="small"
+                      color="warning"
+                      onClick={() => onToggleRead(r.id, !!r.adminRead)}
+                    >
+                      확인
+                    </Button>
+                  )}
                 </TableCell>
               </TableRow>
             ))}

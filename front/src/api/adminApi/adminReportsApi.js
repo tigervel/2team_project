@@ -3,7 +3,7 @@ import { API_SERVER_HOST } from "../serverConfig";
 
 const PREFIX = `${API_SERVER_HOST}/g2i4/admin/reports`;
 
-export async function fetchReports({ status, keyword, page=0, size=10, sort="createdAt,desc" }) {
+export async function fetchReports({ status, keyword, page = 0, size = 10, sort = "createdAt,desc" }) {
   const { data } = await axios.get(PREFIX, {
     params: { status, keyword, page, size, sort },
     withCredentials: false,
@@ -17,11 +17,9 @@ export async function fetchUnreadCount() {
 }
 
 export async function markReportRead(id, read) {
-  await axios.post(`${PREFIX}/${id}/read`, null, {
-    params: { read },
-    headers: { "Content-Type": "text/plain" },
-    withCredentials: false,
-  });
+    await axios.post(`${PREFIX}/${id}/read`, { read: read }, {
+        withCredentials: true,
+    });
 }
 
 export async function resolveReport(id, note) {
