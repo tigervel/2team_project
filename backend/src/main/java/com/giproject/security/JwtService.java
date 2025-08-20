@@ -1,16 +1,19 @@
 package com.giproject.security;
 
+import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.stereotype.Service;
 
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
+import java.util.stream.Collectors;
 
 @Service
 public class JwtService {
@@ -32,26 +35,33 @@ public class JwtService {
         return Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
     }
 
-    public String generateAccessToken(String username) {
+    public String generateAccessToken(Authentication authentication) {
         Date now = new Date();
         Date exp = new Date(now.getTime() + accessExpSeconds * 1000);
+
+    
+
         return Jwts.builder()
-                .subject(username)
-                .issuer(issuer)
-                .issuedAt(now)
-                .expiration(exp)
+                .setSubject(authentication.getName())
+                .claim("roles", authentication.getAuthorities().stream()
+                        .map(GrantedAuthority::getAuthority)
+                        .collect(Collectors.toList()))
+                .setIssuer(issuer)
+                .setIssuedAt(now)
+                .setExpiration(exp)
                 .signWith(key(), Jwts.SIG.HS256)
                 .compact();
     }
 
-    public String generateRefreshToken(String username) {
+    public String generateRefreshToken(Authentication authentication) {
         Date now = new Date();
         Date exp = new Date(now.getTime() + refreshExpSeconds * 1000);
+
         return Jwts.builder()
-                .subject(username)
-                .issuer(issuer)
-                .issuedAt(now)
-                .expiration(exp)
+                .setSubject(authentication.getName())
+                .setIssuer(issuer)
+                .setIssuedAt(now)
+                .setExpiration(exp)
                 .signWith(key(), Jwts.SIG.HS256)
                 .compact();
     }

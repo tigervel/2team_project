@@ -1,15 +1,22 @@
-package com.giproject.controller.qaboard;
+package com.giproject.common.error;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.NoSuchElementException;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.server.ResponseStatusException;
 
+import io.jsonwebtoken.ExpiredJwtException;
+import io.jsonwebtoken.MalformedJwtException;
+import io.jsonwebtoken.security.SignatureException;
 import lombok.extern.log4j.Log4j2;
 
 /**
@@ -23,6 +30,59 @@ import lombok.extern.log4j.Log4j2;
 @RestControllerAdvice
 @Log4j2
 public class GlobalExceptionHandler {
+	@ExceptionHandler(AuthenticationException.class)
+	public ResponseEntity<Map<String, Object>> handleAuth(AuthenticationException e) {
+	    Map<String, Object> body = new HashMap<>();
+	    body.put("status", HttpStatus.UNAUTHORIZED.value());
+	    body.put("error", "Unauthorized");
+	    body.put("message", e.getMessage());
+	    body.put("timestamp", System.currentTimeMillis());
+	    return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(body);
+	}
+
+	// 401: JWT 만료/위조/오류
+	@ExceptionHandler({ExpiredJwtException.class, MalformedJwtException.class, SignatureException.class})
+	public ResponseEntity<Map<String, Object>> handleJwt(Exception e) {
+	    Map<String, Object> body = new HashMap<>();
+	    body.put("status", HttpStatus.UNAUTHORIZED.value());
+	    body.put("error", "Unauthorized");
+	    body.put("message", e.getMessage());
+	    body.put("timestamp", System.currentTimeMillis());
+	    return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(body);
+	}
+
+	// 403: 권한 없음 (Spring Security의 표준 예외)
+	@ExceptionHandler(AccessDeniedException.class)
+	public ResponseEntity<Map<String, Object>> handleAccessDenied(AccessDeniedException e) {
+	    Map<String, Object> body = new HashMap<>();
+	    body.put("status", HttpStatus.FORBIDDEN.value());
+	    body.put("error", "Forbidden");
+	    body.put("message", e.getMessage());
+	    body.put("timestamp", System.currentTimeMillis());
+	    return ResponseEntity.status(HttpStatus.FORBIDDEN).body(body);
+	}
+
+	// 404: 리소스 없음 (repo.findById(...).orElseThrow() 등)
+	@ExceptionHandler(NoSuchElementException.class)
+	public ResponseEntity<Map<String, Object>> handleNoSuchElement(NoSuchElementException e) {
+	    Map<String, Object> body = new HashMap<>();
+	    body.put("status", HttpStatus.NOT_FOUND.value());
+	    body.put("error", "Not Found");
+	    body.put("message", e.getMessage());
+	    body.put("timestamp", System.currentTimeMillis());
+	    return ResponseEntity.status(HttpStatus.NOT_FOUND).body(body);
+	}
+
+	// 컨트롤러/서비스에서 ResponseStatusException 던진 경우 상태코드 그대로 전달
+	@ExceptionHandler(ResponseStatusException.class)
+	public ResponseEntity<Map<String, Object>> handleRSE(ResponseStatusException e) {
+	    Map<String, Object> body = new HashMap<>();
+	    body.put("status", e.getStatusCode().value());
+	    body.put("error", e.getStatusCode().toString()); 
+	    body.put("message", e.getReason());
+	    body.put("timestamp", System.currentTimeMillis());
+	    return ResponseEntity.status(e.getStatusCode()).body(body);
+	}
 
     /**
      * 잘못된 요청 인수 예외 처리

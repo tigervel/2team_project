@@ -8,6 +8,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -17,15 +19,16 @@ public class TokenAuthController {
 
     private final AuthenticationManager authenticationManager;
     private final JwtService jwtService;
+    private final UserDetailsService userDetailsService;
 
     /** ID/PW 로그인 → 토큰 발급 */
     @PostMapping("/login")
     public ResponseEntity<TokenResponse> login(@Valid @RequestBody LoginRequest req) {
         var authToken = new UsernamePasswordAuthenticationToken(req.getLoginId(), req.getPassword());
-        authenticationManager.authenticate(authToken); // 실패시 AuthenticationException → 401로 매핑
+        Authentication authentication = authenticationManager.authenticate(authToken); // 실패시 AuthenticationException → 401로 매핑
 
-        String access  = jwtService.generateAccessToken(req.getLoginId());
-        String refresh = jwtService.generateRefreshToken(req.getLoginId());
+        String access  = jwtService.generateAccessToken(authentication);
+        String refresh = jwtService.generateRefreshToken(authentication);
 
         return ResponseEntity.ok(new TokenResponse("Bearer", access, refresh, jwtService.getAccessExpiresInSeconds()));
     }
@@ -37,7 +40,9 @@ public class TokenAuthController {
             return ResponseEntity.status(401).build();
         }
         String username = jwtService.getUsername(refreshToken);
-        String access = jwtService.generateAccessToken(username);
+        var userDetails = userDetailsService.loadUserByUsername(username);
+        var authentication = new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
+        String access = jwtService.generateAccessToken(authentication);
         return ResponseEntity.ok(new TokenResponse("Bearer", access, refreshToken, jwtService.getAccessExpiresInSeconds()));
     }
 

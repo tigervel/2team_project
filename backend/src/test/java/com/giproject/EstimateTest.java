@@ -82,12 +82,12 @@ public class EstimateTest {
 		            .size(10)
 		            .build();
 
-		        PageResponseDTO<MatchingDTO> response = matchingService.getList(requestDTO);
-		        
-		        System.out.println(response.getDtoList());
-		        for(MatchingDTO dto : response.getDtoList()) {
-		        	System.out.println(dto.getEno() +" : "+ dto.getCargoType() + dto.getStartTime() + dto.getRoute());
-		        }
-		       
+//		        PageResponseDTO<MatchingDTO> response = matchingService.getList(requestDTO);
+//		        
+//		        System.out.println(response.getDtoList());
+//		        for(MatchingDTO dto : response.getDtoList()) {
+//		        	System.out.println(dto.getEno() +" : "+ dto.getCargoType() + dto.getStartTime() + dto.getRoute());
+//		        }
+//		       
 	}
 }
