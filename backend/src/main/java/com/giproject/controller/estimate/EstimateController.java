@@ -6,11 +6,6 @@ import java.util.NoSuchElementException;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.userdetails.User;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -30,7 +25,6 @@ import com.giproject.repository.cargo.CargoOwnerRepository;
 import com.giproject.security.JwtService;
 import com.giproject.service.estimate.EstimateService;
 import com.giproject.service.estimate.matching.MatchingService;
-import com.giproject.utils.JWTUtil;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
@@ -47,7 +41,6 @@ public class EstimateController {
 	private final JwtService jwtService;
 
 	@PostMapping("/")
-	@PreAuthorize("hasAuthority('ROLE_SHIPPER')") 
 	public Map<String, Long> register(@RequestBody EstimateDTO dto,  @RequestHeader("Authorization") String authHeader) {
 		String token = authHeader.replace("Bearer ","");
 		String memId = jwtService.getUsername(token);
@@ -66,8 +59,7 @@ public class EstimateController {
 		return matchingService.getList(dto,cargoId);
 	}
 
-	@PostMapping("/rejected")
-	@PreAuthorize("hasAuthority('ROLE_DRIVER')") 
+	@PostMapping("/subpath/rejected")
 	public ResponseEntity<Map<String, String>> reject(@RequestBody Map<String, Long> eno) {
 		Long estimateNo = eno.get("estimateNo");
 
@@ -78,19 +70,19 @@ public class EstimateController {
 		return ResponseEntity.ok().body(Map.of("result", "reject"));
 	}
 
-	@PostMapping("/accepted")
-	@PreAuthorize("hasAuthority('ROLE_DRIVER')") 
-	public ResponseEntity<Map<String, String>> accepted(@RequestBody Map<String, Long> eno) {
+	@PostMapping("/subpath/accepted")
+	public ResponseEntity<Map<String, String>> accepted(@RequestBody Map<String, Long> eno,@RequestHeader("Authorization") String authHeader) {
 		Long estimateNo = eno.get("estimateNo");
-		CargoOwner cargoOwner = cargoOwnerRepository.findById("cargo123").get();
+		String token = authHeader.replace("Bearer ","");
+		String cargoId = jwtService.getUsername(token);
+		CargoOwner cargoOwner = cargoOwnerRepository.findById(cargoId).get();
 
 		matchingService.acceptMatching(estimateNo, cargoOwner);
 
 		return ResponseEntity.ok().body(Map.of("result", "accepted"));
 	}
 
-	@GetMapping("savelist")
-	@PreAuthorize("hasAuthority('ROLE_SHIPPER')") 
+	@GetMapping("/subpathsavelist")
 	public ResponseEntity<List<EstimateDTO>> getSaveEstimat() {
 		// Authentication auth = SecurityContextHolder.getContext().getAuthentication();
 		// String memId = auth.getName(); 추후 아이디 토큰인증로 확인예정
@@ -101,8 +93,7 @@ public class EstimateController {
 
 	}
 
-	@GetMapping("/export")
-	@PreAuthorize("hasAuthority('ROLE_SHIPPER')") 
+	@GetMapping("/subpath/export")
 	public ResponseEntity<EstimateDTO> exportEs(@RequestParam("eno") Long eno) {
 		// Authentication auth = SecurityContextHolder.getContext().getAuthentication();
 		// String memId = auth.getName(); 추후 아이디 토큰인증로 확인예정
@@ -111,8 +102,7 @@ public class EstimateController {
 		return ResponseEntity.ok(dto);
 	}
 
-	@PostMapping("savedreft")
-	@PreAuthorize("hasAuthority('ROLE_SHIPPER')") 
+	@PostMapping("/subpathsavedreft")
 	public ResponseEntity<Map<String, String>>  saveEstimate(@RequestBody EstimateDTO estimateDTO) {
 		estimateDTO.setMemberId("user");
 		try {
@@ -132,37 +122,37 @@ public class EstimateController {
 
 	}
 	
-	@PostMapping("myestimate")
-	public ResponseEntity<List<EstimateDTO>> getMyEs(@RequestBody Map<String, String> body){
-		//String memberId = body.get("memberId");
-		String user = "user";
-		List<EstimateDTO> dtoList = estimateService.myEstimateList(user);
+	@PostMapping("/subpathmyestimate")
+	public ResponseEntity<List<EstimateDTO>> getMyEs(@RequestBody Map<String, String> body,@RequestHeader("Authorization") String authHeader){
+		String token = authHeader.replace("Bearer ","");
+		String memId = jwtService.getUsername(token);
+		List<EstimateDTO> dtoList = estimateService.myEstimateList(memId);
 		
 		return ResponseEntity.ok(dtoList);
 	}
-	@GetMapping("/my-all-list")
-	public ResponseEntity<List<EstimateDTO>> getMyAllEstimateList() {
-	    // 추후 인증 기반으로 수정 예정
-	    String user = "user";
-
-	    List<EstimateDTO> dtoList = estimateService.myEstimateList(user);
+	@GetMapping("/subpath/my-all-list")
+	public ResponseEntity<List<EstimateDTO>> getMyAllEstimateList(@RequestHeader("Authorization") String authHeader) {
+		String token = authHeader.replace("Bearer ","");
+		String memId = jwtService.getUsername(token);
+		System.out.println(memId);
+	    List<EstimateDTO> dtoList = estimateService.myEstimateList(memId);
 
 	    return ResponseEntity.ok(dtoList);
 	}
-	@GetMapping("/unpaidlist")
-	public ResponseEntity<List<EstimateDTO>> getMyUnpaidEstimateList() {
-	    // TODO: 인증 연동 시 SecurityContext에서 user 추출
-	    String user = "user";
-	    List<EstimateDTO> dtoList = estimateService.findMyEstimatesWithoutPayment(user);
+	@GetMapping("/subpath/unpaidlist")
+	public ResponseEntity<List<EstimateDTO>> getMyUnpaidEstimateList(@RequestHeader("Authorization") String authHeader) {
+		String token = authHeader.replace("Bearer ","");
+		String memId = jwtService.getUsername(token);
+	    List<EstimateDTO> dtoList = estimateService.findMyEstimatesWithoutPayment(memId);
 	    return ResponseEntity.ok(dtoList);
 	}
-	@PostMapping("/searchfeesbasic")
+	@PostMapping("/subpath/searchfeesbasic")
 	public ResponseEntity<List<FeesBasicDTO>> getFeesBasic(){
 		System.out.println(estimateService.searchFees());
 		return ResponseEntity.ok(estimateService.searchFees());
 	}
 	
-	@PostMapping("/searchfeesextra")
+	@PostMapping("/subpath/searchfeesextra")
 	public ResponseEntity<List<FeesExtraDTO>> getFeesExtra(){
 		return ResponseEntity.ok(estimateService.searchExtra());
 	}
