@@ -108,6 +108,7 @@ export const getMyPaidEstimateList = async ({ page, size }) => {
   const accessToken = localStorage.getItem("accessToken");
   const res = await axios.get(`${prefix}/subpath/paidlist`, {
     params: { page, size },
+     withCredentials: true,
     headers: {
         Authorization: `Bearer ${accessToken}`, 
         "Content-Type": "application/json",

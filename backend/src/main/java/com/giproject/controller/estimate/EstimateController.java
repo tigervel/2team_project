@@ -82,7 +82,7 @@ public class EstimateController {
 		return ResponseEntity.ok().body(Map.of("result", "accepted"));
 	}
 
-	@GetMapping("/subpathsavelist")
+	@GetMapping("/subpath/savelist")
 	public ResponseEntity<List<EstimateDTO>> getSaveEstimat() {
 		// Authentication auth = SecurityContextHolder.getContext().getAuthentication();
 		// String memId = auth.getName(); 추후 아이디 토큰인증로 확인예정
@@ -102,7 +102,7 @@ public class EstimateController {
 		return ResponseEntity.ok(dto);
 	}
 
-	@PostMapping("/subpathsavedreft")
+	@PostMapping("/subpath/savedreft")
 	public ResponseEntity<Map<String, String>>  saveEstimate(@RequestBody EstimateDTO estimateDTO) {
 		estimateDTO.setMemberId("user");
 		try {
@@ -122,7 +122,7 @@ public class EstimateController {
 
 	}
 	
-	@PostMapping("/subpathmyestimate")
+	@PostMapping("/subpath/myestimate")
 	public ResponseEntity<List<EstimateDTO>> getMyEs(@RequestBody Map<String, String> body,@RequestHeader("Authorization") String authHeader){
 		String token = authHeader.replace("Bearer ","");
 		String memId = jwtService.getUsername(token);
@@ -146,6 +146,15 @@ public class EstimateController {
 	    List<EstimateDTO> dtoList = estimateService.findMyEstimatesWithoutPayment(memId);
 	    return ResponseEntity.ok(dtoList);
 	}
+	
+	@GetMapping("/subpath/paidlist")
+	   public ResponseEntity<List<EstimateDTO>> getMyPaidList(@RequestHeader("Authorization") String authHeader) {
+		String token = authHeader.replace("Bearer ","");
+		String memId = jwtService.getUsername(token);
+	       List<EstimateDTO> dtoList = estimateService.findMyPaidEstimates(memId);
+
+	       return ResponseEntity.ok(estimateService.findMyPaidEstimates(memId));
+	   }
 	@PostMapping("/subpath/searchfeesbasic")
 	public ResponseEntity<List<FeesBasicDTO>> getFeesBasic(){
 		System.out.println(estimateService.searchFees());
