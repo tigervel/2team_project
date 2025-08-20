@@ -22,9 +22,6 @@ public class AdminMemberAliasController {
 
     private final AdminMemberService adminMemberService;
 
-    // 기존 컨트롤러: @RequestMapping("/api/admin/members") 가 이미 있음
-    // 추가 별칭: /g2i4/admin/users 로도 같은 핸들러 제공
-
     @GetMapping("/g2i4/admin/users")
     public Page<AdminMemberDTO> aliasList(
             @RequestParam(name="type", defaultValue="ALL") String type,
