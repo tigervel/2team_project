@@ -72,7 +72,7 @@ public class SecurityConfig {
 //                .requestMatchers("/api/email/**").permitAll()
 //                .requestMatchers("/api/test").permitAll()
                 .requestMatchers("/api/**").permitAll()
-                //.requestMatchers("/g2i4/**").permitAll()
+                .requestMatchers("/g2i4/estimate/list").hasAuthority("ROLE_DRIVER")
                 .requestMatchers("/g2i4/estimate/subpath/**").permitAll()
                 .requestMatchers("/uploads/**").permitAll()
                 .requestMatchers("/oauth2/authorization/**", "/login/oauth2/**").permitAll()
