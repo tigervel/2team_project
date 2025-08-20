@@ -59,18 +59,18 @@ const EstimateComponent = () => {
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
   const navigate = useNavigate();
   useEffect(() => {
-    // const token = getAccessToken();
-    // const payload = parseJwt(token);
-    // const roles = payload?.roles || payload?.authorities || [];
+    const token = getAccessToken();
+    const payload = parseJwt(token);
+    const roles = payload?.roles || payload?.authorities || [];
 
-    // const isDriver = Array.isArray(roles)
-    //   ? roles.includes("ROLE_SHIPPER")
-    //   : roles === "ROLE_SHIPPER";
+    const isDriver = Array.isArray(roles)
+      ? roles.includes("ROLE_SHIPPER")
+      : roles === "ROLE_SHIPPER";
 
-    // if (!token || !isDriver) {
-    //   alert("회원만 작성이 가능합니다.");
-    //   navigate("/", { replace: true });
-    // }
+    if (!token || !isDriver) {
+      alert("회원만 작성이 가능합니다.");
+      navigate("/", { replace: true });
+    }
     const fetchData = async () => {
       try {
         const data = await postSearchFeesBasic();
