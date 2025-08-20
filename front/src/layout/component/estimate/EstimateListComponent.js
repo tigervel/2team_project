@@ -22,9 +22,15 @@ const EstimateListComponent = () => {
     const[serverData,setServerData] = useState(initState);
 
     useEffect(()=>{
+      try{
         getEstimateList({page,size}).then(data=>{
             setServerData(data)
         })
+      }catch(error){
+        alert("화물 기사만 이용할 수 있습니다.")
+        console.log(error)
+        return
+      }
     },[page,size,refresh]);
 
     const clickRejected = (esNo) =>{

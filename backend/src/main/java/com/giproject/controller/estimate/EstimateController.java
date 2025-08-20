@@ -6,9 +6,15 @@ import java.util.NoSuchElementException;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.User;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -21,8 +27,10 @@ import com.giproject.dto.matching.PageRequestDTO;
 import com.giproject.dto.matching.PageResponseDTO;
 import com.giproject.entity.cargo.CargoOwner;
 import com.giproject.repository.cargo.CargoOwnerRepository;
+import com.giproject.security.JwtService;
 import com.giproject.service.estimate.EstimateService;
 import com.giproject.service.estimate.matching.MatchingService;
+import com.giproject.utils.JWTUtil;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
@@ -36,13 +44,15 @@ public class EstimateController {
 	private final EstimateService estimateService;
 	private final MatchingService matchingService;
 	private final CargoOwnerRepository cargoOwnerRepository;
+	private final JwtService jwtService;
 
 	@PostMapping("/")
-	public Map<String, Long> register(@RequestBody EstimateDTO dto) {
-		// Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-		// String memId = auth.getName();
-		dto.setMemberId("user");
-
+	@PreAuthorize("hasAuthority('ROLE_SHIPPER')") 
+	public Map<String, Long> register(@RequestBody EstimateDTO dto,  @RequestHeader("Authorization") String authHeader) {
+		String token = authHeader.replace("Bearer ","");
+		String memId = jwtService.getUsername(token);
+		dto.setMemberId(memId);
+		System.out.println(memId);
 		Long eno = estimateService.sendEstimate(dto);
 		log.info("Received DTO: {}", eno);
 		return Map.of("RESULT", eno);
@@ -50,11 +60,14 @@ public class EstimateController {
 	}
 
 	@GetMapping("/list")
-	public PageResponseDTO<MatchingDTO> getEstimateList(PageRequestDTO dto) {
-		return matchingService.getList(dto);
+	public PageResponseDTO<MatchingDTO> getEstimateList(PageRequestDTO dto,@RequestHeader("Authorization") String authHeader) {
+		String token = authHeader.replace("Bearer ","");
+		String cargoId = jwtService.getUsername(token);
+		return matchingService.getList(dto,cargoId);
 	}
 
 	@PostMapping("/rejected")
+	@PreAuthorize("hasAuthority('ROLE_DRIVER')") 
 	public ResponseEntity<Map<String, String>> reject(@RequestBody Map<String, Long> eno) {
 		Long estimateNo = eno.get("estimateNo");
 
@@ -66,6 +79,7 @@ public class EstimateController {
 	}
 
 	@PostMapping("/accepted")
+	@PreAuthorize("hasAuthority('ROLE_DRIVER')") 
 	public ResponseEntity<Map<String, String>> accepted(@RequestBody Map<String, Long> eno) {
 		Long estimateNo = eno.get("estimateNo");
 		CargoOwner cargoOwner = cargoOwnerRepository.findById("cargo123").get();
@@ -76,6 +90,7 @@ public class EstimateController {
 	}
 
 	@GetMapping("savelist")
+	@PreAuthorize("hasAuthority('ROLE_SHIPPER')") 
 	public ResponseEntity<List<EstimateDTO>> getSaveEstimat() {
 		// Authentication auth = SecurityContextHolder.getContext().getAuthentication();
 		// String memId = auth.getName(); 추후 아이디 토큰인증로 확인예정
@@ -87,6 +102,7 @@ public class EstimateController {
 	}
 
 	@GetMapping("/export")
+	@PreAuthorize("hasAuthority('ROLE_SHIPPER')") 
 	public ResponseEntity<EstimateDTO> exportEs(@RequestParam("eno") Long eno) {
 		// Authentication auth = SecurityContextHolder.getContext().getAuthentication();
 		// String memId = auth.getName(); 추후 아이디 토큰인증로 확인예정
@@ -96,6 +112,7 @@ public class EstimateController {
 	}
 
 	@PostMapping("savedreft")
+	@PreAuthorize("hasAuthority('ROLE_SHIPPER')") 
 	public ResponseEntity<Map<String, String>>  saveEstimate(@RequestBody EstimateDTO estimateDTO) {
 		estimateDTO.setMemberId("user");
 		try {

@@ -11,7 +11,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
-
+import com.giproject.controller.order.OrderController;
 import com.giproject.dto.matching.MatchingDTO;
 import com.giproject.dto.matching.PageRequestDTO;
 import com.giproject.dto.matching.PageResponseDTO;
@@ -23,6 +23,7 @@ import com.giproject.repository.cargo.CargoOwnerRepository;
 import com.giproject.repository.estimate.EsmateRepository;
 import com.giproject.repository.matching.MatchingRepository;
 import com.giproject.repository.matching.RejectedMatchingRepository;
+import com.giproject.security.JwtService;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
@@ -31,22 +32,21 @@ import lombok.extern.log4j.Log4j2;
 @RequiredArgsConstructor
 @Log4j2
 public class MatchingServiceImpl implements MatchingService{
+
+    private final OrderController orderController;
 	
 	private final MatchingRepository matchingRepository;
 	private final CargoOwnerRepository cargoOwnerRepository;
 	private final EsmateRepository esmateRepository;
 	private final RejectedMatchingRepository rejectedMatchingRepository;
-	
+	private final JwtService jwtService;
+
+
+   
 
 	@Override
-	public PageResponseDTO<MatchingDTO> getList(PageRequestDTO requestDTO) {
-		// Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-		   // String memId = auth.getName(); // 로그인된 사용자 ID
-		 // CargoOwner cargoOwner =cargoOwnerRepository.findById(memId).orElseThrow();
-		String testOwner = "cargo123";
-		CargoOwner owner = cargoOwnerRepository.findById(testOwner).orElseThrow(() -> new RuntimeException("기사정보 없음"));
-		
-		
+	public PageResponseDTO<MatchingDTO> getList(PageRequestDTO requestDTO,String cargoId) {
+		CargoOwner owner = cargoOwnerRepository.findById(cargoId).orElseThrow(() -> new RuntimeException("기사정보 없음"));
 		Pageable pageable= PageRequest.of(requestDTO.getPage()-1, requestDTO.getSize(),Sort.by("matchingNo").descending());
 		LocalDateTime now = LocalDateTime.now();
 		Page<Matching> result = matchingRepository.findValidMatchingList(owner,now,pageable);

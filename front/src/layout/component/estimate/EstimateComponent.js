@@ -345,7 +345,7 @@ const EstimateComponent = () => {
                 ))}
               </Box>
             )}
-            <Button variant="contained" fullWidth onClick={calculateDistance}>
+            <Button variant="contained" sx={{maxWidth:200}} onClick={calculateDistance}>
               거리 계산
             </Button>
           </Stack>
@@ -358,7 +358,7 @@ const EstimateComponent = () => {
             <Stack direction="row" spacing={1}>
               <Button
                 size="small"
-                fullWidth
+                sx={{minWidth:100}}
                 variant={!showMap ? "contained" : "outlined"}
                 onClick={() => setShowMap(false)}
               >
@@ -366,7 +366,7 @@ const EstimateComponent = () => {
               </Button>
               <Button
                 size="small"
-                fullWidth
+                sx={{minWidth:100}}
                 variant={showMap ? "contained" : "outlined"}
                 onClick={() => setShowMap(true)}
               >
@@ -405,15 +405,16 @@ const EstimateComponent = () => {
         direction={isMobile ? "column" : "row"}
         spacing={2}
         mt={5}
+        justifyContent="center"
         alignItems="center"
       >
-        <Button variant="contained" fullWidth onClick={handleClickSave}>
+        <Button variant="contained" sx={{minWidth:100}} onClick={handleClickSave}>
           임시 저장
         </Button>
-        <Button variant="contained" fullWidth onClick={handleClickEstimateSend}>
+        <Button variant="contained"  sx={{minWidth:100}} onClick={handleClickEstimateSend}>
           견적서 제출
         </Button>
-        <Button variant="contained" fullWidth onClick={handleClickCancel}>
+        <Button variant="contained" sx={{minWidth:100}}  onClick={handleClickCancel}>
           취소
         </Button>
       </Stack>
