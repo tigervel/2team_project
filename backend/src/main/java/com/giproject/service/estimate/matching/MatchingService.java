@@ -1,6 +1,5 @@
 package com.giproject.service.estimate.matching;
 
-import java.lang.module.ModuleDescriptor.Builder;
 import java.time.LocalDateTime;
 
 import com.giproject.dto.matching.MatchingDTO;
@@ -53,7 +52,7 @@ public interface MatchingService {
 		}
 		String[] parts = fullAddress.split(" ");
 		if(parts.length>=2) {
-			return parts[0].replaceAll("(시|구|특별자치도)$", "") + " "+ parts[1].replaceAll("(시|구|특별자치도)$", "");
+			return parts[0].replaceAll("(시|광역시|특별자치도)$", "") + " "+ parts[1].replaceAll("(시|구|특별자치도)$", "");
 		}
 		return fullAddress;
 	}
@@ -64,7 +63,7 @@ public interface MatchingService {
 	    return from + " → " + to;
 	}
 	
-	PageResponseDTO<MatchingDTO> getList(PageRequestDTO requestDTO);
+	PageResponseDTO<MatchingDTO> getList(PageRequestDTO requestDTO,String cargoId);
 	
 	void rejectMatching(Long estimateNo, CargoOwner cargoOwner);
 	void acceptMatching(Long estimateNo, CargoOwner cargoOwner);
