@@ -7,6 +7,7 @@ import { calculateDistanceBetweenAddresses } from "../layout/component/common/ca
 import { basicList } from "../api/adminApi/adminApi";
 import MainFeesUtil from "../layout/component/common/MainFeesUtil";
 import { API_SERVER_HOST } from "../api/serverConfig";
+import { getAccessToken, parseJwt } from "../utils/jwt";
 const initState = {
   startAddress: '',
   endAddress: '',
@@ -26,6 +27,18 @@ const HomePage = () => {
   const [showAll, setShowAll] = useState(false);
   const visibleFees = showAll ? fees : fees.slice(0, 3);
   const [openFees, setOpenFees] = useState(false);
+  const [adminRole, setAdminRole] = useState(false);
+
+  const getRolesFromPayload = (payload) => {
+    const raw =
+      payload?.roles ??
+      payload?.authorities ??
+      payload?.role ??
+      payload?.auth ??
+      [];
+    const arr = Array.isArray(raw) ? raw : typeof raw === "string" ? raw.split(/[,\s]+/) : [];
+    return arr.map(r => String(r).toUpperCase());
+  };
 
   const DEFAULT_TRUCK_IMG = "/image/placeholders/truck.svg";
   const fetchFees = async () => {
@@ -52,8 +65,20 @@ const HomePage = () => {
 
 
   useEffect(() => {
-    fetchFees();
+    let isAdmin = false;
+    try {
+      const token = getAccessToken();
+      if (token) {
+        const payload = parseJwt(token);
+        const roles = getRolesFromPayload(payload);       
+        isAdmin = roles.some(r => r === "ROLE_ADMIN" || r === "ADMIN");
+      }
+    } catch (e) {
+      console.error("JWT parse error:", e);
+    }
+    setAdminRole(isAdmin);
 
+    fetchFees(); // 기존 호출 유지
   }, []);
 
   useEffect(() => {
@@ -181,9 +206,9 @@ const HomePage = () => {
                 {showAll ? "접기" : "더보기"}
               </Button>
             )}
-            <Button variant="contained" onClick={() => setOpenFees(true)}>
+            {adminRole &&( <Button variant="contained" onClick={() => setOpenFees(true)}>
               등록하기
-            </Button>
+            </Button>)}
           </Box>
         </Box>
 
