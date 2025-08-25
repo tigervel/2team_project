@@ -10,14 +10,13 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.giproject.dto.order.OrderFormDTO;
 import com.giproject.dto.order.OrderSheetDTO;
-import com.giproject.entity.order.OrderSheet;
 import com.giproject.service.order.OrderService;
 
 import lombok.RequiredArgsConstructor;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/g2i4/order")
+@RequestMapping("/g2i4/subpath/order")
 public class OrderController {
 	private final OrderService orderService;
 	

@@ -28,4 +28,6 @@ public class FeesBasic {
 	private BigDecimal initialCharge; // 기본요금
 
 	private LocalDateTime updatedAt;// 수정일
+	
+	private String cargoImage;//
 }

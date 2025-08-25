@@ -34,3 +34,4 @@ export const addExtraRow = (name) =>
 export const deleteExtraRow = (name) =>
   axios.delete(`${FEES_PREFIX}/extra/rows`, { params: { title: name } });
 
+

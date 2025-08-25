@@ -8,8 +8,13 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.http.HttpStatus;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
+import com.giproject.controller.order.OrderController;
 import com.giproject.dto.matching.MatchingDTO;
 import com.giproject.dto.matching.PageRequestDTO;
 import com.giproject.dto.matching.PageResponseDTO;
@@ -21,6 +26,7 @@ import com.giproject.repository.cargo.CargoOwnerRepository;
 import com.giproject.repository.estimate.EsmateRepository;
 import com.giproject.repository.matching.MatchingRepository;
 import com.giproject.repository.matching.RejectedMatchingRepository;
+import com.giproject.security.JwtService;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
@@ -29,21 +35,24 @@ import lombok.extern.log4j.Log4j2;
 @RequiredArgsConstructor
 @Log4j2
 public class MatchingServiceImpl implements MatchingService{
+
+    private final OrderController orderController;
 	
 	private final MatchingRepository matchingRepository;
 	private final CargoOwnerRepository cargoOwnerRepository;
 	private final EsmateRepository esmateRepository;
 	private final RejectedMatchingRepository rejectedMatchingRepository;
-	
+	private final JwtService jwtService;
+
+
+   
 
 	@Override
-	public PageResponseDTO<MatchingDTO> getList(PageRequestDTO requestDTO) {
-		 //Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-		    //String memId = auth.getName(); // 로그인된 사용자 ID
-		  //CargoOwner cargoOwner =cargoOwnerRepository.findById(memId).orElseThrow();
-		String testOwner = "cargo123";
-		CargoOwner owner = cargoOwnerRepository.findById(testOwner).orElseThrow(() -> new RuntimeException("기사정보 없음"));
-		
+	public PageResponseDTO<MatchingDTO> getList(PageRequestDTO requestDTO,String cargoId) {
+		 if (cargoId == null || cargoId.isBlank()) {
+		        throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "인증 정보가 없습니다.");
+		    }
+		CargoOwner owner = cargoOwnerRepository.findById(cargoId).orElseThrow(() -> new ResponseStatusException(HttpStatus.FORBIDDEN,"운전기사만 접근 가능합니다"));
 		
 		Pageable pageable= PageRequest.of(requestDTO.getPage()-1, requestDTO.getSize(),Sort.by("matchingNo").descending());
 		LocalDateTime now = LocalDateTime.now();
@@ -76,7 +85,7 @@ public class MatchingServiceImpl implements MatchingService{
 	}
 
 	@Override
-	public void acceptMatching(Long estimateNo, CargoOwner cargoOwner) {
+	public Long acceptMatching(Long estimateNo, CargoOwner cargoOwner) {
 		Estimate estimate = esmateRepository.findById(estimateNo)
 				.orElseThrow(() -> new RuntimeException("해당 견적이 존재하지 않습니다"));
 		
@@ -91,6 +100,8 @@ public class MatchingServiceImpl implements MatchingService{
 		matching.changeAcceptedTime(LocalDateTime.now());
 		esmateRepository.save(estimate);
 		matchingRepository.save(matching);
+		
+		return  matching.getMatchingNo();
 	
 	}
 

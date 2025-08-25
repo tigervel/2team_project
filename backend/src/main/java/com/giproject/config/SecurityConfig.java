@@ -2,67 +2,110 @@ package com.giproject.config;
 
 import java.util.List;
 
+import org.springframework.boot.autoconfigure.security.servlet.PathRequest;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
-import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.AuthenticationProvider;
+import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
+import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
+
+import org.springframework.security.core.userdetails.UserDetailsService;
+
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+
+import com.giproject.security.JwtAuthenticationFilter;
+import com.giproject.security.CustomOAuth2SuccessHandler;
+import com.giproject.security.JwtService;
 
 @Configuration
 @EnableMethodSecurity
 public class SecurityConfig {
 
+    private final UserDetailsService userDetailsService;
+    private final CustomOAuth2SuccessHandler customOAuth2SuccessHandler;
+
+    // 🔹 JwtAuthenticationFilter는 @Bean 메서드로 공급할 것이므로 생성자 주입에서 제외
+    public SecurityConfig(UserDetailsService userDetailsService,
+                          CustomOAuth2SuccessHandler customOAuth2SuccessHandler) {
+        this.userDetailsService = userDetailsService;
+        this.customOAuth2SuccessHandler = customOAuth2SuccessHandler;
+    }
+
+    // ✅ JwtAuthenticationFilter를 Bean으로 등록
     @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+    public JwtAuthenticationFilter jwtAuthenticationFilter(JwtService jwtService,
+                                                           UserDetailsService userDetailsService) {
+        return new JwtAuthenticationFilter(jwtService, userDetailsService);
+    }
+
+    @Bean
+    public SecurityFilterChain filterChain(HttpSecurity http,
+                                           JwtAuthenticationFilter jwtAuthenticationFilter) throws Exception {
         http
-        .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-        .csrf(csrf -> csrf.disable())
-        .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-        .oauth2Login(oauth2 -> oauth2.defaultSuccessUrl("/", true).failureUrl("/login?error"))
-        .authorizeHttpRequests(auth -> auth
-        	// CORS preflight 허용
-            .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-            // 아이디 중복 확인 API 허용
-            .requestMatchers(HttpMethod.GET, "/api/signup/check-id").permitAll()
-            .requestMatchers("/api/email/**").permitAll()
-            .requestMatchers("/api/test").permitAll()
-            .requestMatchers("/api/qaboard/**").permitAll() // QABoard API 임시 허용 (JWT 구현 전)
-            .requestMatchers("/api/notices/**").permitAll() // ✅ Notice API 허용
-            .requestMatchers("/h2-console/**").permitAll() // H2 Console 허용 (개발 환경용)
-            .requestMatchers("/g2i4/**").permitAll()
-            .requestMatchers("/uploads/**").permitAll()
-            .anyRequest().authenticated()
-        );
+            .cors(c -> c.configurationSource(corsConfigurationSource()))
+            .csrf(AbstractHttpConfigurer::disable)
+            .headers(h -> h.frameOptions(f -> f.sameOrigin()))
+            .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+            .oauth2Login(o -> o
+                .successHandler(customOAuth2SuccessHandler)
+                .failureUrl("/login?error")
+            )
+            .authorizeHttpRequests(auth -> auth
+                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                .requestMatchers("/api/**").permitAll()
+                .requestMatchers("/g2i4/subpath/order/**","/g2i4/payment/**","./g2i4/delivery/","/g2i4/address/**",
+                		"/g2i4/estimate/subpath/**","/uploads/**","/oauth2/authorization/**", "/login/oauth2/**",
+                		"/h2-console/**","/g2i4/cargo/**","/g2i4/admin/**").permitAll()
+                .requestMatchers("/g2i4/estimate/list").hasAuthority("ROLE_DRIVER")
+                .requestMatchers(PathRequest.toStaticResources().atCommonLocations()).permitAll()
+                .anyRequest().authenticated()
+            )
+            .authenticationProvider(authenticationProvider(passwordEncoder()))
+            .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+
         return http.build();
     }
 
-    // CORS 설정
+    @Bean
+    public AuthenticationProvider authenticationProvider(PasswordEncoder encoder) {
+        DaoAuthenticationProvider provider = new DaoAuthenticationProvider();
+        provider.setUserDetailsService(userDetailsService);
+        provider.setPasswordEncoder(encoder);
+        return provider;
+    }
+
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
-
-        // 정확한 origin 명시 (frontend 포트 추가)
         config.setAllowedOrigins(List.of("http://localhost:3000", "http://localhost:3002"));
-
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
-        config.setAllowCredentials(true); // 쿠키 등 자격정보 허용
-
+        config.setAllowCredentials(true);
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", config);
-
         return source;
     }
-    
+
     @Bean
-    public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
+    public PasswordEncoder passwordEncoder() { return new BCryptPasswordEncoder(); }
+
+    @Bean
+    public AuthenticationManager authenticationManager(AuthenticationConfiguration configuration) throws Exception {
+        return configuration.getAuthenticationManager();
     }
 }

@@ -8,8 +8,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.giproject.dto.member.MemberDTO;
 import com.giproject.dto.secure.MemberModifyDTO;
+import com.giproject.dto.member.MemberDTO;
 import com.giproject.service.member.MemberService;
 import com.giproject.utils.JWTUtil;
 

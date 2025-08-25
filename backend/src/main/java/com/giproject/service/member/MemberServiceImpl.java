@@ -1,9 +1,9 @@
 package com.giproject.service.member;
 
 import com.giproject.dto.common.UserResponseDTO;
-import com.giproject.dto.member.MemberDTO;
 import com.giproject.dto.secure.MemberModifyDTO;
 import com.giproject.dto.secure.MemberRole;
+import com.giproject.dto.member.MemberDTO;
 import com.giproject.entity.member.Member;
 import com.giproject.repository.member.MemberRepository;
 
