@@ -85,7 +85,7 @@ public class MatchingServiceImpl implements MatchingService{
 	}
 
 	@Override
-	public void acceptMatching(Long estimateNo, CargoOwner cargoOwner) {
+	public Long acceptMatching(Long estimateNo, CargoOwner cargoOwner) {
 		Estimate estimate = esmateRepository.findById(estimateNo)
 				.orElseThrow(() -> new RuntimeException("해당 견적이 존재하지 않습니다"));
 		
@@ -100,6 +100,8 @@ public class MatchingServiceImpl implements MatchingService{
 		matching.changeAcceptedTime(LocalDateTime.now());
 		esmateRepository.save(estimate);
 		matchingRepository.save(matching);
+		
+		return  matching.getMatchingNo();
 	
 	}
 

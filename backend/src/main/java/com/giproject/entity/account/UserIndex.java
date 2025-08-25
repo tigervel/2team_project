@@ -9,7 +9,7 @@ import lombok.*;
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
 public class UserIndex {
 
-    public enum Role { SHIPPER, DRIVER }
+    public enum Role { SHIPPER, DRIVER, ADMIN }
 
     // ★ 문자열 PK (login_id)
     @Id
