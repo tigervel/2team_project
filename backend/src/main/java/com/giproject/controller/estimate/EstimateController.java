@@ -25,6 +25,7 @@ import com.giproject.repository.cargo.CargoOwnerRepository;
 import com.giproject.security.JwtService;
 import com.giproject.service.estimate.EstimateService;
 import com.giproject.service.estimate.matching.MatchingService;
+import com.giproject.service.mail.MailService;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
@@ -39,7 +40,7 @@ public class EstimateController {
 	private final MatchingService matchingService;
 	private final CargoOwnerRepository cargoOwnerRepository;
 	private final JwtService jwtService;
-
+	private final MailService mailService;
 	@PostMapping("/")
 	public Map<String, Long> register(@RequestBody EstimateDTO dto,  @RequestHeader("Authorization") String authHeader) {
 		String token = authHeader.replace("Bearer ","");
@@ -76,9 +77,9 @@ public class EstimateController {
 		String token = authHeader.replace("Bearer ","");
 		String cargoId = jwtService.getUsername(token);
 		CargoOwner cargoOwner = cargoOwnerRepository.findById(cargoId).get();
-
-		matchingService.acceptMatching(estimateNo, cargoOwner);
-
+		System.out.println(cargoId+"--------------------------------------------------");
+		Long mcno=matchingService.acceptMatching(estimateNo, cargoOwner);
+		mailService.acceptedMail(mcno);
 		return ResponseEntity.ok().body(Map.of("result", "accepted"));
 	}
 
