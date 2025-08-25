@@ -6,6 +6,7 @@ import { postSearchFeesBasic } from "../api/estimateApi/estimateApi";
 import { calculateDistanceBetweenAddresses } from "../layout/component/common/calculateDistanceBetweenAddresses";
 import { basicList } from "../api/adminApi/adminApi";
 import MainFeesUtil from "../layout/component/common/MainFeesUtil";
+import { API_SERVER_HOST } from "../api/serverConfig";
 const initState = {
   startAddress: '',
   endAddress: '',
@@ -24,22 +25,35 @@ const HomePage = () => {
   const [exPrice, setExprice] = useState(0);
   const [showAll, setShowAll] = useState(false);
   const visibleFees = showAll ? fees : fees.slice(0, 3);
+  const [openFees, setOpenFees] = useState(false);
 
   const DEFAULT_TRUCK_IMG = "/image/placeholders/truck.svg";
-  const normalizeUrl = (p) =>
-    !p ? null : p.startsWith("http") ? p : p.startsWith("/") ? p : `/uploads/trucks/${p}`;
+  const fetchFees = async () => {
+    try {
+      const data = await postSearchFeesBasic();
+      setFees(data);
+    } catch (error) {
+      console.log("API 호출 실패", error);
+    }
+  };
+
+
+  const normalizeUrl = (p) => {
+    if (!p) return null;
+    if (p.startsWith("http")) return p;
+    if (p.startsWith("/g2i4/uploads/")) return `${API_SERVER_HOST}${p}`;
+    if (p.startsWith("/uploads/")) {
+      const fname = p.split("/").pop();
+      return `${API_SERVER_HOST}/g2i4/uploads${fname}`;
+    }
+    return `${API_SERVER_HOST}/g2i4/uploads${p}`;
+  }
+
 
 
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const data = await postSearchFeesBasic();
-        setFees(data);
-      } catch (error) {
-        console.log("API 호출 실패", error)
-      }
-    };
-    fetchData()
+    fetchFees();
+
   }, []);
 
   useEffect(() => {
@@ -63,11 +77,6 @@ const HomePage = () => {
     setExprice(total);
   }, [estimate.cargoWeight, estimate.distanceKm, fees]);
 
-  const vehicleTypes = [(
-    { id: 1, name: "소형", image: "/images/small-truck.png" },
-    { id: 2, name: "중형", image: "/images/medium-truck.png" },
-    { id: 3, name: "대형", image: "/images/large-truck.png" })
-  ];
 
   const notices = [
     { id: 1, title: "공지사항 1" },
@@ -129,37 +138,67 @@ const HomePage = () => {
       </Carousel>
 
       {/* 🚚 차량 종류 */}
-      <Box sx={{ py: 5, textAlign: "center" }}>
-        <Typography variant="h5" fontWeight="bold" gutterBottom>차량 종류</Typography>
+      <Box>
+        {/* ... 캐러셀/상단은 그대로 ... */}
 
-        <Grid container spacing={2} justifyContent="center">
-          {visibleFees.map((basic) => {
-            const img = normalizeUrl(basic.cargoImage) || DEFAULT_TRUCK_IMG;
-            return (
-              <Grid item key={basic.tno}>
-                <Card sx={{ width: 350, height: 250 }} >
-                   <MainFeesUtil key={basic.tno} tno={basic.tno} />
-        
-                  <CardContent>
-                    <Typography align="center">{basic.weight}</Typography>
-                  </CardContent>
-                </Card>
-              </Grid>
-            );
-          })}
-        </Grid>
+        {/* 🚚 차량 종류: 이미지만 표시 */}
+        <Box sx={{ py: 5, textAlign: "center" }}>
+          <Typography variant="h5" fontWeight="bold" gutterBottom>차량 종류</Typography>
 
-        {fees.length > 3 && (
-          <Button
-            variant="contained"
-            sx={{ mt: 2 }}
-            onClick={() => setShowAll((prev) => !prev)}
-          >
-            {showAll ? "접기" : "더보기"}
-          </Button>
-        )}
+          <Grid container spacing={2} justifyContent="center">
+            {visibleFees.map((basic) => {
+              const img = normalizeUrl(basic.cargoImage) || DEFAULT_TRUCK_IMG;
+              return (
+                <>                <Grid item key={basic.tno}>
+                  <Card sx={{ width: { xs: 160, sm: 220, md: 300 }, height: { xs: 110, sm: 150, md: 200 }, overflow: "hidden" }}>
+                    <CardMedia
+                      component="img"
+                      src={img}
+                      alt={basic.weight || "truck"}
+                      sx={{
+                        width: '100%',
+                        height: '100%',
+                        objectFit: 'contain',    // ✅ 전체가 보이도록 (안 잘림)
+                        objectPosition: 'center',
+                        display: 'block',
+                      }}
+                    />
+
+                  </Card>
+                  <Typography>{basic.weight}</Typography>
+                </Grid>
+
+                </>
+
+              );
+            })}
+          </Grid>
+
+          {/* 버튼 묶음 */}
+          <Box sx={{ display: "flex", justifyContent: "center", gap: 2, mt: 2 }}>
+            {fees.length > 3 && (
+              <Button variant="contained" onClick={() => setShowAll((prev) => !prev)}>
+                {showAll ? "접기" : "더보기"}
+              </Button>
+            )}
+            <Button variant="contained" onClick={() => setOpenFees(true)}>
+              등록하기
+            </Button>
+          </Box>
+        </Box>
+
+        {/* ... 간편조회/공지사항 섹션은 그대로 ... */}
+
+        {/* 등록 모달 */}
+        <MainFeesUtil
+          open={openFees}
+          onClose={() => setOpenFees(false)}
+          onSuccess={() => {
+            setOpenFees(false);
+            fetchFees(); // 저장 후 이미지 목록 갱신
+          }}
+        />
       </Box>
-
       <Box sx={{ width: '100%', display: 'flex', justifyContent: 'center', py: 6 }}>
         <Box sx={{ width: '100%', maxWidth: '1200px', px: 2 }}>
           <Grid container spacing={5} justifyContent="center">

@@ -34,17 +34,4 @@ export const addExtraRow = (name) =>
 export const deleteExtraRow = (name) =>
   axios.delete(`${FEES_PREFIX}/extra/rows`, { params: { title: name } });
 
-export const uploadImage = async (tno,file) =>{
-  const form = new FormData();
-  form.append("image",file)
-  const res = await axios.put(`${FEES_PREFIX}/${tno}`,form,{
-    headers: { "Content-Type": "multipart/form-data" },
-  })
-  return res;
-}
-
-export const basicList = async () =>{
-  const res = await axios.post(`${FEES_PREFIX}/getfeeslist`)
-  return res.data;
-}
 
