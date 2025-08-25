@@ -34,6 +34,7 @@ public class SecurityConfig {
             .requestMatchers("/api/email/**").permitAll()
             .requestMatchers("/api/test").permitAll()
             .requestMatchers("/api/qaboard/**").permitAll() // QABoard API 임시 허용 (JWT 구현 전)
+            .requestMatchers("/api/notices/**").permitAll() // ✅ Notice API 허용
             .requestMatchers("/h2-console/**").permitAll() // H2 Console 허용 (개발 환경용)
             .requestMatchers("/g2i4/**").permitAll()
             .requestMatchers("/uploads/**").permitAll()

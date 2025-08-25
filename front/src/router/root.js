@@ -10,7 +10,7 @@ import adminRouter from "./adminRouter";
 import SignUpPage from "../pages/SignUpPage";
 import estimateRouter from "./estimateRouter";
 import orderRouter from "./orderRouter";
-
+import NoboardComponent from "../layout/component/noboard/NoboardComponent"; // ✅ Import NoboardComponent
 
 
 const Loading = <div>Loading 중....</div>
@@ -59,6 +59,10 @@ const root = createBrowserRouter([
             {
                 path: "qaboard",
                 element: <Suspense fallback={Loading}><QABoard /></Suspense>,
+            },
+            { // ✅ New route for NoboardComponent
+                path: "noboard",
+                element: <Suspense fallback={Loading}><NoboardComponent /></Suspense>,
             },
               {
                 path: "order",
