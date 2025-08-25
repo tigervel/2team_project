@@ -70,7 +70,7 @@ const parseDateSmart = (v) => {
 
 // 배송예정일 후보 키들(실제 필드명에 맞게 추가/정정)
 const DUE_KEYS = [
-  'startTime',           // ★ 추가: 출발일을 배송예정일로 사용
+  'startTime',           // 추가: 출발일을 배송예정일로 사용
   'deliveryDueDate',
   'deliveryDate',
   'expectedDeliveryDate',
@@ -125,9 +125,9 @@ const DeliveryInfoPage = () => {
 
   // 미결제(기존 serverData) + 결제(새 paidData) 상태 분리
   const [serverData, setServerData] = useState(initState);        // 미결제
-  const [paidData, setPaidData] = useState(initState);            // ★ 결제됨
+  const [paidData, setPaidData] = useState(initState);            // 결제됨
   const [pageParams, setPageParams] = useState({ page: 1, size: 5 });   // 미결제 페이지
-  const [paidPage, setPaidPage] = useState({ page: 1, size: 5 });       // ★ 결제됨 페이지
+  const [paidPage, setPaidPage] = useState({ page: 1, size: 5 });       // 결제됨 페이지
 
   const handleConfirmClick = (matchingNo) => {
     navigate("/order", { state: { matchingNo } });
