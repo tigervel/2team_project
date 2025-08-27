@@ -1,5 +1,7 @@
 package com.giproject.dto.delivery;
 
+import java.time.LocalDateTime;
+
 import com.giproject.entity.delivery.DeliveryStatus;
 
 import lombok.AllArgsConstructor;
@@ -17,5 +19,6 @@ public class DeliveryDTO {
 	private Long deliveryNo;
 	private DeliveryStatus status;
 	private Long paymentNo;
+	private LocalDateTime completTime;
 	
 }
