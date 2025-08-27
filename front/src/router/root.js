@@ -73,9 +73,9 @@ const root = createBrowserRouter([
                 path: "qaboard",
                 element: <Suspense fallback={Loading}><QABoard /></Suspense>
             },
-            { // ✅ New route for NoboardComponent
+            {
                 path: "noboard",
-                element: <Suspense fallback={Loading}><NoboardComponent /></Suspense>,
+                element: <Suspense fallback={Loading}><NoboardComponent /></Suspense>
             },
             {
                 path: "order",

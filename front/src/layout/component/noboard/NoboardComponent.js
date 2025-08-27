@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box,
   Container,
@@ -12,15 +12,11 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
-  Accordion,
-  AccordionSummary,
-  AccordionDetails,
   Pagination,
   InputAdornment,
   IconButton,
   Divider,
   Stack,
-  Alert,
   CircularProgress,
   Chip
 } from '@mui/material';
@@ -29,6 +25,7 @@ import {
   Person,
   CalendarToday,
   ExpandMore,
+  ExpandLess,
   Visibility,
   Edit as EditIcon,
   Delete as DeleteIcon,
@@ -47,7 +44,7 @@ const NoboardComponent = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [totalPages, setTotalPages] = useState(0);
-  const [totalElements, setTotalElements] = useState(0);
+  // const [totalElements, setTotalElements] = useState(0);
   const [expandedNotices, setExpandedNotices] = useState(new Set());
 
   // State for creating/editing notices
@@ -67,7 +64,7 @@ const NoboardComponent = () => {
   });
 
   // Fetch notices from the backend API
-  const fetchNotices = async () => {
+  const fetchNotices = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
@@ -91,7 +88,7 @@ const NoboardComponent = () => {
       
       setNotices(transformedData);
       setTotalPages(response.totalPages);
-      setTotalElements(response.totalElements);
+      // setTotalElements(response.totalElements);
     } catch (error) {
       console.error('Failed to fetch notices:', error);
       let errorMessage = '공지사항을 불러오는 중 오류가 발생했습니다.';
@@ -103,16 +100,16 @@ const NoboardComponent = () => {
       setError(errorMessage);
       setNotices([]);
       setTotalPages(0);
-      setTotalElements(0);
+      // setTotalElements(0);
     } finally {
       setLoading(false);
     }
-  };
+  }, [searchTerm, currentPage]);
 
   // Fetch notices on component mount and when dependencies change
   useEffect(() => {
     fetchNotices();
-  }, [searchTerm, currentPage]);
+  }, [fetchNotices]);
 
   const toggleNoticeExpansion = async (noticeId) => {
     const newExpanded = new Set(expandedNotices);
@@ -277,7 +274,14 @@ const NoboardComponent = () => {
                 )}
                 {!isEditing && (
                   <Card 
-                    sx={{ cursor: 'pointer', '&:hover': { boxShadow: 3 } }}
+                    sx={{ 
+                      cursor: 'pointer', 
+                      '&:hover': { 
+                        boxShadow: 3,
+                        transform: 'translateY(-1px)',
+                        transition: 'all 0.2s'
+                      }
+                    }}
                     onClick={() => toggleNoticeExpansion(item.id)}
                   >
                     <CardHeader
@@ -291,10 +295,7 @@ const NoboardComponent = () => {
                       }
                       action={
                         <IconButton>
-                          <ExpandMore sx={{ 
-                            transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
-                            transition: 'transform 0.3s'
-                          }} />
+                          {isExpanded ? <ExpandLess /> : <ExpandMore />}
                         </IconButton>
                       }
                     />
