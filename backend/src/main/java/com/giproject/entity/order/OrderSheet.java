@@ -43,7 +43,7 @@ public class OrderSheet {
 	@Column(nullable = false , unique = true)
 	private String orderUuid;
 	private String startRestAddress;
-	private String endRestAdrress;
+	private String endRestAddress;
 	private LocalDateTime orderTime;
 	private String Addressee;
 	private String phone;
