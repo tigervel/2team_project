@@ -174,11 +174,7 @@ const HomePage = () => {
             {visibleFees.map((basic) => {
               const img = normalizeUrl(basic?.cargoImage) || DEFAULT_TRUCK_IMG;
               return (
-<<<<<<< HEAD
-                               <Grid item key={basic.tno}>
-=======
                 <Grid item key={basic?.tno }>
->>>>>>> ce6c2bf62a3cd8ec077afed13e382dcc708cefca
                   <Card sx={{ width: { xs: 160, sm: 220, md: 300 }, height: { xs: 110, sm: 150, md: 200 }, overflow: "hidden" }}>
                     <CardMedia
                       component="img"
@@ -197,10 +193,7 @@ const HomePage = () => {
                   <Typography>{basic.weight}</Typography>
                 </Grid>
 
-<<<<<<< HEAD
-=======
             
->>>>>>> ce6c2bf62a3cd8ec077afed13e382dcc708cefca
 
               );
             })}
