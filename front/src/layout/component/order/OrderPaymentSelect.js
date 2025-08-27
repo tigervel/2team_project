@@ -17,6 +17,7 @@ import useCustomMove from "../../../hooks/useCustomMove";
 import { postOrderCreate } from "../../../api/orderAPI/orderApi";
 import { acceptedPayment } from "../../../api/paymentApi/paymentApi";
 import { useNavigate } from "react-router-dom";
+import { createDelivery } from "../../../api/deliveryApi/deliveryApi";
 
 const CHANNELS = {
     TOSSPAYMENTS: "channel-key-3d19f1f1-7177-4ed0-addd-cf0e2f225912",
@@ -90,7 +91,8 @@ const OrderPaymentSelect = ({ serverData, orderSheet }) => {
                 currency: "KRW",
             }
             const paymentNo = await acceptedPayment(paymentDTO);
-            console.log(paymentNo)
+            
+            createDelivery(paymentNo);
             alert("주문이 완료되었습니다.");
             navigate(`/order/payment`, { state: { paymentNo } })
 

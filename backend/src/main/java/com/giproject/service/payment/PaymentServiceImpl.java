@@ -57,7 +57,7 @@ public class PaymentServiceImpl implements PaymentService  {
 				.addressee(orderSheet.getAddressee())
 				.addresseePhone(orderSheet.getPhone())
 				.endAddress(estimate.getEndAddress())
-				.endRestAdreess(orderSheet.getEndRestAdrress())
+				.endRestAdreess(orderSheet.getEndRestAddress())
 				.paymentMethod(paymentMethodLabel)
 				.totalCost(estimate.getTotalCost())
 				.paidAt(payment.getPaidAt())

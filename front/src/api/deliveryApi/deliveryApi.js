@@ -12,3 +12,9 @@ export const updateDeliveryStatus = async (matchingNo, status) => {
   );
   return res.data;
 };
+
+export const createDelivery = async (paymentNo) =>{
+  const res = await axios.post(`${prefix}/create`,{paymentNo:paymentNo})
+
+  return res.data
+}
