@@ -1,5 +1,6 @@
 package com.giproject.security;
 
+import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
@@ -31,6 +32,48 @@ public class JwtService {
     private SecretKey key() {
         return Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
     }
+
+    // =========================
+    // 신규: 공용 파서/가입토큰 지원
+    // =========================
+
+    /** JWT를 파싱해 Claims를 반환 (jjwt 0.12 스타일) */
+    public Claims parseToken(String token) {
+        return Jwts.parser()
+                .verifyWith(key())
+                .build()
+                .parseSignedClaims(token)
+                .getPayload();
+    }
+
+    /** 소셜 첫가입 컨텍스트 토큰 파싱 (컨트롤러에서 claims.get("email") 형태로 사용 가능) */
+    public Claims parseSignupToken(String token) {
+        return parseToken(token);
+    }
+
+    /**
+     * 소셜 첫가입 컨텍스트 토큰 생성 (기본 만료 10분).
+     * - email / provider 클레임 포함
+     * - subject는 email로 설정 (원하면 providerUserId 등으로 바꿔도 OK)
+     */
+    public String generateSignupToken(String email, String provider) {
+        long expSeconds = 600L; // 10분
+        Date now = new Date();
+        Date exp = new Date(now.getTime() + expSeconds * 1000);
+        return Jwts.builder()
+                .subject(email)
+                .issuer(issuer)
+                .issuedAt(now)
+                .expiration(exp)
+                .claim("email", email)
+                .claim("provider", provider)
+                .signWith(key(), Jwts.SIG.HS256)
+                .compact();
+    }
+
+    // =========================
+    // 기존 액세스/리프레시 토큰 로직
+    // =========================
 
     public String generateAccessToken(String username) {
         Date now = new Date();
