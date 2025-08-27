@@ -15,6 +15,6 @@ public interface AdminMemberRepository extends JpaRepository<Member, String> {
     long countNewMembersByDate(@Param("date") LocalDate date);
 
     // 월별 Member 수
-    @Query(value = "SELECT DATE_FORMAT(m.mem_create_id_datetime, '%Y-%m') as month, COUNT(*) as count FROM member m WHERE m.mem_create_id_datetime IS NOT NULL GROUP BY month ORDER BY month", nativeQuery = true)
+    @Query(value = "SELECT DATE_FORMAT(m.mem_create_id_datetime, '%Y-%m') as month, COUNT(*) as count FROM member m GROUP BY month ORDER BY month", nativeQuery = true)
      List<MonthlyDataDTO> findMonthlyNewMemberCounts();
 }

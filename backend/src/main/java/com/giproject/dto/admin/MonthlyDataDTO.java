@@ -11,6 +11,7 @@ public class MonthlyDataDTO {
     private Long count;
 
     public MonthlyDataDTO(String month, Long count) {
+    	System.out.println(month);
         this.month = month;
         this.count = count;
     }

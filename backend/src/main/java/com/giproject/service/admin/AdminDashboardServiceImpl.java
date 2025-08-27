@@ -31,42 +31,50 @@ public class AdminDashboardServiceImpl implements AdminDashboardService {
     public DashboardDataDTO dashboardDataDTO() {
         // 1. 총 사용자 수
     	long totalUsers = adminMemberRepository.count() + adminCargoOwnerRepository.count();
+        System.out.println("-----------------------------------------1");
 
         // 2. 이번 달 매출
     	long monthlyRevenue = adminPaymentRepository.findTotalMonthlyRevenue(LocalDate.now()).orElse(0L);
+        System.out.println("-----------------------------------------2");
 
         // 3. 총 배송 건
         long totalDeliveries = adminOrderRepository.count();
+        System.out.println("-----------------------------------------3");
 
         // 4. 신규 회원가입 수
         long newMembersThisMonth = adminMemberRepository.countNewMembersByDate(LocalDate.now());
+        System.out.println("-----------------------------------------4");
         long newCargoOwnersThisMonth = adminCargoOwnerRepository.countNewCargoOwnersByDate(LocalDate.now());
+        System.out.println("-----------------------------------------5");
         long newMembers = newMembersThisMonth + newCargoOwnersThisMonth;
 
         // 5. 월별 배송 내역 차트
         // 리포지토리에서 이미 DTO로 변환하여 가져오므로 별도 매핑 로직 불필요
-        List<MonthlyDataDTO> monthlyDeliveries = adminOrderRepository.findMonthlyDeliveryCounts();
+        List<Object[]> monthlyDeliveriesRaw = adminOrderRepository.findMonthlyDeliveryCounts();
+        System.out.println("-----------------------------------------6");
+        List<MonthlyDataDTO> monthlyDeliveries = monthlyDeliveriesRaw.stream()
+                .map(row -> new MonthlyDataDTO((String) row[0], ((Number) row[1]).longValue()))
+                .collect(Collectors.toList());
 
         // 6. 월별 신규 회원가입 차트
         List<MonthlyDataDTO> memberMonthly = adminMemberRepository.findMonthlyNewMemberCounts();
+        System.out.println("-----------------------------------------7");
         List<MonthlyDataDTO> cargoMonthly  = adminCargoOwnerRepository.findMonthlyNewCargoOwnerCounts();
+        System.out.println("-----------------------------------------8");
 
         List<MonthlyDataDTO> newMembersByMonth = mergeMonthly(memberMonthly, cargoMonthly);
         
-        // TODO: 배송 현황 로직 구현 필요
-        List<String> currentDeliveries = new ArrayList<>();
-        List<String> pastDeliveries = new ArrayList<>();
-
-        return DashboardDataDTO.builder()
+        // 배송 현황 추가 예정
+        DashboardDataDTO dashboardDataDTO = DashboardDataDTO.builder()
                 .totalUsers(totalUsers)
                 .monthlyRevenue(monthlyRevenue)
                 .totalDeliveries(totalDeliveries)
                 .newMembers(newMembers)
                 .monthlyDeliveries(monthlyDeliveries)
                 .newMembersByMonth(newMembersByMonth)
-                .currentDeliveries(currentDeliveries)
-                .pastDeliveries(pastDeliveries)
                 .build();
+        System.out.println("-----------------------------------------99");
+        return dashboardDataDTO;
     }
     
     /** 두 월별 리스트(동일 포맷 "YYYY-MM") 합산 + 정렬 */
@@ -74,6 +82,7 @@ public class AdminDashboardServiceImpl implements AdminDashboardService {
         Map<String, Long> map = new java.util.HashMap<>();
         if (a != null) for (MonthlyDataDTO d : a) map.merge(d.getMonth(), d.getCount(), Long::sum);
         if (b != null) for (MonthlyDataDTO d : b) map.merge(d.getMonth(), d.getCount(), Long::sum);
+        System.out.println("-----------------------------------------10");
 
         return map.entrySet().stream()
                 .sorted(Map.Entry.comparingByKey())

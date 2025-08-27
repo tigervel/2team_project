@@ -3,9 +3,8 @@ import { Box, Grid, Paper, Typography, CircularProgress, Alert } from "@mui/mate
 import { ArcElement, BarElement, CategoryScale, Chart, Legend, LinearScale, Title, Tooltip } from "chart.js";
 import { Bar, Doughnut } from "react-chartjs-2";
 import axios from "axios";
+import { fetchDashboardData } from "../../../api/adminApi/adminDashboardApi";
 
-
-import { API_SERVER_HOST } from "../../../api/serverConfig";
 
 Chart.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, ArcElement);
 
@@ -17,8 +16,8 @@ const AdminPage = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const response = await axios.get(`${API_SERVER_HOST}/g2i4/admin/dashboard`, { withCredentials: true });
-        console.log("Dashboard Data:", JSON.stringify(response.data, null, 2));
+        const response = await axios.get('/g2i4/admin/dashboard');
+        console.log("Axios Response:", response);
         setDashboardData(response.data);
       } catch (err) {
         setError("데이터를 불러오지 못했습니다. 다시 시도해 주세요.");
@@ -48,6 +47,7 @@ const AdminPage = () => {
   }
 
   if (!dashboardData) {
+    console.log("Dashboard Data (when no data):", dashboardData);
     return (
       <Box sx={{ p: 3 }}>
         <Alert severity="warning">표시할 데이터가 없습니다.</Alert>
@@ -144,13 +144,13 @@ const AdminPage = () => {
       <Grid container spacing={2} mb={4} >
         <Grid item xs={12} md={6}>
           <Paper sx={{ p: 2, height: 400 }}>
-            <Bar data={bar2Data} options={bar2Options} key={JSON.stringify(bar2Data)} />
+            <Bar data={bar2Data} options={bar2Options} />
           </Paper>
         </Grid>
 
         <Grid item xs={12} md={6}>
           <Paper sx={{ p: 2, height: 400 }}>
-            <Bar data={barData} options={barOptions} key={JSON.stringify(barData)} />
+            <Bar data={barData} options={barOptions} />
           </Paper>
         </Grid>
       </Grid >

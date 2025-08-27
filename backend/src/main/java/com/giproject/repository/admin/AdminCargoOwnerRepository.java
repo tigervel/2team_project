@@ -15,6 +15,6 @@ public interface AdminCargoOwnerRepository extends JpaRepository<CargoOwner, Str
     long countNewCargoOwnersByDate(@Param("date") LocalDate date);
 
         // 월별 신규 CargoOwner 수
-    @Query(value = "SELECT DATE_FORMAT(c.cargo_created_date_time, '%Y-%m') as month, COUNT(*) as count FROM cargo_owner c WHERE c.cargo_created_date_time IS NOT NULL GROUP BY month ORDER BY month", nativeQuery = true)
+    @Query(value = "SELECT DATE_FORMAT(c.cargo_created_date_time, '%Y-%m') as month, COUNT(*) as count FROM cargo_owner c GROUP BY month ORDER BY month", nativeQuery = true)
      List<MonthlyDataDTO> findMonthlyNewCargoOwnerCounts();
 }

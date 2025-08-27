@@ -18,8 +18,9 @@ public class AdminDashboardController {
 
     private final AdminDashboardService adminDashboardService;
 
-    @GetMapping
+    @GetMapping("")
     public ResponseEntity<DashboardDataDTO> getDashboardData() {
+    	System.out.println("호출됨 1``````````````````````````````````````````````````");
         DashboardDataDTO dashboardData = adminDashboardService.dashboardDataDTO();
         return ResponseEntity.ok(dashboardData);
     }
