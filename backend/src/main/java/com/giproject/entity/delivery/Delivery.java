@@ -1,5 +1,7 @@
 package com.giproject.entity.delivery;
 
+import java.time.LocalDateTime;
+
 import com.giproject.entity.payment.Payment;
 
 import jakarta.persistence.Column;
@@ -38,4 +40,6 @@ public class Delivery {
 	@OneToOne(fetch = FetchType.LAZY)
 	@JoinColumn(name = "payment_no")
 	private Payment payment;
+	
+	private LocalDateTime completTime;
 }
