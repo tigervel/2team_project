@@ -10,6 +10,7 @@ public interface DeliveryService {
 									.deliveryNo(delivery.getDeliveryNo())
 									.status(delivery.getStatus())
 									.paymentNo(delivery.getPayment().getPaymentNo())
+									.completTime(delivery.getCompletTime())
 									.build();
 		return deliveryDTO;
 	}

@@ -1,5 +1,7 @@
 package com.giproject.service.delivery;
 
+import java.time.LocalDateTime;
+
 import org.springframework.stereotype.Service;
 
 import com.giproject.dto.delivery.DeliveryDTO;
@@ -40,6 +42,7 @@ public class DeliveryServiceImpl implements DeliveryService{
 	public DeliveryDTO changeStatusCompleted(Long deliveryNo) {
 		Delivery delivery = deliveryRepository.findById(deliveryNo).orElseThrow(()-> new RuntimeException("배송정보가 존재하지않습니다"));
 		delivery.setStatus(DeliveryStatus.COMPLETED);
+		delivery.setCompletTime(LocalDateTime.now());
 		return entityToDTO(delivery);
 	}
 	
