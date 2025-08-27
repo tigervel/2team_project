@@ -68,7 +68,7 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                 .requestMatchers("/api/**").permitAll()
-                .requestMatchers("/g2i4/subpath/order/**","/g2i4/payment/**","./g2i4/delivery/","/g2i4/address/**",
+                .requestMatchers("/g2i4/subpath/order/**","/g2i4/payment/**","/g2i4/delivery/**","/g2i4/address/**",
                 		"/g2i4/estimate/subpath/**","/uploads/**","/oauth2/authorization/**", "/login/oauth2/**",
                 		"/h2-console/**","/g2i4/cargo/**","/g2i4/admin/**","/g2i4/main/**","/g2i4/uploads/**").permitAll()
                 .requestMatchers("/g2i4/estimate/list").hasAuthority("ROLE_DRIVER")
