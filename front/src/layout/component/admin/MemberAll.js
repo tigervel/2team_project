@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useMemo } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
 import {
     Box,
     Typography,
@@ -22,8 +21,6 @@ import { fetchMembers } from "../../../api/adminApi/adminMembersApi";
 
 const MemberAll = () => {
     const [activeTab, setActiveTab] = useState(0);     // 0=전체, 1=물주, 2=차주, 3=신고내역, 4=관리자
-    const navigate = useNavigate();
-    const location = useLocation();
     const [currentPage, setCurrentPage] = useState(1);
     const [pageSize] = useState(10);
     const [users, setUsers] = useState([]);
@@ -42,18 +39,10 @@ const MemberAll = () => {
         }
     })();
 
+    const page = currentPage - 1;
     const sort = "memCreateidDateTime,desc";
 
     useEffect(() => {
-      if (location.pathname.endsWith("/admin/memberAll")) setActiveTab(0);
-      else if (location.pathname.endsWith("/admin/memberOwner")) setActiveTab(1);
-      else if (location.pathname.endsWith("/admin/memberCowner")) setActiveTab(2);
-      else if (location.pathname.endsWith("/admin/memberReport")) setActiveTab(3);
-      else if (location.pathname.endsWith("/admin/memberAdmin")) setActiveTab(4);
-    }, [location.pathname]);
-
-    useEffect(() => {
-    const page = currentPage - 1; // Declare page inside useEffect
     const load = async () => {
       setIsLoading(true); setError("");
       try {
@@ -76,7 +65,7 @@ const MemberAll = () => {
       }
     };
     load();
-  }, [apiType, currentPage, pageSize, searchKeyword, sort]);
+  }, [apiType, page, pageSize, searchKeyword, sort]);
 
     const toRow = (u) => ({
         name: u.memName || "",
@@ -100,11 +89,11 @@ const MemberAll = () => {
         <Box>
           <Typography variant="h5" fontWeight="bold" mb={1}>회원 관리</Typography>
           <Tabs value={activeTab} onChange={handleTabChange} textColor="primary" indicatorColor="primary">
-            <Tab label="전체 회원" onClick={() => navigate("/admin/memberAll")} />
-            <Tab label="물주" onClick={() => navigate("/admin/memberOwner")} />
-            <Tab label="차주" onClick={() => navigate("/admin/memberCowner")} />
-            <Tab label="신고내역" onClick={() => navigate("/admin/memberReport")} />
-            <Tab label="관리자" onClick={() => navigate("/admin/memberAdmin")} />
+            <Tab label="전체 회원" />
+            <Tab label="물주" />
+            <Tab label="차주" />
+            <Tab label="신고내역" />
+            <Tab label="관리자" />
           </Tabs>
         </Box>
         <TextField

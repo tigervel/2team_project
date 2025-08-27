@@ -1,7 +1,7 @@
 import axios from "axios";
 import { API_SERVER_HOST } from "../serverConfig";
 
-const DASH_BOARD = `${API_SERVER_HOST}/g2i4/admin`;
+const DASH_BOARD = `${API_SERVER_HOST}/g2i4/admin/fees`;
 
 export const fetchDashboardData = async () => {
     try {

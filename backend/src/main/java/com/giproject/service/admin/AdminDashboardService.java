@@ -51,7 +51,7 @@ public interface AdminDashboardService {
                 .matchingNo(orderSheet.getMatching().getMatchingNo())
                 .orderUuid(orderSheet.getOrderUuid())
                 .startRestAddress(orderSheet.getStartRestAddress())
-                .endRestAddress(orderSheet.getEndRestAddress())
+                .endRestAddress(orderSheet.getEndRestAdrress())
                 .orderTime(orderSheet.getOrderTime())
                 .Addressee(orderSheet.getAddressee())
                 .phone(orderSheet.getPhone())

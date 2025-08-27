@@ -24,11 +24,11 @@ const MemberOwner = () => {
   const sort = useMemo(() => "memCreateidDateTime,desc", []);
 
   useEffect(() => {
-    if (location.pathname.endsWith("/admin/memberOwner")) setActiveTab(1);
-    else if (location.pathname.endsWith("/admin/memberAll")) setActiveTab(0);
-    else if (location.pathname.endsWith("/admin/memberCowner")) setActiveTab(2);
-    else if (location.pathname.endsWith("/admin/memberReport")) setActiveTab(3);
-    else if (location.pathname.endsWith("/admin/memberAdmin")) setActiveTab(4);
+    if (location.pathname.includes("/admins")) setActiveTab(4);
+    else if (location.pathname.includes("/owners")) setActiveTab(1);
+    else if (location.pathname.includes("/cowners")) setActiveTab(2);
+    else if (location.pathname.includes("/reports")) setActiveTab(3);
+    else setActiveTab(0);
   }, [location.pathname]);
 
   const handleTabChange = (_e, v) => {
@@ -73,11 +73,11 @@ const MemberOwner = () => {
         <Box>
           <Typography variant="h5" fontWeight="bold" mb={1}>물주</Typography>
           <Tabs value={activeTab} onChange={handleTabChange} textColor="primary" indicatorColor="primary">
-            <Tab label="전체 회원" onClick={() => navigate("/admin/memberAll")} />
-            <Tab label="물주" onClick={() => navigate("/admin/memberOwner")} />
-            <Tab label="차주" onClick={() => navigate("/admin/memberCowner")} />
-            <Tab label="신고내역" onClick={() => navigate("/admin/memberReport")} />
-            <Tab label="관리자" onClick={() => navigate("/admin/memberAdmin")} />
+            <Tab label="전체 회원" />
+            <Tab label="물주" />
+            <Tab label="차주" />
+            <Tab label="신고내역" />
+            <Tab label="관리자" />
           </Tabs>
         </Box>
         <TextField

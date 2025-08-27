@@ -1,35 +1,11 @@
 import React, { useEffect, useState } from "react";
 import { Box, Grid, Paper, Typography, CircularProgress, Alert } from "@mui/material";
 import { ArcElement, BarElement, CategoryScale, Chart, Legend, LinearScale, Title, Tooltip } from "chart.js";
-import { Bar } from "react-chartjs-2";
+import { Bar, Doughnut } from "react-chartjs-2";
 import axios from "axios";
-import { API_SERVER_HOST } from "../../../api/serverConfig";
+
 
 Chart.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, ArcElement);
-
-const makeBarOptions = (maxValue, title) => {
-  const suggested = Math.max(Math.ceil((maxValue || 0) * 1.25), 10);
-  return {
-    responsive: true,
-    maintainAspectRatio: false,
-    scales: {
-      y: {
-        beginAtZero: true,
-        suggestedMax: suggested,
-        ticks: { precision: 0 },
-        grid: { drawBorder: false },
-      },
-      x: {
-        grid: { display: false },
-      },
-    },
-    plugins: {
-      title: { display: true, text: title, font: { size: 18, weight: "bold" } },
-      legend: { display: true, position: "top" },
-      tooltip: { intersect: false, mode: "index" },
-    },
-  };
-};
 
 const AdminPage = () => {
   const [dashboardData, setDashboardData] = useState(null);
@@ -39,15 +15,8 @@ const AdminPage = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const res = await axios.get(`${API_SERVER_HOST}/g2i4/admin/dashboard`);
-        const d = res.data || {};
-        setDashboardData({
-          ...d,
-          monthlyDeliveries: d.monthlyDeliveries || [],
-          newMembersByMonth: d.newMembersByMonth || [],
-          currentDeliveries: d.currentDeliveries || [],
-          pastDeliveries: d.pastDeliveries || [],
-        });
+        const response = await axios.get('/g2i4/admin/dashboard');
+        setDashboardData(response.data);
       } catch (err) {
         setError("데이터를 불러오지 못했습니다. 다시 시도해 주세요.");
         console.error("Failed to fetch dashboard data:", err);
@@ -55,12 +24,13 @@ const AdminPage = () => {
         setLoading(false);
       }
     };
+
     fetchData();
   }, []);
 
   if (loading) {
     return (
-      <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", height: "100vh" }}>
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
         <CircularProgress />
       </Box>
     );
@@ -82,58 +52,57 @@ const AdminPage = () => {
     );
   }
 
-  const deliveriesLabels = dashboardData.monthlyDeliveries.map((it) => it.month);
-  const deliveriesCounts = dashboardData.monthlyDeliveries.map((it) => it.count);
-  const newMembersLabels = dashboardData.newMembersByMonth.map((it) => it.month);
-  const newMembersCounts = dashboardData.newMembersByMonth.map((it) => it.count);
-
-  const deliveriesMax = Math.max(0, ...deliveriesCounts);
-  const newMembersMax = Math.max(0, ...newMembersCounts);
-
   const barData = {
-    labels: deliveriesLabels,
+    labels: dashboardData.monthlyDeliveries.map(item => item.month),
     datasets: [
       {
-        label: "월 별 배송내역",
-        data: deliveriesCounts,
+        label: '월 별 배송내역',
+        data: dashboardData.monthlyDeliveries.map(item => item.count),
         backgroundColor: [
-          "rgb(255, 99, 132)",
-          "rgb(255, 159, 64)",
-          "rgb(255, 205, 86)",
-          "rgb(75, 192, 192)",
-          "rgb(54, 162, 235)",
-          "rgb(153, 102, 255)",
+          'rgb(255, 99, 132)', 'rgb(255, 159, 64)', 'rgb(255, 205, 86)',
+          'rgb(75, 192, 192)', 'rgb(54, 162, 235)', 'rgb(153, 102, 255)',
         ],
         borderWidth: 1,
-        borderRadius: 4,
-        barThickness: 30,
       },
     ],
+  };
+
+  const barOptions = {
+    responsive: true,
+    scales: {
+      y: { beginAtZero: true },
+    },
+    plugins: {
+      title: { display: true, text: '월별 배송 내역', font: { size: 18, weight: 'bold' } },
+      legend: { display: true, position: 'top' },
+    },
   };
 
   const bar2Data = {
-    labels: newMembersLabels,
+    labels: dashboardData.newMembersByMonth.map(item => item.month),
     datasets: [
       {
-        label: "신규 회원가입",
-        data: newMembersCounts,
+        label: '신규 회원가입',
+        data: dashboardData.newMembersByMonth.map(item => item.count),
         backgroundColor: [
-          "rgb(54, 162, 235)",
-          "rgb(75, 192, 192)",
-          "rgb(255, 205, 86)",
-          "rgb(255, 159, 64)",
-          "rgb(255, 99, 132)",
-          "rgb(153, 102, 255)",
+          'rgb(255, 99, 132)', 'rgb(255, 159, 64)', 'rgb(255, 205, 86)',
+          'rgb(75, 192, 192)', 'rgb(54, 162, 235)', 'rgb(153, 102, 255)',
         ],
         borderWidth: 1,
-        borderRadius: 4,
-        barThickness: 30,
       },
     ],
   };
 
-  const barOptions = makeBarOptions(deliveriesMax, "월별 배송 내역");
-  const bar2Options = makeBarOptions(newMembersMax, "신규 회원가입");
+  const bar2Options = {
+    responsive: true,
+    scales: {
+      y: { beginAtZero: true },
+    },
+    plugins: {
+      title: { display: true, text: '신규 회원가입', font: { size: 18, weight: 'bold' } },
+      legend: { display: true, position: 'top' },
+    },
+  };
 
   return (
     <Box sx={{ p: 3 }}>
@@ -169,7 +138,7 @@ const AdminPage = () => {
         ))}
       </Box>
 
-      <Grid container spacing={2} mb={4}>
+      <Grid container spacing={2} mb={4} >
         <Grid item xs={12} md={6}>
           <Paper sx={{ p: 2, height: 400 }}>
             <Bar data={bar2Data} options={bar2Options} />
@@ -181,8 +150,8 @@ const AdminPage = () => {
             <Bar data={barData} options={barOptions} />
           </Paper>
         </Grid>
-      </Grid>
-
+      </Grid >
+      
       <Paper sx={{ p: 2, mb: 3 }}>
         <Typography fontSize={16} fontWeight="bold" mb={2}>
           현재 배송 진행건

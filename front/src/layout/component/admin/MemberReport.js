@@ -1,6 +1,5 @@
 // 신고내역 페이지
 import React, { useEffect, useState, useMemo } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
 import {
   Box,
   Typography,
@@ -30,8 +29,6 @@ import {
 
 const MemberReport = () => {
   const [activeTab, setActiveTab] = useState(3);
-  const navigate = useNavigate();
-  const location = useLocation();
   const [page, setPage] = useState(1);
   const [size] = useState(10);
   const [rows, setRows] = useState([]);
@@ -41,14 +38,6 @@ const MemberReport = () => {
   const [unreadOnly, setUnreadOnly] = useState(false);
   const [error, setError] = useState("");
   const [unreadCount, setUnreadCount] = useState(0);
-
-  useEffect(() => {
-    if (location.pathname.endsWith("/admin/memberReport")) setActiveTab(3);
-    else if (location.pathname.endsWith("/admin/memberAll")) setActiveTab(0);
-    else if (location.pathname.endsWith("/admin/memberOwner")) setActiveTab(1);
-    else if (location.pathname.endsWith("/admin/memberCowner")) setActiveTab(2);
-    else if (location.pathname.endsWith("/admin/memberAdmin")) setActiveTab(4);
-  }, [location.pathname]);
 
   const handleTabChange = (e, newValue) => {
     setActiveTab(newValue);
@@ -114,14 +103,13 @@ const MemberReport = () => {
             회원 관리
           </Typography>
           <Tabs value={activeTab} onChange={handleTabChange} textColor="primary" indicatorColor="primary">
-            <Tab label="전체 회원" onClick={() => navigate("/admin/memberAll")} />
-            <Tab label="물주" onClick={() => navigate("/admin/memberOwner")} />
-            <Tab label="차주" onClick={() => navigate("/admin/memberCowner")} />
+            <Tab label="전체 회원" />
+            <Tab label="물주" />
+            <Tab label="차주" />
             <Tab
               label={unreadCount > 0 ? `신고내역 (${unreadCount})` : "신고내역"}
-              onClick={() => navigate("/admin/memberReport")}
             />
-            <Tab label="관리자" onClick={() => navigate("/admin/memberAdmin")} />
+            <Tab label="관리자" />
           </Tabs>
         </Box>
 

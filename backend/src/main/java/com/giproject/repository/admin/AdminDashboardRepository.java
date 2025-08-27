@@ -40,11 +40,11 @@ public interface AdminDashboardRepository extends JpaRepository<Object, Long> {
     long countNewCargoOwnersByDate(@Param("date") LocalDate date);
 
     // 월별 주문 건수
-    @Query(value = "SELECT DATE_FORMAT(o.order_time, '%Y-%m') as month, COUNT(*) as count FROM order_sheet o GROUP BY month ORDER BY month", nativeQuery = true)
+    @Query(value = "SELECT DATE_FORMAT(o.order_time, '%Y-%m') as month, COUNT(*) as count FROM OrderSheet o GROUP BY month ORDER BY month", nativeQuery = true)
     List<MonthlyDataDTO> findMonthlyDeliveryCounts();
 
     // 월별 Member 수11
-    @Query(value = "SELECT DATE_FORMAT(m.mem_create_id_datetime, '%Y-%m') as month, COUNT(*) as count FROM member m GROUP BY month ORDER BY month", nativeQuery = true)
+    @Query(value = "SELECT DATE_FORMAT(m.mem_create_id_date_time, '%Y-%m') as month, COUNT(*) as count FROM member m GROUP BY month ORDER BY month", nativeQuery = true)
     List<MonthlyDataDTO> findMonthlyNewMemberCounts();
     
     // 월별 신규 회원 (CargoOwner) 수22
