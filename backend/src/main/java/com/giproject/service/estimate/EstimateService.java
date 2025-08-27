@@ -26,7 +26,7 @@ public interface EstimateService {
 				.isTemp(estimate.isTemp())
 				.matched(estimate.isMatched())
 				.isOrdered(estimate.isOrdered())
-				.memberId(estimate.getMember().getMemId())
+				.memberId(estimate.getMember() != null ? estimate.getMember().getMemId() : null)
 				.build();
 		return dto;
 	}

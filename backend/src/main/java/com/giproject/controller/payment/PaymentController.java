@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.giproject.dto.payment.PaymentCompleteDTO;
 import com.giproject.dto.payment.PaymentDTO;
+import com.giproject.service.mail.MailService;
 import com.giproject.service.payment.PaymentService;
 
 import lombok.RequiredArgsConstructor;
@@ -20,11 +21,12 @@ import lombok.RequiredArgsConstructor;
 @RequestMapping("/g2i4/payment")
 public class PaymentController {
 	private final PaymentService paymentService;
+	private final MailService mailService;
 	
 	@PostMapping("/accepted")
 	public ResponseEntity<Map<String , Long>> requestPayment(@RequestBody PaymentDTO.CreateRequest dto){
 		Long response= paymentService.acceptedPayment(dto);
-		
+		mailService.paymentAcceptedMail(response);
 		return ResponseEntity.ok(Map.of("paymentNo",response));
 	}
 	

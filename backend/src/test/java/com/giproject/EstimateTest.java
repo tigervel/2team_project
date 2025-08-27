@@ -20,11 +20,12 @@ import com.giproject.entity.estimate.Estimate;
 import com.giproject.entity.matching.Matching;
 import com.giproject.repository.estimate.EsmateRepository;
 import com.giproject.repository.matching.MatchingRepository;
+import com.giproject.service.delivery.DeliveryService;
 import com.giproject.service.estimate.EstimateService;
 import com.giproject.service.estimate.matching.MatchingService;
 
 import jakarta.transaction.Transactional;
-
+import lombok.RequiredArgsConstructor;
 @Transactional
 @SpringBootTest
 @Rollback(false)
@@ -38,13 +39,15 @@ public class EstimateTest {
 	MatchingRepository matchingRepository;
 	@Autowired
 	EsmateRepository esmateRepository;
-
+	
+	@Autowired
+ DeliveryService deliveryService;
 	// @Test
 	void contextLoads() {
 		System.out.println("1수정");
 	}
 	@Transactional
-	@Test
+	//@Test
 	void test() {
 		String user = "user";
 		List<EstimateDTO> dtolist = estimateService.getSaveEstimate(user);
@@ -89,5 +92,11 @@ public class EstimateTest {
 //		        	System.out.println(dto.getEno() +" : "+ dto.getCargoType() + dto.getStartTime() + dto.getRoute());
 //		        }
 //		       
+	}
+	@Transactional
+	@Test
+	void changeTest() {
+		Long no =1L;
+		deliveryService.changeStatusCompleted(no);
 	}
 }

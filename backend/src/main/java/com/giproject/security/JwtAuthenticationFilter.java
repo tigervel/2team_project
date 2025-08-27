@@ -27,7 +27,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private static final List<String> EXCLUDES = List.of(
         "/favicon.ico", "/error", "/",
-        "/h2-console/**", "/uploads/**", "/g2i4/**",
+        "/h2-console/**", "/uploads/**",
         "/api/auth/login", "/api/auth/refresh", "/api/auth/signup",
         "/api/signup/check-id", "/api/email/**", "/api/qaboard/**",
         "/oauth2/authorization/**", "/login/oauth2/**",

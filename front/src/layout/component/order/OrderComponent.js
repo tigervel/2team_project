@@ -182,9 +182,9 @@ const OrderComponent = () => {
           </Grid>
           <Grid item sx={{ flex: 1, minWidth: 0, display: "flex", gap: 1 }}>
             <TextField size="small" sx={{ flex: 1, maxWidth:150}} inputProps={{ readOnly: true }}
-              value={serverData.ordererEmail.split('@')[0]}/>
+              value={(serverData?.ordererEmail??'').split('@')[0]??''}/>
             <Typography variant="h6">@</Typography>
-            <TextField size="small" sx={{ flex: 1 , maxWidth:300}} placeholder="도메인"  value={serverData.ordererEmail.split('@')[1]}
+            <TextField size="small" sx={{ flex: 1 , maxWidth:300}} placeholder="도메인"  value={(serverData?.ordererEmail??'').split('@')[1]??''}
            inputProps={{ readOnly: true }} />
         
 

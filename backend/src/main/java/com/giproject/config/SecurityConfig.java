@@ -67,17 +67,12 @@ public class SecurityConfig {
             )
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-//                .requestMatchers("/api/auth/login", "/api/auth/refresh", "/api/auth/signup").permitAll()
-//                .requestMatchers("/api/signup/check-id").permitAll()
-//                .requestMatchers("/api/email/**").permitAll()
-//                .requestMatchers("/api/test").permitAll()
                 .requestMatchers("/api/**").permitAll()
-                //.requestMatchers("/g2i4/**").permitAll()
-                .requestMatchers("/g2i4/estimate/subpath/**").permitAll()
-                .requestMatchers("/uploads/**").permitAll()
-                .requestMatchers("/oauth2/authorization/**", "/login/oauth2/**").permitAll()
+                .requestMatchers("/g2i4/subpath/order/**","/g2i4/payment/**","/g2i4/delivery/**","/g2i4/address/**",
+                		"/g2i4/estimate/subpath/**","/uploads/**","/oauth2/authorization/**", "/login/oauth2/**",
+                		"/h2-console/**","/g2i4/cargo/**","/g2i4/admin/**","/g2i4/main/**","/g2i4/uploads/**").permitAll()
+                .requestMatchers("/g2i4/estimate/list").hasAuthority("ROLE_DRIVER")
                 .requestMatchers(PathRequest.toStaticResources().atCommonLocations()).permitAll()
-                .requestMatchers("/h2-console/**").permitAll()
                 .anyRequest().authenticated()
             )
             .authenticationProvider(authenticationProvider(passwordEncoder()))

@@ -105,26 +105,27 @@ public class FeesBasicServiceImpl implements FeesBasicService {
 
 	@Override
 	public Map<String, String> uploadImg(Long tno, MultipartFile file) {
+		String uploadDir = "D:/2team_Project_Git/uploads/";
 		try {
 			FeesBasic basic = feesBasicRepository.findById(tno)
 					.orElseThrow(() -> new RuntimeException("해당 차량이 존재하지 않음" + tno));
 
 			if (basic.getCargoImage() != null) {
-				String existingImagPath = "src/main/resources/static" + basic.getCargoImage();
-				Path existingPath = Paths.get(existingImagPath);
-				if(Files.exists(existingPath)) {
-					Files.delete(existingPath); //파일이 존재하면 지우기
+				String oldUrl = basic.getCargoImage();     
+				String oldName = Paths.get(oldUrl).getFileName().toString(); 
+				Path oldPath = Paths.get(uploadDir, oldName);      
+				Files.deleteIfExists(oldPath);
 					
-				}
 			}
-			
+			Files.createDirectories(Paths.get(uploadDir));
 			String fileName = UUID.randomUUID() +"_"+file.getOriginalFilename();
-			Path uploadPath = Paths.get("src/main/resources/static/uploads/" + fileName);
+			Path savePath  = Paths.get(uploadDir + fileName);
+			Files.write(savePath, file.getBytes());
 			
-			Files.createDirectories(uploadPath.getParent());
-			Files.write(uploadPath, file.getBytes());
 			
-			basic.setCargoImage("/upload/"+fileName);
+			
+			
+			basic.setCargoImage("/g2i4/uploads/"+fileName);
 			feesBasicRepository.save(basic);
 			
 		} catch (Exception e) {
