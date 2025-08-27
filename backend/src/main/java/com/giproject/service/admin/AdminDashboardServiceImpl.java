@@ -71,7 +71,8 @@ public class AdminDashboardServiceImpl implements AdminDashboardService {
         if (a != null) for (MonthlyDataDTO d : a) map.merge(d.getMonth(), d.getCount(), Long::sum);
         if (b != null) for (MonthlyDataDTO d : b) map.merge(d.getMonth(), d.getCount(), Long::sum);
 
-        return map.entrySet().stream()
+                return map.entrySet().stream()
+                .filter(entry -> entry.getKey() != null) // Add this line to filter out null keys
                 .sorted(Map.Entry.comparingByKey())
                 .map(e -> new MonthlyDataDTO(e.getKey(), e.getValue()))
                 .collect(Collectors.toList());
