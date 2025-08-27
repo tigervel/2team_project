@@ -53,8 +53,10 @@ public class AdminDashboardServiceImpl implements AdminDashboardService {
 
         List<MonthlyDataDTO> newMembersByMonth = mergeMonthly(memberMonthly, cargoMonthly);
         
-        // 배송 현황 추가 예정
-        
+        // TODO: 배송 현황 로직 구현 필요
+        List<String> currentDeliveries = new ArrayList<>();
+        List<String> pastDeliveries = new ArrayList<>();
+
         return DashboardDataDTO.builder()
                 .totalUsers(totalUsers)
                 .monthlyRevenue(monthlyRevenue)
@@ -62,6 +64,8 @@ public class AdminDashboardServiceImpl implements AdminDashboardService {
                 .newMembers(newMembers)
                 .monthlyDeliveries(monthlyDeliveries)
                 .newMembersByMonth(newMembersByMonth)
+                .currentDeliveries(currentDeliveries)
+                .pastDeliveries(pastDeliveries)
                 .build();
     }
     

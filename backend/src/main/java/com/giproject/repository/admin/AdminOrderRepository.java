@@ -9,7 +9,7 @@ import java.util.List;
 public interface AdminOrderRepository extends JpaRepository<OrderSheet, Long> {
 
     // 월별 주문 건수 조회
-    @Query(value = "SELECT DATE_FORMAT(o.order_time, '%Y-%m') as month, COUNT(*) as count FROM OrderSheet o GROUP BY month ORDER BY month", nativeQuery = true)
+    @Query(value = "SELECT DATE_FORMAT(o.order_time, '%Y-%m') as month, COUNT(*) as count FROM order_sheet o WHERE o.order_time IS NOT NULL GROUP BY month ORDER BY month", nativeQuery = true)
     List<MonthlyDataDTO> findMonthlyDeliveryCounts();
     // 진행 중인 배송건
     

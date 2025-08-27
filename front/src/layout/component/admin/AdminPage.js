@@ -5,6 +5,8 @@ import { Bar, Doughnut } from "react-chartjs-2";
 import axios from "axios";
 
 
+import { API_SERVER_HOST } from "../../../api/serverConfig";
+
 Chart.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, ArcElement);
 
 const AdminPage = () => {
@@ -15,7 +17,8 @@ const AdminPage = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const response = await axios.get('/g2i4/admin/dashboard');
+        const response = await axios.get(`${API_SERVER_HOST}/g2i4/admin/dashboard`, { withCredentials: true });
+        console.log("Dashboard Data:", JSON.stringify(response.data, null, 2));
         setDashboardData(response.data);
       } catch (err) {
         setError("데이터를 불러오지 못했습니다. 다시 시도해 주세요.");
@@ -141,13 +144,13 @@ const AdminPage = () => {
       <Grid container spacing={2} mb={4} >
         <Grid item xs={12} md={6}>
           <Paper sx={{ p: 2, height: 400 }}>
-            <Bar data={bar2Data} options={bar2Options} />
+            <Bar data={bar2Data} options={bar2Options} key={JSON.stringify(bar2Data)} />
           </Paper>
         </Grid>
 
         <Grid item xs={12} md={6}>
           <Paper sx={{ p: 2, height: 400 }}>
-            <Bar data={barData} options={barOptions} />
+            <Bar data={barData} options={barOptions} key={JSON.stringify(barData)} />
           </Paper>
         </Grid>
       </Grid >
