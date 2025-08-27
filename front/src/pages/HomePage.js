@@ -164,7 +164,7 @@ const HomePage = () => {
 
       {/* 🚚 차량 종류 */}
       <Box>
-        {/* ... 캐러셀/상단은 그대로 ... */}
+    
 
         {/* 🚚 차량 종류: 이미지만 표시 */}
         <Box sx={{ py: 5, textAlign: "center" }}>
@@ -172,9 +172,13 @@ const HomePage = () => {
 
           <Grid container spacing={2} justifyContent="center">
             {visibleFees.map((basic) => {
-              const img = normalizeUrl(basic.cargoImage) || DEFAULT_TRUCK_IMG;
+              const img = normalizeUrl(basic?.cargoImage) || DEFAULT_TRUCK_IMG;
               return (
+<<<<<<< HEAD
                                <Grid item key={basic.tno}>
+=======
+                <Grid item key={basic?.tno }>
+>>>>>>> ce6c2bf62a3cd8ec077afed13e382dcc708cefca
                   <Card sx={{ width: { xs: 160, sm: 220, md: 300 }, height: { xs: 110, sm: 150, md: 200 }, overflow: "hidden" }}>
                     <CardMedia
                       component="img"
@@ -183,7 +187,7 @@ const HomePage = () => {
                       sx={{
                         width: '100%',
                         height: '100%',
-                        objectFit: 'contain',    // ✅ 전체가 보이도록 (안 잘림)
+                        objectFit: 'contain',    
                         objectPosition: 'center',
                         display: 'block',
                       }}
@@ -193,6 +197,10 @@ const HomePage = () => {
                   <Typography>{basic.weight}</Typography>
                 </Grid>
 
+<<<<<<< HEAD
+=======
+            
+>>>>>>> ce6c2bf62a3cd8ec077afed13e382dcc708cefca
 
               );
             })}
