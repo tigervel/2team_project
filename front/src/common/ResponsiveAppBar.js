@@ -16,6 +16,7 @@ import Tooltip from '@mui/material/Tooltip';
 import MenuItem from '@mui/material/MenuItem';
 
 import { login as loginAction, logout as logoutAction } from '../slice/loginSlice'; // ✅ 경로 확인
+import useCustomLogin from '../hooks/useCustomLogin'; // ✅ useCustomLogin 훅 임포트
 
 const pages = [
   { label: '견적서 작성', path: '/estimatepage' },
@@ -29,6 +30,13 @@ const settings = [
   { label: '마이페이지', path: '/mypage' },
   { label: '주문내역 확인', path: '/mypage' },
   { label: '배송상태', path: '/mypage' },
+  { label: '로그아웃', path: '/logout' }
+];
+
+const settingsAdmin = [
+  { label: '관리자페이지', path: '/admin' },
+  { label: '회원조회', path: '/admin/memberAll' },
+  { label: '배송상태', path: '/admin/deliveryPage' },
   { label: '로그아웃', path: '/logout' }
 ];
 
@@ -49,18 +57,12 @@ function decodeJwt(token) {
 export default function ResponsiveAppBar() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
-
-  const loginState = useSelector(state => state?.login);
-  const hasReduxLogin = Boolean(loginState?.email || loginState?.memberId);
-
-  const accessToken = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
-  const hasToken = Boolean(accessToken);
-
-  const isLogin = hasReduxLogin || hasToken;
+  const { isLogin, isAdmin } = useCustomLogin(); // ✅ useCustomLogin 사용
 
   // 새로고침 시 토큰으로 하이드레이트
   React.useEffect(() => {
-    if (!hasReduxLogin && accessToken) {
+    const accessToken = localStorage.getItem('accessToken');
+    if (isLogin && accessToken) {
       const payload = decodeJwt(accessToken);
       if (payload) {
         dispatch(
@@ -68,13 +70,13 @@ export default function ResponsiveAppBar() {
             email: payload.email || '',
             nickname: payload.name || '',
             pw: '',
-            role: (payload.rolenames && payload.rolenames[0]) || payload.role || 'USER',
+            roles: payload.roles || ['USER'], // ✅ roles 배열 사용
             memberId: payload.memId || payload.cargoId || payload.sub || null,
           })
         );
       }
     }
-  }, [hasReduxLogin, accessToken, dispatch]);
+  }, [isLogin, dispatch]);
 
   const [anchorElNav, setAnchorElNav]   = React.useState(null);
   const [anchorElUser, setAnchorElUser] = React.useState(null);
@@ -91,17 +93,15 @@ export default function ResponsiveAppBar() {
       localStorage.removeItem('accessToken');
       localStorage.removeItem('refreshToken');
 
-      // (선택) 서버에도 로그아웃 알림을 보내고 싶다면:
-      // await fetch(`${API_BASE}/api/auth/logout`, { method: 'POST', credentials: 'include' });
-
       // Redux 상태 초기화
       dispatch(logoutAction());
     } finally {
       handleCloseUserMenu();
-      // 바로 UI가 로그인/회원가입으로 변경됨
       navigate('/login', { replace: true });
     }
   };
+
+  const currentSettings = isAdmin ? settingsAdmin : settings; // ✅ 조건부 메뉴 선택
 
   return (
     <AppBar position="static" sx={{ zIndex: (t) => t.zIndex.drawer + 1, bgcolor: '#299AF0' }}>
@@ -180,8 +180,7 @@ export default function ResponsiveAppBar() {
                 open={Boolean(anchorElUser)}
                 onClose={handleCloseUserMenu}
               >
-                {settings.map((s) => {
-                  // 🔸 로그아웃만 커스텀 핸들러로 즉시 상태 초기화
+                {currentSettings.map((s) => { // ✅ 조건부 렌더링
                   if (s.label === '로그아웃') {
                     return (
                       <MenuItem key={s.label} onClick={handleLogout}>
@@ -189,7 +188,6 @@ export default function ResponsiveAppBar() {
                       </MenuItem>
                     );
                   }
-                  // 다른 항목은 그대로 링크 이동
                   return (
                     <MenuItem key={s.label} onClick={handleCloseUserMenu} component={Link} to={s.path}>
                       <Typography sx={{ textAlign: 'center' }}>{s.label}</Typography>

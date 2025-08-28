@@ -4,7 +4,8 @@ import { useEffect, useState } from "react";
 import { getEstimateList, postAccepted, postRejected } from "../../../api/estimateApi/estimateApi";
 import PageComponent from "../common/PageComponent";
 import { useNavigate } from "react-router-dom";
-import { getAccessToken, parseJwt } from "../../../utils/jwt";
+import { useSelector } from "react-redux";
+import { useRef } from "react";
 
 const initState = {
   dtoList: [],
@@ -23,22 +24,24 @@ const EstimateListComponent = () => {
   const { page, size, moveToList, refresh, setRefresh } = useCustomMove();
   const [serverData, setServerData] = useState(initState);
   const navigate = useNavigate();
+  const { roles, email } = useSelector(state => state.login);
+  const authChecked = useRef(false); // ✅ 실행 여부 플래그
 
   useEffect(() => {
-    const token = getAccessToken();
-    const payload = parseJwt(token);
-    const roles = payload?.roles || payload?.authorities || [];
+    if (authChecked.current) {
+      return; // ✅ 이미 체크했다면 중복 실행 방지
+    }
 
-    const isDriver = Array.isArray(roles)
-      ? roles.includes("ROLE_DRIVER")
-      : roles === "ROLE_DRIVER";
+    const isDriver = roles.includes("ROLE_DRIVER");
+    const isAdmin = roles.includes("ROLE_ADMIN");
 
-    if (!token || !isDriver) {
+    if (!email || !isDriver || isAdmin) {
+      authChecked.current = true; // ✅ 체크 완료로 표시
       alert("운전기사만 접근 가능합니다.");
       navigate("/", { replace: true });
-      
+      return;
     }
-    ;
+
     try {
       getEstimateList({ page, size }).then(data => {
         setServerData(data)
@@ -58,7 +61,7 @@ const EstimateListComponent = () => {
         alert("목록을 불러오는 중 오류가 발생했습니다.");
       }
     }
-  }, [page, size, refresh, navigate]);
+  }, [page, size, refresh, navigate, roles, email]);
 
   const clickRejected = (esNo) => {
     postRejected(esNo).then(data => {
@@ -68,7 +71,6 @@ const EstimateListComponent = () => {
   }
   const clickAccepted = (esNo) => {
     postAccepted(esNo).then((data) => {
-      console.log(data)
       setRefresh(!refresh)
     })
   }

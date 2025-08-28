@@ -19,7 +19,7 @@ const SignUpComponent = () => {
     // 사용자 유형 (화주/차주)
     const [alignment, setAlignment] = React.useState('user'); // user=화주, car=차주
     const handleAlignment = (_, v) => { if (v) setAlignment(v); };
-    const role = alignment === 'car' ? 'DRIVER' : 'SHIPPER';
+    const roles = alignment === 'car' ? 'DRIVER' : 'SHIPPER';
 
     // ID 폼 상태
     const { id, handleChange, isIdValid } = useIdForm();
@@ -128,7 +128,7 @@ const SignUpComponent = () => {
         setSubmitting(true);
         try {
             const payload = {
-                role,                               // "SHIPPER" or "DRIVER"
+                roles,                               // "SHIPPER" or "DRIVER"
                 loginId: id,                        // DTO 키와 동일
                 password: password1,
                 name,

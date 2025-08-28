@@ -1,5 +1,7 @@
 package com.giproject.security;
 
+import com.giproject.dto.cargo.CargoOwnerDTO;
+import com.giproject.dto.member.MemberDTO;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
@@ -39,10 +41,18 @@ public class JwtService {
         Date now = new Date();
         Date exp = new Date(now.getTime() + accessExpSeconds * 1000);
 
-    
+        Object principal = authentication.getPrincipal();
+        String email = "";
+
+        if (principal instanceof MemberDTO) {
+            email = ((MemberDTO) principal).getMemEmail();
+        } else if (principal instanceof CargoOwnerDTO) {
+            email = ((CargoOwnerDTO) principal).getCargoEmail();
+        }
 
         return Jwts.builder()
                 .setSubject(authentication.getName())
+                .claim("email", email)
                 .claim("roles", authentication.getAuthorities().stream()
                         .map(GrantedAuthority::getAuthority)
                         .collect(Collectors.toList()))

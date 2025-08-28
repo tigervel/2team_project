@@ -11,7 +11,8 @@ const API_BASE =
 // 초기 상태 (기존 필드 유지 + 상태/토큰 필드 추가)
 const initState = {
     email: "",
-    role: "USER",
+    roles: ["USER"],
+
     memberId: null,
 
     status: "idle",      // 'idle' | 'loading' | 'succeeded' | 'failed'
@@ -61,10 +62,12 @@ const loginSlice = createSlice({
         // (선택) 수동 로그인 상태 세팅 - 기존 호환 유지
         login: (state, action) => {
             const d = action.payload || {};
+            // roles가 배열인지 확인하고, 아니면 배열로 만듭니다.
+            const newRoles = Array.isArray(d.roles) ? d.roles : (d.role ? [d.role] : state.roles);
             return {
                 ...state,
                 email: d.email ?? state.email ?? "",
-                role: d.role ?? state.role ?? "USER",
+                roles: newRoles,
                 memberId: d.memberId ?? d.id ?? state.memberId ?? null,
             };
         },

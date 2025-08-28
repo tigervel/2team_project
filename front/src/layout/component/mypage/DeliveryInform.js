@@ -137,7 +137,7 @@ const DeliveryInfoPage = () => {
   useEffect(() => {
     getMyUnpaidEstimateList(pageParams)
       .then(async (data) => {
-        console.table(data.slice(0, 3));
+        //console.table(data.slice(0, 3));
         // 배치 단순화 요청: [start, end, start, end, ...]
         // eno 내림차순 정렬 (숫자/문자 대비)
         const sorted = [...data].sort((a, b) => {

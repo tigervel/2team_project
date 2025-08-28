@@ -6,6 +6,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.giproject.entity.cargo.CargoOwner;
 import com.giproject.entity.estimate.Estimate;
 
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
@@ -21,7 +22,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Entity
-@Table(name = "RejectedMatching")
+@Table(name = "rejected_matching")
 @Getter
 @Setter
 @Builder
@@ -34,7 +35,7 @@ public class RejectedMatching {
 	private Long rmno;//매칭 거절 리스트
 	
 	@ManyToOne(fetch = FetchType.LAZY)
-	@JoinColumn(name = "cargo_owner_id")
+	@JoinColumn(name = "cargo_owner_id",columnDefinition="varchar(50)" )
 	@JsonIgnore
 	private CargoOwner cargoOwner;
 	
