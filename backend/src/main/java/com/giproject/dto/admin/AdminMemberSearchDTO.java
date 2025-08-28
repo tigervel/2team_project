@@ -6,6 +6,8 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.util.List;
+
 @Getter
 @Setter
 @NoArgsConstructor
@@ -15,5 +17,9 @@ public class AdminMemberSearchDTO {
     private String name;
     private String email;
     private String phone;
+    private int orders;
+    private String status;
+    private List<DeliveryDetailDTO> details;
+    private List<String> history;
 }
 

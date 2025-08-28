@@ -1,18 +1,11 @@
 package com.giproject.dto.admin;
 
+import lombok.AllArgsConstructor;
 import lombok.Data;
-import lombok.NoArgsConstructor;
 
 @Data
-@NoArgsConstructor
+@AllArgsConstructor
 public class MonthlyDataDTO {
-
     private String month;
-    private Long count;
-
-    public MonthlyDataDTO(String month, Long count) {
-    	System.out.println(month);
-        this.month = month;
-        this.count = count;
-    }
+    private long count;
 }

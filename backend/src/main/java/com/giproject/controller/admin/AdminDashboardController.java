@@ -3,25 +3,21 @@ package com.giproject.controller.admin;
 import com.giproject.dto.admin.DashboardDataDTO;
 import com.giproject.service.admin.AdminDashboardService;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.log4j.Log4j2;
-
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@Log4j2
 @RequestMapping("/g2i4/admin/dashboard")
 @RequiredArgsConstructor
 public class AdminDashboardController {
 
     private final AdminDashboardService adminDashboardService;
 
-    @GetMapping("")
+    @GetMapping
     public ResponseEntity<DashboardDataDTO> getDashboardData() {
-    	System.out.println("호출됨 1``````````````````````````````````````````````````");
-        DashboardDataDTO dashboardData = adminDashboardService.dashboardDataDTO();
+        DashboardDataDTO dashboardData = adminDashboardService.getDashboardData();
         return ResponseEntity.ok(dashboardData);
     }
 }

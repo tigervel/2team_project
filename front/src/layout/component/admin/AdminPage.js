@@ -16,9 +16,9 @@ const AdminPage = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const response = await axios.get('/g2i4/admin/dashboard');
+        const response = await fetchDashboardData();
         console.log("Axios Response:", response);
-        setDashboardData(response.data);
+        setDashboardData(response);
       } catch (err) {
         setError("데이터를 불러오지 못했습니다. 다시 시도해 주세요.");
         console.error("Failed to fetch dashboard data:", err);

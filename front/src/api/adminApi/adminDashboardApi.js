@@ -1,14 +1,9 @@
 import axios from "axios";
 import { API_SERVER_HOST } from "../serverConfig";
 
-const DASH_BOARD = `${API_SERVER_HOST}/g2i4/admin`;
+const PREFIX = `${API_SERVER_HOST}/g2i4/admin/dashboard`;
 
 export const fetchDashboardData = async () => {
-    try {
-        const response = await axios.get(`${DASH_BOARD}/dashboard`);
-        return response.data;
-    } catch (error) {
-        console.error("Error fetching dashboard data:", error);
-        throw error;
-    }
+  const { data } = await axios.get(`${PREFIX}`);
+  return data;
 };

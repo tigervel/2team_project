@@ -1,92 +1,74 @@
 package com.giproject.service.admin;
 
+import com.giproject.dto.admin.DashboardDataDTO;
+import com.giproject.dto.admin.MonthlyDataDTO;
+import com.giproject.entity.delivery.DeliveryStatus;
+import com.giproject.repository.delivery.DeliveryRepository;
+import com.giproject.repository.member.MemberRepository;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+
 import java.time.LocalDate;
+import java.time.YearMonth;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
-import com.giproject.dto.admin.DashboardDataDTO;
-import com.giproject.dto.admin.MonthlyDataDTO;
-import com.giproject.repository.admin.AdminCargoOwnerRepository;
-import com.giproject.repository.admin.AdminMemberRepository;
-import com.giproject.repository.admin.AdminOrderRepository;
-import com.giproject.repository.admin.AdminPaymentRepository;
-import lombok.RequiredArgsConstructor;
-
 @Service
 @RequiredArgsConstructor
-@Transactional(readOnly = true)
 public class AdminDashboardServiceImpl implements AdminDashboardService {
-    
-    private final AdminMemberRepository adminMemberRepository;
-    private final AdminCargoOwnerRepository adminCargoOwnerRepository;
-    private final AdminOrderRepository adminOrderRepository;
-    private final AdminPaymentRepository adminPaymentRepository;
+
+    private final MemberRepository memberRepository;
+    private final DeliveryRepository deliveryRepository;
 
     @Override
-    public DashboardDataDTO dashboardDataDTO() {
-        // 1. 총 사용자 수
-    	long totalUsers = adminMemberRepository.count() + adminCargoOwnerRepository.count();
-        System.out.println("-----------------------------------------1");
+    public DashboardDataDTO getDashboardData() {
+        long totalUsers = memberRepository.count();
+        long monthlyRevenue = 5000000; // Replace with actual revenue logic
+        long newMembers = memberRepository.countByMemCreateIdDateTimeAfter(LocalDate.now().withDayOfMonth(1).atStartOfDay());
+        long totalDeliveries = deliveryRepository.count();
 
-        // 2. 이번 달 매출
-    	long monthlyRevenue = adminPaymentRepository.findTotalMonthlyRevenue(LocalDate.now()).orElse(0L);
-        System.out.println("-----------------------------------------2");
+        // Prepare last 6 months labels
+        List<String> last6Months = new ArrayList<>();
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM");
+        YearMonth currentMonth = YearMonth.now();
+        for (int i = 5; i >= 0; i--) {
+            last6Months.add(currentMonth.minusMonths(i).format(formatter));
+        }
 
-        // 3. 총 배송 건
-        long totalDeliveries = adminOrderRepository.count();
-        System.out.println("-----------------------------------------3");
-
-        // 4. 신규 회원가입 수
-        long newMembersThisMonth = adminMemberRepository.countNewMembersByDate(LocalDate.now());
-        System.out.println("-----------------------------------------4");
-        long newCargoOwnersThisMonth = adminCargoOwnerRepository.countNewCargoOwnersByDate(LocalDate.now());
-        System.out.println("-----------------------------------------5");
-        long newMembers = newMembersThisMonth + newCargoOwnersThisMonth;
-
-        // 5. 월별 배송 내역 차트
-        // 리포지토리에서 이미 DTO로 변환하여 가져오므로 별도 매핑 로직 불필요
-        List<Object[]> monthlyDeliveriesRaw = adminOrderRepository.findMonthlyDeliveryCounts();
-        System.out.println("-----------------------------------------6");
-        List<MonthlyDataDTO> monthlyDeliveries = monthlyDeliveriesRaw.stream()
-                .map(row -> new MonthlyDataDTO((String) row[0], ((Number) row[1]).longValue()))
+        // Monthly Deliveries
+        Map<String, Long> monthlyDeliveriesMap = deliveryRepository.findMonthlyDeliveries().stream()
+                .collect(Collectors.toMap(obj -> (String)obj[0], obj -> (long)obj[1]));
+        List<MonthlyDataDTO> monthlyDeliveries = last6Months.stream()
+                .map(month -> new MonthlyDataDTO(month, monthlyDeliveriesMap.getOrDefault(month, 0L)))
                 .collect(Collectors.toList());
 
-        // 6. 월별 신규 회원가입 차트
-        List<MonthlyDataDTO> memberMonthly = adminMemberRepository.findMonthlyNewMemberCounts();
-        System.out.println("-----------------------------------------7");
-        List<MonthlyDataDTO> cargoMonthly  = adminCargoOwnerRepository.findMonthlyNewCargoOwnerCounts();
-        System.out.println("-----------------------------------------8");
+        // New Members by Month
+        Map<String, Long> newMembersByMonthMap = memberRepository.findNewMembersByMonth().stream()
+                .collect(Collectors.toMap(obj -> (String)obj[0], obj -> (long)obj[1]));
+        List<MonthlyDataDTO> newMembersByMonth = last6Months.stream()
+                .map(month -> new MonthlyDataDTO(month, newMembersByMonthMap.getOrDefault(month, 0L)))
+                .collect(Collectors.toList());
 
-        List<MonthlyDataDTO> newMembersByMonth = mergeMonthly(memberMonthly, cargoMonthly);
-        
-        // 배송 현황 추가 예정
-        DashboardDataDTO dashboardDataDTO = DashboardDataDTO.builder()
+        List<String> currentDeliveries = deliveryRepository.findTop5ByStatusOrderByCompletTimeDesc(DeliveryStatus.IN_TRANSIT).stream()
+                .map(d -> d.getPayment().getOrderSheet().getStartRestAddress() + " -> " + d.getPayment().getOrderSheet().getEndRestAddress())
+                .collect(Collectors.toList());
+
+        List<String> pastDeliveries = deliveryRepository.findTop5ByStatusOrderByCompletTimeDesc(DeliveryStatus.COMPLETED).stream()
+                .map(d -> d.getPayment().getOrderSheet().getStartRestAddress() + " -> " + d.getPayment().getOrderSheet().getEndRestAddress())
+                .collect(Collectors.toList());
+
+        return DashboardDataDTO.builder()
                 .totalUsers(totalUsers)
                 .monthlyRevenue(monthlyRevenue)
-                .totalDeliveries(totalDeliveries)
                 .newMembers(newMembers)
+                .totalDeliveries(totalDeliveries)
                 .monthlyDeliveries(monthlyDeliveries)
                 .newMembersByMonth(newMembersByMonth)
+                .currentDeliveries(currentDeliveries)
+                .pastDeliveries(pastDeliveries)
                 .build();
-        System.out.println("-----------------------------------------99");
-        return dashboardDataDTO;
-    }
-    
-    /** 두 월별 리스트(동일 포맷 "YYYY-MM") 합산 + 정렬 */
-    private List<MonthlyDataDTO> mergeMonthly(List<MonthlyDataDTO> a, List<MonthlyDataDTO> b) {
-        Map<String, Long> map = new java.util.HashMap<>();
-        if (a != null) for (MonthlyDataDTO d : a) map.merge(d.getMonth(), d.getCount(), Long::sum);
-        if (b != null) for (MonthlyDataDTO d : b) map.merge(d.getMonth(), d.getCount(), Long::sum);
-        System.out.println("-----------------------------------------10");
-
-        return map.entrySet().stream()
-                .sorted(Map.Entry.comparingByKey())
-                .map(e -> new MonthlyDataDTO(e.getKey(), e.getValue()))
-                .collect(Collectors.toList());
     }
 }
