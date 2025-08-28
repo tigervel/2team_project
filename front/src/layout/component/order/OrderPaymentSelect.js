@@ -35,6 +35,7 @@ const OrderPaymentSelect = ({ serverData, orderSheet }) => {
     const navigate = useNavigate();
     const [paymentType, setPaymentType] = useState(null);
     const [orderType, setOrderType] = useState(iniState);
+    
     const handleCheck = () => {
         if (String(orderSheet.addressee ?? "").trim() === "") {
             alert("받는분 이름을 입력해주세요");
