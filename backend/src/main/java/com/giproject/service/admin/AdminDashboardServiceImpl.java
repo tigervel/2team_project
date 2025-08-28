@@ -3,8 +3,10 @@ package com.giproject.service.admin;
 import com.giproject.dto.admin.DashboardDataDTO;
 import com.giproject.dto.admin.MonthlyDataDTO;
 import com.giproject.entity.delivery.DeliveryStatus;
+import com.giproject.entity.payment.PaymentStatus;
 import com.giproject.repository.delivery.DeliveryRepository;
 import com.giproject.repository.member.MemberRepository;
+import com.giproject.repository.payment.PaymentRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -22,13 +24,18 @@ public class AdminDashboardServiceImpl implements AdminDashboardService {
 
     private final MemberRepository memberRepository;
     private final DeliveryRepository deliveryRepository;
+    private final PaymentRepository paymentRepository;
 
     @Override
     public DashboardDataDTO getDashboardData() {
         long totalUsers = memberRepository.count();
-        long monthlyRevenue = 5000000; // Replace with actual revenue logic
         long newMembers = memberRepository.countByMemCreateIdDateTimeAfter(LocalDate.now().withDayOfMonth(1).atStartOfDay());
         long totalDeliveries = deliveryRepository.count();
+
+        long monthlyRevenue = paymentRepository.findAllByPaymentStatus(PaymentStatus.PAID).stream()
+                .filter(p -> p.getPaidAt().getMonth() == LocalDate.now().getMonth())
+                .mapToLong(p -> p.getOrderSheet().getMatching().getEstimate().getTotalCost())
+                .sum();
 
         // Prepare last 6 months labels
         List<String> last6Months = new ArrayList<>();
