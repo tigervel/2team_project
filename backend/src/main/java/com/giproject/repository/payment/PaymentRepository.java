@@ -13,17 +13,14 @@ import com.giproject.entity.payment.Payment;
 public interface PaymentRepository extends JpaRepository<Payment, Long>{
 
 	@EntityGraph(attributePaths = {
-		    "orderSheet",
-		    "orderSheet.matching",
-		    "orderSheet.matching.cargoOwner",
-		    "orderSheet.matching.estimate"
-		})
-		Optional<Payment> findByPaymentNo(Long id);
-<<<<<<< HEAD
+	          "orderSheet",
+	          "orderSheet.matching",
+	          "orderSheet.matching.cargoOwner",
+	          "orderSheet.matching.estimate"
+	      })
+	      Optional<Payment> findByPaymentNo(Long id);
 
     List<Payment> findAllByPaymentStatus(PaymentStatus status);
-=======
-	    Optional<Payment> findByOrderSheet_Matching_MatchingNo(Long matchingNo);
-
->>>>>>> 1553a7fcd2f2678346f2c951ca9beed7f8a78fb8
+    
+    Optional<Payment> findByOrderSheet_Matching_MatchingNo(Long matchingNo);
 }
