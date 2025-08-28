@@ -1,5 +1,8 @@
 package com.giproject.repository.payment;
 
+import com.giproject.entity.payment.PaymentStatus;
+
+import java.util.List;
 import java.util.Optional;
 
 import org.springframework.data.jpa.repository.EntityGraph;
@@ -16,4 +19,6 @@ public interface PaymentRepository extends JpaRepository<Payment, Long>{
 		    "orderSheet.matching.estimate"
 		})
 		Optional<Payment> findByPaymentNo(Long id);
+
+    List<Payment> findAllByPaymentStatus(PaymentStatus status);
 }
