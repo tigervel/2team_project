@@ -25,12 +25,14 @@ const EditVehicleInform = () => {
     try {
       const res = await axios.get(`http://localhost:8080/g2i4/cargo/list/${cargoId}`);
       const data = res.data.map(cargo => ({
+        
         no: cargo.cargoNo,
         name: cargo.cargoName,
         address: cargo.cargoType,
         weight: cargo.cargoCapacity,
         imagePath: cargo.cargoImage,
         preview: cargo.cargoImage ? `http://localhost:8080${cargo.cargoImage}` : null
+        
       }));
       setVehicles(data);
     } catch (err) {

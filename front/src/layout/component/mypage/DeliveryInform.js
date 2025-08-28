@@ -7,8 +7,8 @@ import PageComponent from '../common/PageComponent';
 import { getMyUnpaidEstimateList, getMyPaidEstimateList } from '../../../api/estimateApi/estimateApi';
 import { useNavigate } from "react-router-dom";
 import { simplifyBatch } from "../../../api/addressApi/addressApi";
-//시작일 지나고 매칭 안 된 로그는 숨기기 역순 eno 높을수록 첫페이지
-//시작일 지남+ 배송예정일 지남 -> 결제일 초과 시작일지남+미승인 -> 매칭취소
+
+// 날짜/페이지/불리언 처리 
 const initState = {
   dtoList: [], pageNumList: [],
   prev: false, next: false, totalCount: 0,
@@ -21,45 +21,35 @@ const isAfterDay = (a, b) => {
   const B = new Date(b.getFullYear(), b.getMonth(), b.getDate());
   return A.getTime() > B.getTime();
 };
-// 안전 파서: "YYYY-MM-DD HH:mm"도 처리
-// 안전 파서: 다양한 포맷 지원 + 날짜만 있을 땐 '그날 23:59:59'로 간주
+
 const parseDateSmart = (v) => {
   if (v == null) return null;
 
-  // 숫자 타임스탬프
   if (typeof v === 'number') {
     const d = new Date(v);
     return isNaN(d.getTime()) ? null : d;
   }
-
   if (typeof v === 'string') {
     const raw = v.trim();
     if (!raw) return null;
 
-    // YYYY-MM-DD (하이픈)
     const ymdDash = /^(\d{4})-(\d{2})-(\d{2})$/;
-    // YYYY.MM.DD (닷)
     const ymdDot = /^(\d{4})\.(\d{2})\.(\d{2})$/;
-    // YYYY/MM/DD (슬래시)
     const ymdSlash = /^(\d{4})\/(\d{2})\/(\d{2})$/;
 
     let m;
     if ((m = raw.match(ymdDash)) || (m = raw.match(ymdDot)) || (m = raw.match(ymdSlash))) {
-      // 로컬 타임존 기준으로 '해당일 23:59:59'
       const year = parseInt(m[1], 10);
-      const month = parseInt(m[2], 10) - 1; // 0-based
+      const month = parseInt(m[2], 10) - 1;
       const day = parseInt(m[3], 10);
       const d = new Date(year, month, day, 23, 59, 59, 999);
       return isNaN(d.getTime()) ? null : d;
     }
 
-    // 공백 → T 치환해서 ISO로 시도
     const isoLike = raw.includes(' ') ? raw.replace(' ', 'T') : raw;
     const d = new Date(isoLike);
     return isNaN(d.getTime()) ? null : d;
   }
-
-  // Date 객체 같은 케이스
   try {
     const d = new Date(v);
     return isNaN(d.getTime()) ? null : d;
@@ -68,28 +58,19 @@ const parseDateSmart = (v) => {
   }
 };
 
-// 배송예정일 후보 키들(실제 필드명에 맞게 추가/정정)
 const DUE_KEYS = [
-  'startTime',           // ★ 추가: 출발일을 배송예정일로 사용
-  'deliveryDueDate',
-  'deliveryDate',
-  'expectedDeliveryDate',
-  'expectedEndDate',
-  'deliveryEndTime',
-  'endTime',
-  'endDate',
-  'dueDate',
-  'paymentDueDate',
-  'paymentDeadline'
+  'startTime', 'deliveryDueDate', 'deliveryDate', 'expectedDeliveryDate',
+  'expectedEndDate', 'deliveryEndTime', 'endTime', 'endDate',
+  'dueDate', 'paymentDueDate', 'paymentDeadline'
 ];
 
-// 객체에서 첫 번째로 값이 존재하는 키의 값을 반환
 const pickFirst = (obj, keys) => {
   for (const k of keys) {
     if (obj && obj[k] != null && obj[k] !== '') return obj[k];
   }
   return null;
 };
+
 const normalizeBoolean = (v) => {
   if (v === true) return true;
   if (v === false) return false;
@@ -97,11 +78,11 @@ const normalizeBoolean = (v) => {
   const s = String(v).trim().toLowerCase();
   return s === 'y' || s === 'yes' || s === 'true' || s === '1';
 };
-// 공통 페이지네이션 유틸
+
 const paginate = (data, { page, size }) => {
   const totalCount = data.length;
-  const totalPage = Math.ceil(totalCount / size);
-  const current = page;
+  const totalPage = Math.ceil(totalCount / size || 1);
+  const current = Math.min(Math.max(1, page), totalPage);
   const startIdx = (current - 1) * size;
   const endIdx = startIdx + size;
   const pageData = data.slice(startIdx, endIdx);
@@ -119,15 +100,38 @@ const paginate = (data, { page, size }) => {
     current,
   };
 };
+const formatDateHour = (v) => {
+  const d = parseDateSmart(v);
+  return d
+    ? d.toLocaleString('ko-KR', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        hour12: false,     // 24시간제 (13시 형태)
+      })
+    : '-';
+};
+const statusKo = (s) =>
+  s === 'IN_TRANSIT' ? '배송 중'
+    : s === 'COMPLETED' ? '배송 완료'
+      : '대기';
 
+// 페이지
 const DeliveryInfoPage = () => {
   const navigate = useNavigate();
 
-  // 미결제(기존 serverData) + 결제(새 paidData) 상태 분리
-  const [serverData, setServerData] = useState(initState);        // 미결제
-  const [paidData, setPaidData] = useState(initState);            // ★ 결제됨
-  const [pageParams, setPageParams] = useState({ page: 1, size: 5 });   // 미결제 페이지
-  const [paidPage, setPaidPage] = useState({ page: 1, size: 5 });       // ★ 결제됨 페이지
+  // 미결제
+  const [serverData, setServerData] = useState(initState);
+  const [pageParams, setPageParams] = useState({ page: 1, size: 5 });
+
+  // 결제됨(진행/대기만)
+  const [paidData, setPaidData] = useState(initState);
+  const [paidPage, setPaidPage] = useState({ page: 1, size: 5 });
+
+  // 완료
+  const [completedData, setCompletedData] = useState(initState);
+  const [completedPage, setCompletedPage] = useState({ page: 1, size: 5 });
 
   const handleConfirmClick = (matchingNo) => {
     navigate("/order", { state: { matchingNo } });
@@ -143,18 +147,17 @@ const DeliveryInfoPage = () => {
         const sorted = [...data].sort((a, b) => {
           const A = typeof a.eno === "string" ? parseInt(a.eno, 10) : a.eno ?? 0;
           const B = typeof b.eno === "string" ? parseInt(b.eno, 10) : b.eno ?? 0;
-          return B - A; // desc
+          return B - A;
         });
+
+        // 주소 축약 서버 호출: [start, end, start, end, ...]
         const addresses = [];
         for (const it of sorted) {
           addresses.push(it.startAddress || "");
           addresses.push(it.endAddress || "");
         }
+        const results = await simplifyBatch(addresses);
 
-        // 서버에서 일괄 변환
-        const results = await simplifyBatch(addresses); // 배열 길이 동일
-
-        // 결과를 다시 DTO에 주입
         const withShort = sorted.map((it, idx) => ({
           ...it,
           startAddressShort: results[idx * 2] ?? "",
@@ -166,22 +169,30 @@ const DeliveryInfoPage = () => {
       .catch((err) => console.error("미결제 견적 로딩 실패:", err));
   }, [pageParams]);
 
-  // 결제됨 로딩
+  // 결제됨 + 완료 로딩/분리
   useEffect(() => {
     getMyPaidEstimateList(paidPage)
       .then((data) => {
+        // eno 내림차순
         const sorted = [...data].sort((a, b) => {
           const A = typeof a.eno === "string" ? parseInt(a.eno, 10) : a.eno ?? 0;
           const B = typeof b.eno === "string" ? parseInt(b.eno, 10) : b.eno ?? 0;
           return B - A;
         });
-        setPaidData(paginate(sorted, paidPage));
+
+        // 완료/진행 분리
+        const completed = sorted.filter((it) => it.deliveryStatus === 'COMPLETED');
+        const inProgressOrWaiting = sorted.filter((it) => it.deliveryStatus !== 'COMPLETED'); // null 포함
+
+        setPaidData(paginate(inProgressOrWaiting, paidPage));
+        setCompletedData(paginate(completed, completedPage));
       })
       .catch((err) => console.error("결제된 견적 로딩 실패:", err));
-  }, [paidPage]);
+  }, [paidPage, completedPage]);
 
   const movePage = (pageObj) => setPageParams((prev) => ({ ...prev, ...pageObj }));
-  const movePaidPage = (pageObj) => setPaidPage((prev) => ({ ...prev, ...pageObj }));  // ★
+  const movePaidPage = (pageObj) => setPaidPage((prev) => ({ ...prev, ...pageObj }));
+  const moveCompletedPage = (pageObj) => setCompletedPage((prev) => ({ ...prev, ...pageObj }));
 
   const tableColgroup = (
     <colgroup>
@@ -194,6 +205,8 @@ const DeliveryInfoPage = () => {
       <col style={{ width: '8%' }} />
     </colgroup>
   );
+
+  // 미결제 행 렌더러
   const renderUnpaidRows = (list) => {
     const now = new Date();
 
@@ -212,16 +225,11 @@ const DeliveryInfoPage = () => {
 
       let rightCell = null;
 
-      // 1) 배송예정일(=startTime 등) '날짜가 지나갔고' + 승인됨 -> 결제일 초과
       if (due && isAfterDay(now, due) && isAccepted) {
         rightCell = <Typography sx={{ color: 'warning.main' }} variant="body2">결제일 초과</Typography>;
-      }
-      // 2) 시작일 '날짜가 지나갔고' + 미승인 -> 매칭취소
-      else if (start && isAfterDay(now, start) && !isAccepted) {
+      } else if (start && isAfterDay(now, start) && !isAccepted) {
         rightCell = <Typography color="error" variant="body2">매칭취소</Typography>;
-      }
-      // 3) 승인됨 -> 승인 확인 버튼
-      else if (isAccepted) {
+      } else if (isAccepted) {
         rightCell = (
           <Button
             variant="contained"
@@ -232,9 +240,7 @@ const DeliveryInfoPage = () => {
             승인 확인
           </Button>
         );
-      }
-      // 4) 기본: 미승인
-      else {
+      } else {
         rightCell = <Typography color="error" variant="body2">미승인</Typography>;
       }
 
@@ -245,45 +251,87 @@ const DeliveryInfoPage = () => {
           <TableCell align="center">{item.startAddressShort ?? ""}</TableCell>
           <TableCell align="center">{item.endAddressShort ?? ""}</TableCell>
           <TableCell align="center">
-            {item.startTime ? new Date(item.startTime.replace(' ', 'T')).toLocaleDateString() : '-'}
+            <span style={{whiteSpace:'nowrap'}}>{formatDateHour(item.startTime)}</span>
           </TableCell>
-          <TableCell align="center">{item.cargoId ?? '-'}</TableCell>
+          <TableCell align="center">{item.driverName ?? '-'}</TableCell>
+
           <TableCell align="center">{rightCell}</TableCell>
         </TableRow>
       );
     });
   };
 
-  // 공통용 (결제/배송완료는 그대로 풀주소 표시)
-  const renderTableRows = (list) =>
-    (!list || list.length === 0) ? (
-      <TableRow>
-        <TableCell colSpan={7} align="center">항목이 없습니다.</TableCell>
-      </TableRow>
-    ) : (
-      list.map((item) => (
+  // 결제됨(진행/대기) 렌더러
+  const renderPaidRows = (list) => {
+    if (!list || list.length === 0) {
+      return (
+        <TableRow>
+          <TableCell colSpan={7} align="center">항목이 없습니다.</TableCell>
+        </TableRow>
+      );
+    }
+
+    return list.map((item) => {
+      const s = item.deliveryStatus ?? null;
+      return (
         <TableRow key={item.eno}>
           <TableCell align="center">{item.cargoType}</TableCell>
           <TableCell align="center">{item.cargoWeight}</TableCell>
           <TableCell align="center">{item.startAddress}</TableCell>
           <TableCell align="center">{item.endAddress}</TableCell>
           <TableCell align="center">
-            {item.startTime ? new Date(item.startTime.replace(' ', 'T')).toLocaleDateString() : '-'}
+           <span style={{whiteSpace:'nowrap'}}>{formatDateHour(item.startTime)}</span>
           </TableCell>
-          <TableCell align="center">{item.cargoId ?? '-'}</TableCell>
+          <TableCell align="center">{item.driverName ?? '-'}</TableCell>
+
           <TableCell align="center">
-            {item.isAccepted ? (
-              <Button variant="contained" color="success" size="small"
-                onClick={() => handleConfirmClick(item.matchingNo)}>
-                승인 확인
-              </Button>
-            ) : (
-              <Typography color="error" variant="body2">미승인</Typography>
-            )}
+            <Typography
+              variant="body2"
+              sx={{ color: s === 'IN_TRANSIT' ? 'info.main' : 'text.secondary' }}
+            >
+              {statusKo(s)}
+            </Typography>
           </TableCell>
         </TableRow>
-      ))
-    );
+      );
+    });
+  };
+
+  // 완료 렌더러
+  // 보조: 공통 포맷터
+  const formatDate = (v) => {
+    const d = parseDateSmart(v);
+    return d ? d.toLocaleDateString() : '-';
+  };
+
+  // 완료 렌더러
+  const renderCompletedRows = (list) => {
+    if (!list || list.length === 0) {
+      return (
+        <TableRow>
+          <TableCell colSpan={7} align="center">항목이 없습니다.</TableCell>
+        </TableRow>
+      );
+    }
+
+    return list.map((item) => {
+      const doneAt = item.deliveryCompletedAt ?? item.endTime ?? null;
+
+      return (
+        <TableRow key={item.eno}>
+          <TableCell align="center">{item.cargoType}</TableCell>
+          <TableCell align="center">{item.cargoWeight}</TableCell>
+          <TableCell align="center">{item.startAddress}</TableCell>
+          <TableCell align="center">{item.endAddress}</TableCell>
+          <TableCell align="center" sx={{ whiteSpace: 'nowrap' }}>{formatDateHour(doneAt)}</TableCell>
+          <TableCell align="center">{item.driverName ?? '-'}</TableCell>
+          <TableCell align="center">
+            <Typography variant="body2" sx={{ color: 'success.main' }}>배송 완료</Typography>
+          </TableCell>
+        </TableRow>
+      );
+    });
+  };
 
   return (
     <Box sx={{ bgcolor: '#f7f9fc', minHeight: '100vh', py: 6 }}>
@@ -319,7 +367,7 @@ const DeliveryInfoPage = () => {
           </TableContainer>
         </Box>
 
-        {/* 결제됨 */}
+        {/* 2) 결제됨 (대기/배송 중) */}
         <Box mt={6}>
           <Typography variant="h6" fontWeight="bold" gutterBottom>
             견적 의뢰 진행 상황 (결제됨)
@@ -335,10 +383,10 @@ const DeliveryInfoPage = () => {
                   <TableCell align="center">도착지</TableCell>
                   <TableCell align="center">배송 시작일</TableCell>
                   <TableCell align="center">운전 기사</TableCell>
-                  <TableCell align="center">승인 여부</TableCell>
+                  <TableCell align="center">상태</TableCell>
                 </TableRow>
               </TableHead>
-              <TableBody>{renderTableRows(paidData.dtoList)}</TableBody>
+              <TableBody>{renderPaidRows(paidData.dtoList)}</TableBody>
             </Table>
             <Box sx={{ position: 'absolute', left: 0, right: 0, bottom: 0, py: 1.5, display: 'flex', justifyContent: 'center', bgcolor: 'background.paper' }}>
               <PageComponent serverData={paidData} movePage={movePaidPage} />
@@ -346,29 +394,30 @@ const DeliveryInfoPage = () => {
           </TableContainer>
         </Box>
 
-        {/* 3. 배송 완료 된 화물 */}
+        {/* 3) 배송 완료 */}
         <Divider sx={{ my: 8 }} />
         <Box mt={6}>
           <Typography variant="h6" fontWeight="bold" gutterBottom>
             배송 완료 된 화물
           </Typography>
           <TableContainer component={Paper} elevation={1}>
-            <Table>
+            <Table sx={{ '& .MuiTableCell-root': { height: 60, py: 0 } }}>
+              {tableColgroup}
               <TableHead>
                 <TableRow>
                   <TableCell align="center">화물명</TableCell>
                   <TableCell align="center">무게</TableCell>
                   <TableCell align="center">출발지</TableCell>
                   <TableCell align="center">도착지</TableCell>
-                  <TableCell align="center">배송 시작일</TableCell>
+                  <TableCell align="center">배송 완료일</TableCell>
                   <TableCell align="center">운전 기사</TableCell>
-                  <TableCell align="center">승인 여부</TableCell>
+                  <TableCell align="center">상태</TableCell>
                 </TableRow>
               </TableHead>
-              <TableBody>{renderTableRows()}</TableBody>
+              <TableBody>{renderCompletedRows(completedData.dtoList)}</TableBody>
             </Table>
             <Box mt={2} display="flex" justifyContent="center" gap={1} sx={{ paddingBottom: 5 }}>
-              <PageComponent serverData={serverData} movePage={movePage} />
+              <PageComponent serverData={completedData} movePage={moveCompletedPage} />
             </Box>
           </TableContainer>
         </Box>
