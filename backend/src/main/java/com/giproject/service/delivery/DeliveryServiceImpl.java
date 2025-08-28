@@ -10,6 +10,7 @@ import com.giproject.entity.delivery.DeliveryStatus;
 import com.giproject.entity.payment.Payment;
 import com.giproject.repository.delivery.DeliveryRepository;
 import com.giproject.repository.payment.PaymentRepository;
+import com.giproject.service.mail.MailService;
 
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -20,6 +21,7 @@ public class DeliveryServiceImpl implements DeliveryService{
 
 	private final DeliveryRepository deliveryRepository;
 	private final PaymentRepository paymentRepository;
+	private final MailService mailService;
 	
 	@Transactional
 	@Override
@@ -43,6 +45,7 @@ public class DeliveryServiceImpl implements DeliveryService{
 		Delivery delivery = deliveryRepository.findById(deliveryNo).orElseThrow(()-> new RuntimeException("배송정보가 존재하지않습니다"));
 		delivery.setStatus(DeliveryStatus.COMPLETED);
 		delivery.setCompletTime(LocalDateTime.now());
+		mailService.deliveryCompleted(deliveryNo);
 		return entityToDTO(delivery);
 	}
 	
