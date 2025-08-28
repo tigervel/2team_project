@@ -24,7 +24,7 @@ public class CargoOwner {
     /** 전역 login_id와 동일 값 (PK) */
     @Id
     @EqualsAndHashCode.Include
-    @Column(name = "cargo_id", length = 50, nullable = false)
+    @Column(name = "cargo_id", nullable = false)
     private String cargoId; // ★ 문자열 PK (로그인 ID)
 
     /** user_index.login_id 와 읽기 전용으로 연결 */

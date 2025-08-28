@@ -96,7 +96,7 @@ public class EstimateTest {
 	@Transactional
 	@Test
 	void changeTest() {
-		Long no =1L;
-		deliveryService.changeStatusCompleted(no);
+		Long no =2L;
+		deliveryService.changeStatusInTransit(no);
 	}
 }

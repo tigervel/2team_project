@@ -39,7 +39,7 @@ public class Matching {
 	private Estimate estimate;
 	
 	@ManyToOne
-	@JoinColumn(name = "cargo_id")
+	@JoinColumn(name = "cargo_id",columnDefinition="varchar(50)")
 	private CargoOwner cargoOwner;
 	private boolean isAccepted;
 	private LocalDateTime acceptedTime;
