@@ -141,9 +141,7 @@ const DeliveryInfoPage = () => {
   useEffect(() => {
     getMyUnpaidEstimateList(pageParams)
       .then(async (data) => {
-        //console.table(data.slice(0, 3));
-        // 배치 단순화 요청: [start, end, start, end, ...]
-        // eno 내림차순 정렬 (숫자/문자 대비)
+        // eno 내림차순
         const sorted = [...data].sort((a, b) => {
           const A = typeof a.eno === "string" ? parseInt(a.eno, 10) : a.eno ?? 0;
           const B = typeof b.eno === "string" ? parseInt(b.eno, 10) : b.eno ?? 0;
@@ -368,6 +366,8 @@ const DeliveryInfoPage = () => {
         </Box>
 
         {/* 2) 결제됨 (대기/배송 중) */}
+        
+        <Divider sx={{ my: 8 }} />
         <Box mt={6}>
           <Typography variant="h6" fontWeight="bold" gutterBottom>
             견적 의뢰 진행 상황 (결제됨)
