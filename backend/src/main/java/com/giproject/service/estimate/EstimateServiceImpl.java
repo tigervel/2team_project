@@ -13,10 +13,12 @@ import com.giproject.entity.estimate.Estimate;
 import com.giproject.entity.fees.FeesBasic;
 import com.giproject.entity.matching.Matching;
 import com.giproject.entity.member.Member;
+import com.giproject.repository.delivery.DeliveryRepository;
 import com.giproject.repository.estimate.EsmateRepository;
 import com.giproject.repository.fees.FeesBasicRepository;
 import com.giproject.repository.fees.FeesExtraRepository;
 import com.giproject.repository.matching.MatchingRepository;
+import com.giproject.repository.payment.PaymentRepository;
 import com.giproject.service.estimate.matching.MatchingService;
 import com.giproject.service.fees.FeesBasicService;
 import com.giproject.service.fees.FeesExtraService;
@@ -35,6 +37,9 @@ public class EstimateServiceImpl implements EstimateService{
 	private final FeesBasicService basicService;
 	private final FeesExtraRepository extraRepository;
 	private final FeesExtraService extraService;
+
+    private final PaymentRepository paymentRepository;
+    private final DeliveryRepository deliveryRepository;
 	
 	@Override
 	public Long sendEstimate(EstimateDTO dto) {
@@ -106,6 +111,7 @@ public class EstimateServiceImpl implements EstimateService{
 	        log.info("DTO 변환 성공: {} (isAccepted: {})", dto.getEno(), dto.isAccepted());
 	        Optional<Long> matchingNoOpt = matchingRepository.findMatchingNoByEstimateNo(estimate.getEno());
 	        dto.setMatchingNo(matchingNoOpt.orElse(null));
+	        
 	        return dto;
 	    }).collect(Collectors.toList());
 	}
@@ -129,43 +135,65 @@ public class EstimateServiceImpl implements EstimateService{
 	    List<Estimate> esList = esmateRepository.findMyEstimatesWithoutPayment(memberId);
 	    log.info("myEstimateList() 진입 - (결제 없는) 조회 결과 수: {}", esList.size());
 
-	    return esList.stream().map(estimate -> {
-	        if (estimate.getMember() == null) {
-	            log.warn("estimate {} 의 member가 null입니다", estimate.getEno());
-	        }
+	    return esList.stream() .filter(e -> !e.isTemp())   .map(e -> {
+            EstimateDTO dto = entityToDTO(e);
+            dto.setAccepted(matchingRepository.findIsAcceptedByEstimateNo(e.getEno()).orElse(false));
+            Long matchingNo = matchingRepository.findMatchingNoByEstimateNo(e.getEno()).orElse(null);
+            dto.setMatchingNo(matchingNo);
 
-	        EstimateDTO dto = entityToDTO(estimate);
-
-	        // matching 여부 조회
-	        Optional<Boolean> isAcceptedOpt =
-	                matchingRepository.findIsAcceptedByEstimateNo(estimate.getEno());
-	        dto.setAccepted(isAcceptedOpt.orElse(false));
-
-	        Optional<Long> matchingNoOpt =
-	                matchingRepository.findMatchingNoByEstimateNo(estimate.getEno());
-	        dto.setMatchingNo(matchingNoOpt.orElse(null));
-
-	        log.info("DTO 변환 성공: {} (isAccepted: {}, matchingNo: {})",
-	                 dto.getEno(), dto.isAccepted(), dto.getMatchingNo());
-	        return dto;
+            // (선택) 운전기사 이름: 매칭에서 바로
+            if (matchingNo != null) {
+                matchingRepository.findById(matchingNo).ifPresent(m -> {
+                    if (m.getCargoOwner() != null) {
+                        dto.setDriverName(m.getCargoOwner().getCargoName());
+                    }
+                });
+            }
+            return dto;
 	    }).collect(Collectors.toList());
 	}
 
 	@Override
 	public List<EstimateDTO> findMyPaidEstimates(String memberId) {
 	    List<Estimate> list = esmateRepository.findMyPaidEstimates(memberId);
-	    return list.stream().map(e -> {
-	        EstimateDTO dto = entityToDTO(e);
 
-	        // 매칭 여부/매칭번호(있으면 넣기)
-	        dto.setAccepted(
-	            matchingRepository.findIsAcceptedByEstimateNo(e.getEno()).orElse(false)
-	        );
-	        dto.setMatchingNo(
-	            matchingRepository.findMatchingNoByEstimateNo(e.getEno()).orElse(null)
-	        );
-	        return dto;
-	    }).toList();
+	    return list.stream()
+	        .filter(e -> !e.isTemp())
+	        .map(e -> {
+	            EstimateDTO dto = entityToDTO(e);
+
+	            dto.setAccepted(
+	                matchingRepository.findIsAcceptedByEstimateNo(e.getEno()).orElse(false)
+	            );
+
+	            Long matchingNo = matchingRepository.findMatchingNoByEstimateNo(e.getEno()).orElse(null);
+	            dto.setMatchingNo(matchingNo);
+
+	            if (matchingNo != null) {
+	                paymentRepository.findByOrderSheet_Matching_MatchingNo(matchingNo)
+	                    .ifPresent(p -> {
+	                        dto.setPaymentNo(p.getPaymentNo());
+
+	                        // 운전기사 이름
+	                        String driverName = null;
+	                        if (p.getOrderSheet() != null &&
+	                            p.getOrderSheet().getMatching() != null &&
+	                            p.getOrderSheet().getMatching().getCargoOwner() != null) {
+	                            driverName = p.getOrderSheet().getMatching().getCargoOwner().getCargoName();
+	                        }
+	                        dto.setDriverName(driverName);
+
+	                        // 배송 상태
+	                        deliveryRepository.findByPayment_PaymentNo(p.getPaymentNo())
+	                        .ifPresent(d -> {
+	                            dto.setDeliveryStatus(d.getStatus());
+	                            dto.setDeliveryCompletedAt(d.getCompletTime());
+	                        });
+	                    });
+	            }
+
+	            return dto;
+	        })
+	        .toList();
 	}
-
 }

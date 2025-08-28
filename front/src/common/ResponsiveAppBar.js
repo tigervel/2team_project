@@ -14,6 +14,7 @@ import Avatar from '@mui/material/Avatar';
 import Button from '@mui/material/Button';
 import Tooltip from '@mui/material/Tooltip';
 import MenuItem from '@mui/material/MenuItem';
+import axios from 'axios';
 
 import { login as loginAction, logout as logoutAction } from '../slice/loginSlice'; // ✅ 경로 확인
 import useCustomLogin from '../hooks/useCustomLogin'; // ✅ useCustomLogin 훅 임포트
@@ -39,7 +40,27 @@ const settingsAdmin = [
   { label: '배송상태', path: '/admin/deliveryPage' },
   { label: '로그아웃', path: '/logout' }
 ];
+const API_BASE =
+  import.meta?.env?.VITE_API_BASE ||
+  process.env.REACT_APP_API_BASE ||
+  'http://localhost:8080';
 
+const DEFAULT_AVATAR = '/image/placeholders/avatar.svg';
+
+const pickToken = () =>
+  localStorage.getItem('accessToken') ||
+  sessionStorage.getItem('accessToken') ||
+  localStorage.getItem('ACCESS_TOKEN') ||
+  sessionStorage.getItem('ACCESS_TOKEN') ||
+  null;
+
+const normalizeProfileUrl = (v) => {
+  if (!v) return null;
+  if (v.startsWith('http')) return v;
+  if (v.startsWith('/g2i4/uploads/')) return `${API_BASE}${v}`;
+  // 파일명만 온 경우
+  return `${API_BASE}/g2i4/uploads/user_profile/${encodeURIComponent(v)}`;
+};
 // 간단한 JWT 디코더
 function decodeJwt(token) {
   try {
@@ -58,6 +79,8 @@ export default function ResponsiveAppBar() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const { isLogin, isAdmin } = useCustomLogin(); // ✅ useCustomLogin 사용
+  const [avatarUrl, setAvatarUrl] = React.useState(null);
+
 
   // 새로고침 시 토큰으로 하이드레이트
   React.useEffect(() => {
@@ -77,6 +100,37 @@ export default function ResponsiveAppBar() {
       }
     }
   }, [isLogin, dispatch]);
+
+    React.useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      if (!isLogin) {
+        setAvatarUrl(null);
+        return;
+      }
+      try {
+        const token = pickToken();
+        const { data: raw } = await axios.get(`${API_BASE}/g2i4/user/info`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        });
+        const data =
+          raw?.data || raw?.user || raw?.payload || raw?.profile || raw?.account || raw?.result || {};
+        // 서버가 webPath(권장) 또는 profileImage(파일명)로 줄 수 있음
+        const nameOrWebPath =
+          data?.webPath ||
+          data?.profileImage ||
+          data?.mem_profile_image ||
+          data?.cargo_profile_image ||
+          data?.profile ||
+          '';
+        const url = normalizeProfileUrl(nameOrWebPath);
+        if (!cancelled) setAvatarUrl(url);
+      } catch {
+        if (!cancelled) setAvatarUrl(null); // 실패 시 기본 이미지 폴백
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [isLogin]);
 
   const [anchorElNav, setAnchorElNav]   = React.useState(null);
   const [anchorElUser, setAnchorElUser] = React.useState(null);
@@ -167,7 +221,15 @@ export default function ResponsiveAppBar() {
             <Box sx={{ flexGrow: 0 }}>
               <Tooltip title="Open settings">
                 <IconButton onClick={handleOpenUserMenu} sx={{ p: 0 }}>
-                  <Avatar alt="User" src="/image/icon/channels4_profile.jpg" sx={{ width: 48, height: 48 }} />
+                  <Avatar
+                    alt="User"
+                    src={avatarUrl || DEFAULT_AVATAR}
+                    sx={{ width: 48, height: 48 }}
+                    imgProps={{
+                      referrerPolicy: 'no-referrer',
+                      onError: (e) => { e.currentTarget.src = DEFAULT_AVATAR; },
+                    }}
+                  />
                 </IconButton>
               </Tooltip>
               <Menu

@@ -61,10 +61,12 @@ public class EstimateController {
 	}
 
 	@PostMapping("/subpath/rejected")
-	public ResponseEntity<Map<String, String>> reject(@RequestBody Map<String, Long> eno) {
+	public ResponseEntity<Map<String, String>> reject(@RequestBody Map<String, Long> eno,@RequestHeader("Authorization") String authHeader) {
+		String token = authHeader.replace("Bearer ","");
+		String cargoId = jwtService.getUsername(token);
 		Long estimateNo = eno.get("estimateNo");
 
-		CargoOwner cargoOwner = cargoOwnerRepository.findById("cargo123").get();
+		CargoOwner cargoOwner = cargoOwnerRepository.findById(cargoId).get();
 
 		matchingService.rejectMatching(estimateNo, cargoOwner);
 

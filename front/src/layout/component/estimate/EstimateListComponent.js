@@ -5,7 +5,7 @@ import { getEstimateList, postAccepted, postRejected } from "../../../api/estima
 import PageComponent from "../common/PageComponent";
 import { useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
-
+import dayjs from "dayjs";
 
 const initState = {
   dtoList: [],
@@ -112,7 +112,7 @@ const EstimateListComponent = () => {
                 <TableCell align="center">{estimate.route}</TableCell>
                 <TableCell align="center">{estimate.distanceKm}</TableCell>
                 <TableCell align="center">{estimate.cargoWeight}</TableCell>
-                <TableCell align="center">{estimate.startTime}</TableCell>
+                <TableCell align="center">{dayjs(estimate.startTime).format('YYYY년 MM월 DD일 A hh:mm')}</TableCell>
                 <TableCell align="center">{estimate.cargoType}</TableCell>
                 <TableCell align="center">{estimate.totalCost}</TableCell>
                 <TableCell align="center">

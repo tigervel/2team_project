@@ -128,7 +128,7 @@ const SignUpComponent = () => {
         setSubmitting(true);
         try {
             const payload = {
-                roles,                               // "SHIPPER" or "DRIVER"
+                role:roles,                               // "SHIPPER" or "DRIVER"
                 loginId: id,                        // DTO 키와 동일
                 password: password1,
                 name,

@@ -151,7 +151,11 @@ const EstimateComponent = () => {
     if ((estimate.distanceKm !== '')) {
       if (estimate.cargoType !== '') {
         if (estimate.cargoWeight !== '') {
-          postAdd(estimate)
+          const estimateToSend = {
+            ...estimate,
+            startTime: estimate.startTime.format('YYYY-MM-DDTHH:mm:ss')
+          };
+          postAdd(estimateToSend)
             .then(result => {
               alert('견적서 제출이 완료되었습니다.')
               moveToHome();
