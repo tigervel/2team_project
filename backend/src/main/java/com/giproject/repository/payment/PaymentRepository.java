@@ -16,4 +16,6 @@ public interface PaymentRepository extends JpaRepository<Payment, Long>{
 		    "orderSheet.matching.estimate"
 		})
 		Optional<Payment> findByPaymentNo(Long id);
+	    Optional<Payment> findByOrderSheet_Matching_MatchingNo(Long matchingNo);
+
 }

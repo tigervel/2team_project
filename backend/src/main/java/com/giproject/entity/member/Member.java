@@ -46,7 +46,10 @@ public class Member {
 
     @Column(name = "mem_address", length = 255)
     private String memAddress;
-
+    
+    @Column(name = "profile_image") 
+    private String profileImage;
+    
     /** 생성 시각 (NOT NULL) */
     @Column(name = "mem_create_id_datetime", nullable = false)
     private LocalDateTime memCreateIdDateTime;

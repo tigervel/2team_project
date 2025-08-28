@@ -1,4 +1,5 @@
-import React, { useEffect, useState, useCallback } from 'react';
+// EditMyInform.jsx
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import axios from 'axios';
 import {
   Avatar, Box, Button, Divider, Grid, IconButton, InputAdornment,
@@ -7,29 +8,53 @@ import {
 import Visibility from '@mui/icons-material/Visibility';
 import VisibilityOff from '@mui/icons-material/VisibilityOff';
 
-// 공통 axios 인스턴스 (JWT 자동 첨부)
-const api = axios.create();
+// =================== 공통 상수/유틸 ===================
+const API_BASE =
+  import.meta?.env?.VITE_API_BASE ||
+  process.env.REACT_APP_API_BASE ||
+  'http://localhost:8080';
+
+const DEFAULT_AVATAR = '/image/placeholders/avatar.svg';
+
+
+const getFirst = (...candidates) =>
+  candidates.find(v => v !== undefined && v !== null && v !== '') ?? '';
+
+const normalizeProfileUrl = (v) => {
+  if (!v) return null;
+  if (v.startsWith('http')) return v;
+  if (v.startsWith('/g2i4/uploads/')) return `${API_BASE}${v}`; // 이미 웹경로인 경우
+  return `${API_BASE}/g2i4/uploads/user_profile/${encodeURIComponent(v)}`; // 파일명만 온 경우
+};
+
+// axios 인스턴스 + 단일 인터셉터
+const api = axios.create({ baseURL: API_BASE });
+
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('accessToken');
+  const token =
+    localStorage.getItem('accessToken') ||
+    sessionStorage.getItem('accessToken') ||
+    localStorage.getItem('ACCESS_TOKEN') ||
+    sessionStorage.getItem('ACCESS_TOKEN');
   if (token) config.headers.Authorization = `Bearer ${token}`;
   return config;
 });
 
+// =================== 컴포넌트 ===================
 const EditMyInform = () => {
+
   const [showPassword, setShowPassword] = useState({
     current: false,
     new: false,
     confirm: false,
   });
-
-  const togglePasswordVisibility = (field) => {
-    setShowPassword((prev) => ({ ...prev, [field]: !prev[field] }));
-  };
+  const togglePasswordVisibility = (field) =>
+    setShowPassword(prev => ({ ...prev, [field]: !prev[field] }));
 
   // 'MEMBER' | 'CARGO_OWNER'
   const [userType, setUserType] = useState(null);
 
-  // 화면에서 쓰는 공통 스키마
+  // 공통 스키마
   const [user, setUser] = useState({
     id: '',
     name: '',
@@ -40,21 +65,32 @@ const EditMyInform = () => {
     postcode: '',
   });
 
-  const [pwd, setPwd] = useState({
-    current: '',
-    next: '',
-    confirm: '',
-  });
-
+  const [pwd, setPwd] = useState({ current: '', next: '', confirm: '' });
   const [loading, setLoading] = useState(true);
 
+  // 프로필 업로드 상태
+  const [avatarUrl, setAvatarUrl] = useState(null);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef(null);
+  const handleDeleteImageServer = async () => {
+    if (!window.confirm('프로필 이미지를 삭제할까요?')) return;
+    try {
+      setUploading(true);
+      await api.delete('/g2i4/user/profile-image'); // ← 방금 만든 API
+      setAvatarUrl(null); // UI 즉시 반영
+      alert('프로필 이미지가 삭제되었습니다.');
+    } catch (err) {
+      const msg = err?.response?.data ?? err.message ?? '삭제 실패';
+      alert(msg);
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
   // --- Daum postcode ---
   const loadDaumPostcode = useCallback(() => {
     return new Promise((resolve, reject) => {
-      if (window.daum && window.daum.Postcode) {
-        resolve();
-        return;
-      }
+      if (window.daum && window.daum.Postcode) return resolve();
       const script = document.createElement('script');
       script.src = '//t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js';
       script.async = true;
@@ -80,42 +116,63 @@ const EditMyInform = () => {
     }
   }, [loadDaumPostcode]);
 
-  // --- 초기 로드: 로그인 주체 조회 -> 공통 스키마로 매핑 ---
+  // --- 초기 로드: 사용자 정보 + 프로필 이미지 세팅 ---
   useEffect(() => {
     let canceled = false;
-
     (async () => {
       try {
         const res = await api.get('/g2i4/user/info');
-        // 기대 응답:
-        // { userType: 'MEMBER' | 'CARGO_OWNER', data: {...row} }
-        const { userType: type, data } = res.data || {};
-        if (!type || !data) throw new Error('Malformed /g2i4/user/info response');
+        const raw = res?.data ?? {};
+        const type = raw.userType || raw.type || raw.role || raw.loginType || null;
+        const data =
+          raw.data || raw.user || raw.payload || raw.profile || raw.account || raw.result || {};
 
-        // 테이블 별 → 공통 스키마 매핑
-        // member:  mem_id,  mem_name,  mem_email,  mem_phone,  mem_address,  mem_create_id_date_time
-        // cargo:   cargo_id,cargo_name,cargo_email,cargo_phone,cargo_address,cargo_created_date_time
-        const normalized = (type === 'MEMBER')
-          ? {
-              id: data.mem_id ?? '',
-              name: data.mem_name ?? '',
-              email: data.mem_email ?? '',
-              phone: data.mem_phone ?? '',
-              address: data.mem_address ?? '',
-              createdDate: data.mem_create_id_date_time ?? '',
+        if (!type || !data) throw new Error('Unexpected /g2i4/user/info shape');
+
+        const normalized =
+          type === 'MEMBER'
+            ? {
+              id: getFirst(data.mem_id, data.memberId, data.id, data.username),
+              name: getFirst(data.mem_name, data.memberName, data.name),
+              email: getFirst(data.mem_email, data.memberEmail, data.email),
+              phone: getFirst(data.mem_phone, data.memberPhone, data.phone),
+              address: getFirst(data.mem_address, data.memberAddress, data.address),
+              createdDate: getFirst(
+                data.mem_create_id_date_time,
+                data.memCreatedDateTime,
+                data.created_at,
+                data.createdAt
+              ),
             }
-          : {
-              id: data.cargo_id ?? '',
-              name: data.cargo_name ?? '',
-              email: data.cargo_email ?? '',
-              phone: data.cargo_phone ?? '',
-              address: data.cargo_address ?? '',
-              createdDate: data.cargo_created_date_time ?? data.cargo_created_datetime ?? '',
+            : {
+              id: getFirst(data.cargo_id, data.cargoId, data.id, data.username),
+              name: getFirst(data.cargo_name, data.cargoName, data.name),
+              email: getFirst(data.cargo_email, data.cargoEmail, data.email),
+              phone: getFirst(data.cargo_phone, data.cargoPhone, data.phone),
+              address: getFirst(data.cargo_address, data.cargoAddress, data.address),
+              createdDate: getFirst(
+                data.cargo_created_date_time,
+                data.cargo_created_datetime,
+                data.cargoCreateidDateTime,
+                data.created_at,
+                data.createdAt
+              ),
             };
+
+        // 프로필 파일명 후보 읽어서 미리보기 세팅
+        const avatarName = getFirst(
+          data.webPath,
+          data.profileImage,
+          data.mem_profile_image,
+          data.cargo_profile_image,
+          data.profile
+        );
+        const initialAvatar = normalizeProfileUrl(avatarName);
 
         if (!canceled) {
           setUserType(type);
           setUser(prev => ({ ...prev, ...normalized }));
+          setAvatarUrl(initialAvatar || null);
         }
       } catch (err) {
         console.error('회원 정보 불러오기 실패:', err);
@@ -124,27 +181,24 @@ const EditMyInform = () => {
         if (!canceled) setLoading(false);
       }
     })();
-
-    return () => { canceled = true; };
+    return () => {
+      canceled = true;
+    };
   }, []);
 
   // --- 주소 변경 저장 ---
   const handleSaveAddress = async () => {
     try {
       if (!userType) return;
+      const url =
+        userType === 'MEMBER'
+          ? `/g2i4/member/${encodeURIComponent(user.id)}/address`
+          : `/g2i4/cargo/${encodeURIComponent(user.id)}/address`;
 
-      // 백엔드 라우팅 규칙: 필요에 맞춰 경로만 맞춰줘
-      // 통일 엔드포인트가 있으면 그걸로 바꿔도 됨.
-      const url = (userType === 'MEMBER')
-        ? `/g2i4/member/${encodeURIComponent(user.id)}/address`
-        : `/g2i4/cargo/${encodeURIComponent(user.id)}/address`;
-
-      const payload = {
+      await api.put(url, {
         address: user.address,
         postcode: user.postcode || null,
-      };
-
-      await api.put(url, payload);
+      });
       alert('주소가 변경되었습니다.');
     } catch (e) {
       console.error(e);
@@ -165,9 +219,10 @@ const EditMyInform = () => {
         return;
       }
 
-      const url = (userType === 'MEMBER')
-        ? `/g2i4/member/${encodeURIComponent(user.id)}/password`
-        : `/g2i4/cargo/${encodeURIComponent(user.id)}/password`;
+      const url =
+        userType === 'MEMBER'
+          ? `/g2i4/member/${encodeURIComponent(user.id)}/password`
+          : `/g2i4/cargo/${encodeURIComponent(user.id)}/password`;
 
       await api.put(url, {
         currentPassword: pwd.current,
@@ -176,18 +231,57 @@ const EditMyInform = () => {
 
       alert('비밀번호가 변경되었습니다.');
       setPwd({ current: '', next: '', confirm: '' });
-    } catch (e) {
-      console.error(e);
-      alert('비밀번호 변경에 실패했습니다.');
+    } catch (err) {
+      const msg = err?.response?.data ?? err.message ?? '비밀번호 변경 실패';
+      alert(msg);
     }
   };
 
-  if (loading) {
-    return <Box sx={{ p: 7 }}>불러오는 중…</Box>;
-  }
+  // --- 프로필 이미지 업로드 ---
+  const handleUploadImage = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      alert('이미지 파일만 업로드할 수 있습니다.');
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) { // 5MB
+      alert('파일 크기는 5MB를 넘을 수 없습니다.');
+      return;
+    }
+
+    const fd = new FormData();
+    fd.append('image', file);
+    fd.append('userType', userType);
+    fd.append('id', user.id);
+
+    try {
+      setUploading(true);
+      const { data } = await api.post('/g2i4/user/upload-image', fd);
+      const url = normalizeProfileUrl(data?.webPath || data?.filename);
+     if (url) setAvatarUrl(`${url}?v=${Date.now()}`);
+      alert('프로필 이미지가 업로드되었습니다.');
+    } catch (err) {
+      const msg = err?.response?.data ?? err.message ?? '업로드 실패';
+      alert(msg);
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
+  const triggerFilePick = () => fileInputRef.current?.click();
+  const handleDeleteImageLocal = () => {
+    setAvatarUrl(null);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+    // 서버 삭제 API가 있으면 여기서 호출 추가
+  };
+
+  if (loading) return <Box sx={{ p: 7 }}>불러오는 중…</Box>;
 
   return (
-    <Box sx={{ p: 7, paddingLeft: 50, paddingRight: 50, bgcolor: '#f3f4f6', minHeight: '100vh' }}>
+    <Box sx={{ p: 7, pl: 50, pr: 50, bgcolor: '#f3f4f6', minHeight: '100vh' }}>
       <Typography variant="h5" fontWeight="bold" mb={1}>회원 정보 수정</Typography>
       <Typography variant="body2" sx={{ color: 'gray', mb: 4 }}>
         로그인 유형: {userType === 'MEMBER' ? '일반 회원' : '화물(차량) 소유자'}
@@ -197,10 +291,36 @@ const EditMyInform = () => {
       <Grid container spacing={4} alignItems="center">
         <Grid item xs={12} md={6}>
           <Box display="flex" alignItems="center" gap={2}>
-            <Avatar sx={{ width: 80, height: 80, bgcolor: 'grey.200' }} />
-            <Box>
-              <Button variant="outlined" sx={{ mb: 1 }}>사진 업로드</Button>
-              <Typography variant="body2" sx={{ color: 'gray', textAlign: 'center' }}>사진 삭제</Typography>
+            <Avatar
+              sx={{ width: 80, height: 80, bgcolor: 'grey.200' }}
+              src={avatarUrl || DEFAULT_AVATAR}
+              imgProps={{ referrerPolicy: 'no-referrer' }}
+            />
+            <Box display="flex" flexDirection="column" alignItems="center" gap={1}>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                style={{ display: 'none' }}
+                onChange={handleUploadImage}
+              />
+              <Button
+                variant="outlined"
+                onClick={triggerFilePick}
+                disabled={uploading || !userType || !user.id}
+                sx={{ minWidth: 160 }}
+              >
+                {uploading ? '업로드 중...' : '사진 업로드'}
+              </Button>
+              <Button
+                variant="text"
+                color="error"
+                onClick={handleDeleteImageServer}
+                disabled={uploading}
+                sx={{ minWidth: 160 }}
+              >
+                사진 삭제
+              </Button>
             </Box>
           </Box>
         </Grid>

@@ -20,5 +20,4 @@ public class DeliveryDTO {
 	private DeliveryStatus status;
 	private Long paymentNo;
 	private LocalDateTime completTime;
-	
 }
