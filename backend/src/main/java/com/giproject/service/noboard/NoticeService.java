@@ -53,9 +53,10 @@ public interface NoticeService {
      * @param noticeId 공지사항 ID
      * @param updateRequest 수정 요청 데이터
      * @param currentUserId 현재 사용자 ID (관리자)
+     * @param authorName 작성자 이름 (관리자)
      * @return 수정된 공지사항 정보
      */
-    NoticeDTO updateNotice(Long noticeId, NoticeDTO.UpdateRequest updateRequest, String currentUserId);
+    NoticeDTO updateNotice(Long noticeId, NoticeDTO.UpdateRequest updateRequest, String currentUserId, String authorName);
 
     /**
      * 공지사항 삭제

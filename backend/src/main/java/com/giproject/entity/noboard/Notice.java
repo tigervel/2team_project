@@ -69,6 +69,15 @@ public class Notice {
     }
     
     /**
+     * 공지사항 정보 수정 (작성자명 포함)
+     */
+    public void updateNotice(String title, String content, String authorName) {
+        this.title = title;
+        this.content = content;
+        this.authorName = authorName;
+    }
+    
+    /**
      * 조회수 증가
      */
     public void incrementViewCount() {

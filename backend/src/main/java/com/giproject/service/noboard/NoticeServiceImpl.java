@@ -95,8 +95,10 @@ public class NoticeServiceImpl implements NoticeService {
 
     @Transactional
     @Override
-    public NoticeDTO updateNotice(Long noticeId, NoticeDTO.UpdateRequest updateRequest, String currentUserId) {
-        log.info("Updating notice - noticeId: {} by admin: {}", noticeId, currentUserId);
+    public NoticeDTO updateNotice(Long noticeId, NoticeDTO.UpdateRequest updateRequest, String currentUserId, String authorName) {
+        log.info("=== NoticeService.updateNotice 시작 ===");
+        log.info("파라미터 확인 - noticeId: {}, currentUserId: {}, authorName: '{}'", noticeId, currentUserId, authorName);
+        log.info("updateRequest 내용 - title: '{}', content: '{}'", updateRequest.getTitle(), updateRequest.getContent());
         
         Notice notice = noticeRepository.findById(noticeId)
                 .orElseThrow(() -> new IllegalArgumentException("공지사항을 찾을 수 없습니다: " + noticeId));
@@ -106,11 +108,18 @@ public class NoticeServiceImpl implements NoticeService {
             throw new SecurityException("공지사항 수정 권한이 없습니다.");
         }
         
-        // 공지사항 업데이트
-        notice.updateNotice(updateRequest.getTitle(), updateRequest.getContent());
+        log.info("수정 전 기존 데이터 - authorId: {}, authorName: '{}'", notice.getAuthorId(), notice.getAuthorName());
+        
+        // 공지사항 업데이트 (제목, 내용, 작성자명 포함)
+        log.info("updateNotice 메서드 호출 - title: '{}', content: '{}', authorName: '{}'", 
+                updateRequest.getTitle(), updateRequest.getContent(), authorName);
+        notice.updateNotice(updateRequest.getTitle(), updateRequest.getContent(), authorName);
+        
+        log.info("수정 후 데이터 - authorId: {}, authorName: '{}'", notice.getAuthorId(), notice.getAuthorName());
         
         Notice updatedNotice = noticeRepository.save(notice);
         log.info("Notice updated successfully: {}", noticeId);
+        log.info("=== NoticeService.updateNotice 완료 ===");
         
         return convertToDTO(updatedNotice);
     }

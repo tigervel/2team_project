@@ -117,20 +117,33 @@ public class NoticeController {
      * @param noticeId 공지사항 ID
      * @param updateRequest 공지사항 수정 요청 데이터
      * @param userId 현재 사용자 ID (관리자)
+     * @param authorName 작성자 이름 (관리자)
      * @return 수정된 공지사항 정보
      */
     @PutMapping("/{noticeId}")
     public ResponseEntity<NoticeDTO> updateNotice(@PathVariable("noticeId") Long noticeId,
                                                @Valid @RequestBody NoticeDTO.UpdateRequest updateRequest,
-                                               @RequestHeader("X-User-Id") String userId) {
-        log.info("PUT /api/notices/{} - userId: {}", noticeId, userId);
+                                               @RequestHeader("X-User-Id") String userId,
+                                               @RequestHeader("X-User-Name") String authorName) {
+        log.info("PUT /api/notices/{} - 헤더 수신 확인 - userId: {}, authorName(인코딩됨): {}", noticeId, userId, authorName);
+        
+        // URL 인코딩된 사용자명 디코딩
+        try {
+            String decodedAuthorName = java.net.URLDecoder.decode(authorName, "UTF-8");
+            log.info("authorName 디코딩 결과: '{}' -> '{}'", authorName, decodedAuthorName);
+            authorName = decodedAuthorName;
+        } catch (Exception e) {
+            log.warn("Failed to decode author name: {}", authorName);
+        }
+        
+        log.info("PUT /api/notices/{} - 최종 전달값 - userId: {}, authorName: {}", noticeId, userId, authorName);
         
         // TODO: 실제 관리자 권한 검증 로직 추가 (Spring Security)
         if (!userId.toLowerCase().contains("admin")) {
             throw new SecurityException("공지사항 수정 권한이 없습니다.");
         }
 
-        NoticeDTO response = noticeService.updateNotice(noticeId, updateRequest, userId);
+        NoticeDTO response = noticeService.updateNotice(noticeId, updateRequest, userId, authorName);
         return ResponseEntity.ok(response);
     }
 

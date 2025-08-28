@@ -45,15 +45,31 @@ export const updateNotice = async (noticeId, noticeData, userInfo) => {
         'X-User-Name': encodeURIComponent(userInfo.userName || '') // URL 인코딩으로 한국어 문자 처리
     };
     
-    const res = await axios.put(`${noticeHost}/${noticeId}`, noticeData, { headers });
-    return res.data;
+    console.log('=== updateNotice API 호출 ===');
+    console.log('noticeId:', noticeId);
+    console.log('noticeData:', noticeData);
+    console.log('userInfo:', userInfo);
+    console.log('headers:', headers);
+    console.log('URL:', `${noticeHost}/${noticeId}`);
+    
+    try {
+        const res = await axios.put(`${noticeHost}/${noticeId}`, noticeData, { headers });
+        console.log('=== updateNotice API 응답 ===');
+        console.log('응답 데이터:', res.data);
+        return res.data;
+    } catch (error) {
+        console.error('=== updateNotice API 에러 ===');
+        console.error('에러 상세:', error);
+        console.error('응답 데이터:', error.response?.data);
+        console.error('상태 코드:', error.response?.status);
+        throw error;
+    }
 };
 
 // 공지사항 삭제 (관리자 전용)
 export const deleteNotice = async (noticeId, userInfo) => {
     const headers = {
-        'X-User-Id': userInfo.userId,
-        'X-User-Name': encodeURIComponent(userInfo.userName || '') // URL 인코딩으로 한국어 문자 처리
+        'X-User-Id': userInfo.userId
     };
     
     const res = await axios.delete(`${noticeHost}/${noticeId}`, { headers });

@@ -52,7 +52,7 @@ import QAActionButtons from './QAActionButtons';
 import QAEditForm from './QAEditForm';
 import useCustomLogin from '../../../hooks/useCustomLogin';
 import { getPostVisibility, getActionPermissions } from './qaPermissionUtils';
-import NoboardComponent from '../noboard/NoboardComponent'; // ✅ Import NoboardComponent
+import NoboardComponent from '../noboard/NoBoard'; // ✅ Import NoBoard Component
 
 const QABoardMUI = () => {
   // Redux dispatch
