@@ -31,7 +31,7 @@ public class Member {
     @JoinColumn(name = "mem_id", referencedColumnName = "login_id", insertable = false, updatable = false)
     private UserIndex userIndex;
 
-    @Column(name = "mem_email", nullable = false, length = 120)
+    @Column(name = "mem_email", unique = true, nullable = false, length = 120)
     private String memEmail;
 
     /** 반드시 해시 저장(BCrypt) */

@@ -1,18 +1,8 @@
-// com.giproject.security.CustomOAuth2SuccessHandler.java
 package com.giproject.security;
 
-import com.giproject.entity.oauth.SocialAccount;
-import com.giproject.entity.oauth.SocialAccount.Provider;
-import com.giproject.repository.oauth.SocialAccountRepo;
-
-import jakarta.servlet.ServletException;
-import jakarta.servlet.http.Cookie;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
-
+import com.giproject.repository.member.MemberRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
@@ -20,21 +10,20 @@ import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.security.web.authentication.SimpleUrlAuthenticationSuccessHandler;
 import org.springframework.stereotype.Component;
 
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
-import java.time.LocalDateTime;
 import java.util.Map;
-import java.util.Optional;
-import java.util.UUID;
 
 @Slf4j
 @Component
 @RequiredArgsConstructor
 public class CustomOAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler {
 
-    private final SocialAccountRepo socialAccountRepo;
-    private final JwtService jwtService;
+    private final JwtService jwtService;             // ✅ 액세스/리프레시 & 프리필 토큰 생성
+    private final MemberRepository memberRepository; // ✅ 가입 여부 확인
 
     @Value("${frontend.base-url:http://localhost:3000}")
     private String frontendBaseUrl;
@@ -42,121 +31,86 @@ public class CustomOAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHa
     @Override
     public void onAuthenticationSuccess(HttpServletRequest request,
                                         HttpServletResponse response,
-                                        Authentication authentication) throws IOException, ServletException {
+                                        Authentication authentication) throws IOException {
 
-        if (!(authentication instanceof OAuth2AuthenticationToken oauthToken)) {
-            log.warn("Unexpected authentication type: {}", authentication.getClass());
-            getRedirectStrategy().sendRedirect(request, response,
-                    frontendBaseUrl + "/login?error=unsupported_auth_type");
+        OAuth2AuthenticationToken token = (OAuth2AuthenticationToken) authentication;
+        String provider = token.getAuthorizedClientRegistrationId(); // google | kakao | naver
+        OAuth2User oAuth2User = token.getPrincipal();
+        Map<String, Object> attributes = oAuth2User.getAttributes();
+
+        String email = extractEmail(provider, attributes);
+        String name  = extractName(provider, attributes);
+
+        log.info("OAuth2 success provider={}, email={}, name={}", provider, email, name);
+
+        // 1) 이메일 동의 누락 → 가입 페이지로 (프리필 불가)
+        if (email == null || email.isBlank()) {
+            String redirect = frontendBaseUrl + "/signup?social=" + provider + "&reason=no_email";
+            getRedirectStrategy().sendRedirect(request, response, redirect);
             return;
         }
 
-        final String registrationId = oauthToken.getAuthorizedClientRegistrationId(); // naver/kakao/google
-        final OAuth2User oAuth2User = (OAuth2User) authentication.getPrincipal();
+        // 2) 기존 회원이면: 토큰을 URL 해시에 실어 콜백 페이지로 리다이렉트 (프론트가 localStorage에 저장)
+        boolean exists = memberRepository.existsByMemEmail(email);
+        if (exists) {
+            Map<String, Object> claims = Map.of("memEmail", email, "provider", provider);
 
-        String providerUserId = null;
-        String email = null;
-        Provider provider;
-        try {
-            provider = Provider.valueOf(registrationId.toUpperCase());
-        } catch (Exception e) {
-            log.warn("Unknown provider: {}", registrationId);
-            getRedirectStrategy().sendRedirect(request, response,
-                    frontendBaseUrl + "/login?error=unknown_provider");
+            String access  = jwtService.createAccessToken(claims);
+            String refresh = jwtService.createRefreshToken(claims);
+
+            // 해시(#)는 네트워크로 전송되지 않아 쿼리스트링보다 안전하고,
+            // 프론트에서만 읽어 localStorage에 저장할 수 있습니다.
+            String hash = "#access="  + URLEncoder.encode(access,  StandardCharsets.UTF_8)
+                        + "&refresh=" + URLEncoder.encode(refresh, StandardCharsets.UTF_8);
+
+            getRedirectStrategy().sendRedirect(request, response, frontendBaseUrl + "/auth/callback" + hash);
             return;
         }
 
-        if ("naver".equalsIgnoreCase(registrationId)) {
-            Map<String, Object> resp = castMap(oAuth2User.getAttributes().get("response"));
-            if (resp != null) {
-                providerUserId = str(resp.get("id"));
-                email = str(resp.get("email"));
-            }
-        } else if ("kakao".equalsIgnoreCase(registrationId)) {
-            Map<String, Object> attrs = oAuth2User.getAttributes();
-            providerUserId = str(attrs.get("id"));
-            Map<String, Object> kakaoAccount = castMap(attrs.get("kakao_account"));
-            if (kakaoAccount != null) {
-                email = str(kakaoAccount.get("email"));
-            }
-        } else if ("google".equalsIgnoreCase(registrationId)) {
-            providerUserId = str(oAuth2User.getAttributes().get("sub"));
-            email = str(oAuth2User.getAttributes().get("email"));
-        }
+        // 3) 첫 소셜 로그인(미가입): 프리필용 임시 토큰을 해시에 실어 가입 페이지로
+        Map<String, Object> prefillClaims = Map.of(
+                "email", email,
+                "provider", provider,
+                "name", name
+        );
+        String signupTicket = jwtService.createTempToken(prefillClaims, 5 * 60); // 5분 유효
 
-        if (providerUserId == null) {
-            log.warn("Provider user id not found: {}", registrationId);
-            getRedirectStrategy().sendRedirect(request, response,
-                    frontendBaseUrl + "/login?error=social_profile_missing");
-            return;
-        }
+        String hash = "#signup_ticket=" + URLEncoder.encode(signupTicket, StandardCharsets.UTF_8)
+                    + "&social=" + provider;
 
-        final String pUid = providerUserId;
-        final String em = email;
-
-        SocialAccount acc = socialAccountRepo.findByProviderAndProviderUserId(provider, pUid)
-                .orElseGet(() -> socialAccountRepo.save(
-                        SocialAccount.builder()
-                                .provider(provider)
-                                .providerUserId(pUid)
-                                .email(em)
-                                .build()
-                ));
-
-        // 이미 내 계정과 연결된 경우 → 액세스/리프레시 토큰 발급 후 프론트로
-        if (acc.getLoginId() != null && !acc.getLoginId().isBlank()) {
-            String subject = acc.getLoginId();
-
-            // ✅ JwtService 시그니처에 맞춰 사용
-            String accessToken  = jwtService.generateAccessToken(subject);
-            String refreshToken = jwtService.generateRefreshToken(subject);
-
-            // 리프레시 토큰은 HttpOnly 쿠키로 (운영 HTTPS에서는 setSecure(true) + SameSite=None 권장)
-            Cookie refreshCookie = new Cookie("refresh_token", refreshToken);
-            refreshCookie.setHttpOnly(true);
-            refreshCookie.setPath("/");
-            refreshCookie.setMaxAge((int) jwtService.getAccessExpiresInSeconds()); // 필요시 별도 refresh TTL로 변경
-            // refreshCookie.setSecure(true); // PROD(HTTPS)에서
-            response.addCookie(refreshCookie);
-            // SameSite 설정 필요 시:
-            // response.addHeader("Set-Cookie", "refresh_token=" + refreshToken + "; Path=/; HttpOnly; Max-Age=604800; SameSite=Lax");
-
-            String target = frontendBaseUrl
-                    + "/member/oauth-success?token="
-                    + URLEncoder.encode(accessToken, StandardCharsets.UTF_8);
-
-            getRedirectStrategy().sendRedirect(request, response, target);
-            return;
-        }
-
-        // 미연결(첫 소셜 로그인) → 가입 완료 폼 유도 (10분짜리 1회 티켓)
-        String ticket = UUID.randomUUID().toString();
-        acc.setSignupTicket(ticket);
-        acc.setSignupTicketExpireAt(LocalDateTime.now().plusMinutes(10));
-        acc.setEmail(em);
-        socialAccountRepo.save(acc);
-
-        Cookie c = new Cookie("signup_ticket", ticket);
-        c.setHttpOnly(true);
-        c.setPath("/");
-        c.setMaxAge(10 * 60);
-        // c.setSecure(true); // PROD(HTTPS)에서
-        response.addCookie(c);
-
-        String url = frontendBaseUrl + "/signup"
-                + "?provider=" + URLEncoder.encode(registrationId, StandardCharsets.UTF_8);
-        getRedirectStrategy().sendRedirect(request, response, url);
+        getRedirectStrategy().sendRedirect(request, response, frontendBaseUrl + "/signup" + hash);
     }
 
+    // ====== Provider별 이메일/이름 추출 유틸 ======
     @SuppressWarnings("unchecked")
-    private Map<String, Object> castMap(Object obj) {
-        if (obj instanceof Map<?, ?> map) {
-            return (Map<String, Object>) map;
+    private String extractEmail(String provider, Map<String, Object> attributes) {
+        if ("google".equals(provider)) {
+            return (String) attributes.get("email");
+        } else if ("kakao".equals(provider)) {
+            Map<String, Object> acc = (Map<String, Object>) attributes.get("kakao_account");
+            return acc == null ? null : (String) acc.get("email");
+        } else if ("naver".equals(provider)) {
+            Map<String, Object> resp = (Map<String, Object>) attributes.get("response");
+            return resp == null ? null : (String) resp.get("email");
         }
         return null;
     }
 
-    private String str(Object obj) {
-        return Optional.ofNullable(obj).map(String::valueOf).orElse(null);
+    @SuppressWarnings("unchecked")
+    private String extractName(String provider, Map<String, Object> attributes) {
+        if ("google".equals(provider)) {
+            Object v = attributes.getOrDefault("name", attributes.get("given_name"));
+            return v == null ? null : v.toString();
+        } else if ("kakao".equals(provider)) {
+            Map<String, Object> acc = (Map<String, Object>) attributes.get("kakao_account");
+            Map<String, Object> profile = acc == null ? null : (Map<String, Object>) acc.get("profile");
+            Object nick = profile == null ? null : profile.get("nickname");
+            return nick == null ? null : nick.toString();
+        } else if ("naver".equals(provider)) {
+            Map<String, Object> resp = (Map<String, Object>) attributes.get("response");
+            Object nm = resp == null ? null : resp.get("name");
+            return nm == null ? null : nm.toString();
+        }
+        return null;
     }
 }

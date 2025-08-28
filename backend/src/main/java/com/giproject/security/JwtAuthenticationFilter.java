@@ -66,6 +66,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         // context-path 유무에 안전: servletPath 기준
         String p = request.getServletPath();
         return p.startsWith("/oauth2/")
+        	|| p.startsWith("/api/email/")
             || p.startsWith("/login/")          // 콜백/실패 포함 ("/login/oauth2/**"만으로는 부족)
             || p.startsWith("/h2-console/")
             || p.startsWith("/uploads/")

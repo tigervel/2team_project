@@ -78,7 +78,7 @@ const SignUpComponent = () => {
     React.useEffect(() => {
         (async () => {
             try {
-                const r = await fetch(`http://localhost:8080/api/auth/signup-context`, {
+                const r = await fetch(`http://localhost:8080/api/auth/social/signup-context`, {
                     headers: { Accept: 'application/json' },
                     credentials: 'include', // 쿠키에서 signup_ticket 읽음
                 });
@@ -225,7 +225,7 @@ const SignUpComponent = () => {
 
             // ✅ 소셜 첫가입이면 complete-signup으로, 아니면 기존 signup 사용
             const submitUrl = emailLocked
-                ? `http://localhost:8080/api/auth/complete-signup`
+                ? `http://localhost:8080/api/auth/social/complete-signup`
                 : `http://localhost:8080/api/auth/signup`;
 
             const res = await fetch(submitUrl, {
@@ -396,7 +396,7 @@ const SignUpComponent = () => {
                         onClick={onClickVerifyEmail}
                         disabled={emailLocked || !canOpenVerify} // ✅ 소셜 첫가입이면 잠금
                     >
-                        {emailLocked ? "소셜 이메일 고정" : (emailVerified ? "인증완료" : "인증하기")}
+                        {emailLocked ? "인증완료" : (emailVerified ? "인증완료" : "인증하기")}
                     </Button>
                 </Box>
 

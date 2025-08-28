@@ -65,59 +65,47 @@ public class SecurityConfig {
     	  .csrf(AbstractHttpConfigurer::disable)
     	  .headers(h -> h.frameOptions(f -> f.sameOrigin()))
     	  .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
-
-    	// ✅ 기본 /login 페이지 생성/리다이렉트 금지
     	  .formLogin(AbstractHttpConfigurer::disable)
-
-    	  // ✅ 저장 요청(cache)로 인한 /login 리다이렉트 방지
     	  .requestCache(rc -> rc.disable())
-
-    	  // ✅ 인증 실패(미인증)는 401, 권한거부(인증됨/권한없음)는 403으로 고정 응답
     	  .exceptionHandling(e -> e
     	      .authenticationEntryPoint((req, res, ex) -> res.sendError(401))
     	      .accessDeniedHandler((req, res, ex) -> res.sendError(403))
     	  )
-
     	  .oauth2Login(o -> o
     	      .authorizationEndpoint(a -> a.baseUri("/oauth2/authorization"))
     	      .redirectionEndpoint(r -> r.baseUri("/login/oauth2/code/*"))
     	      .successHandler(customOAuth2SuccessHandler)
     	      .failureHandler((req, res, ex) -> {
     	          String base = req.getHeader("Origin");
-    	          if (base == null || base.isBlank()) base = frontendBaseUrl; // @Value 주입값
+    	          if (base == null || base.isBlank()) base = frontendBaseUrl;
     	          String msg = ex.getMessage() == null ? "oauth2_failed" : ex.getMessage();
     	          String target = base + "/login?error=" +
     	                  java.net.URLEncoder.encode(msg, java.nio.charset.StandardCharsets.UTF_8);
     	          res.sendRedirect(target);
     	      })
     	  )
-
     	  .authorizeHttpRequests(auth -> auth
     	      .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 
-    	      // ✅ SPA/정적/루트
+    	      // 정적/SPA 루트
     	      .requestMatchers("/", "/index.html", "/error", "/favicon.ico",
     	                       "/assets/**", "/static/**").permitAll()
     	      .requestMatchers(PathRequest.toStaticResources().atCommonLocations()).permitAll()
 
-    	      // ✅ OAuth 전 구간(인가 진입/콜백/내부 보조 경로 포함)
+    	      // OAuth 흐름
     	      .requestMatchers("/oauth2/**", "/login/**").permitAll()
 
     	      // ✅ 공개 API
-    	      .requestMatchers(
-    	          "/api/auth/**"   // signup-context, complete-signup, check-id, signup 등 모두 포함
-    	      ).permitAll()
+    	      .requestMatchers("/api/auth/**").permitAll()    // 회원가입/로그인/리프레시 등
+    	      .requestMatchers("/api/email/**").permitAll()   // ✅ 이메일 인증 전용 (여기 추가)
 
     	      .requestMatchers("/uploads/**", "/h2-console/**").permitAll()
 
-    	      // 개발 중엔 필요시 완전 허용, 운영 전환 시 축소
-    	      // .requestMatchers("/api/**").permitAll()
-
+    	      // 나머지는 인증 필요
     	      .anyRequest().authenticated()
     	  )
     	  .authenticationProvider(authenticationProvider)
     	  .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
-
 
         return http.build();
     }
