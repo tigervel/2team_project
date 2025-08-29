@@ -17,9 +17,11 @@ import {
 } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
 import axios from "axios";
+import { useNavigate, useLocation, NavLink } from "react-router-dom";
 import { fetchMembers } from "../../../api/adminApi/adminMembersApi";
 
 const MemberAll = () => {
+    
     const [activeTab, setActiveTab] = useState(0);     // 0=전체, 1=물주, 2=차주, 3=신고내역, 4=관리자
     const [currentPage, setCurrentPage] = useState(1);
     const [pageSize] = useState(10);
@@ -28,6 +30,17 @@ const MemberAll = () => {
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState("");
     const [searchKeyword, setSearchKeyword] = useState("");
+
+    const navigate = useNavigate();
+    const location = useLocation();
+
+    useEffect(() => {
+      if (location.pathname.includes("/admin/memberOwner")) setActiveTab(1);
+      else if (location.pathname.includes("/admin/memberCowner")) setActiveTab(2);
+      else if (location.pathname.includes("/admin/memberReport")) setActiveTab(3);
+      else if (location.pathname.includes("/admin/memberAdmin")) setActiveTab(4);
+      else setActiveTab(0); // Default to "전체 회원"
+    }, [location.pathname]);
 
     const apiType = (() => {
         switch (activeTab) {
@@ -79,7 +92,15 @@ const MemberAll = () => {
         reports: 0,
     });
 
-    const handleTabChange = (_, v) => { setActiveTab(v); setCurrentPage(1); };
+    const handleTabChange = (_, v) => {
+      setActiveTab(v);
+      setCurrentPage(1);
+      if (v === 0) navigate("/admin/memberAll");
+      else if (v === 1) navigate("/admin/memberOwner");
+      else if (v === 2) navigate("/admin/memberCowner");
+      else if (v === 3) navigate("/admin/memberReport");
+      else if (v === 4) navigate("/admin/memberAdmin");
+    };
     const handlePageChange = (_, v) => setCurrentPage(v);
     const handleSearchChange = (e) => setSearchKeyword(e.target.value);
 
@@ -89,11 +110,11 @@ const MemberAll = () => {
         <Box>
           <Typography variant="h5" fontWeight="bold" mb={1}>회원 관리</Typography>
           <Tabs value={activeTab} onChange={handleTabChange} textColor="primary" indicatorColor="primary">
-            <Tab label="전체 회원" />
-            <Tab label="물주" />
-            <Tab label="차주" />
-            <Tab label="신고내역" />
-            <Tab label="관리자" />
+            <Tab label="전체 회원" component={NavLink} to="/admin/memberAll" />
+            <Tab label="물주" component={NavLink} to="/admin/memberOwner" />
+            <Tab label="차주" component={NavLink} to="/admin/memberCowner" />
+            <Tab label="신고내역" component={NavLink} to="/admin/memberReport" />
+            <Tab label="관리자" component={NavLink} to="/admin/memberAdmin" />
           </Tabs>
         </Box>
         <TextField

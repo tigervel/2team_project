@@ -16,7 +16,7 @@ import {
 } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
 import axios from "axios";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate, useLocation, NavLink } from "react-router-dom";
 import { API_SERVER_HOST } from "../../../api/serverConfig";
 
 const PREFIX = `${API_SERVER_HOST}/g2i4/admin/members`;
@@ -25,6 +25,7 @@ const MemberAdmin = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
+  
   const [activeTab, setActiveTab] = useState(4);
   const [currentPage, setCurrentPage] = useState(1);
   const [users, setUsers] = useState([]);
@@ -35,26 +36,29 @@ const MemberAdmin = () => {
 
   const sort = useMemo(() => "memCreateidDateTime,desc", []);
 
+  useEffect(() => {
+    if (location.pathname.includes("/admin/memberOwner")) setActiveTab(1);
+    else if (location.pathname.includes("/admin/memberCowner")) setActiveTab(2);
+    else if (location.pathname.includes("/admin/memberReport")) setActiveTab(3);
+    else if (location.pathname.includes("/admin/memberAdmin")) setActiveTab(4);
+    else setActiveTab(0); // Default to "전체 회원"
+  }, [location.pathname]);
+
   const handleTabChange = (_e, newValue) => {
-    setActiveTab(newValue);
+    // setActiveTab(newValue); // This is already handled by useEffect based on location.pathname
+    // No need to set activeTab here if we navigate
     setCurrentPage(1);
     if (newValue === 0) navigate("/admin/memberAll");
-    if (newValue === 1) navigate("/admin/memberOwner");
-    if (newValue === 2) navigate("/admin/memberCowner");
-    if (newValue === 3) navigate("/admin/memberReport");
-    if (newValue === 4) navigate("/admin/memberAdmin");
+    else if (newValue === 1) navigate("/admin/memberOwner");
+    else if (newValue === 2) navigate("/admin/memberCowner");
+    else if (newValue === 3) navigate("/admin/memberReport");
+    else if (newValue === 4) navigate("/admin/memberAdmin");
   };
 
   const handlePageChange = (_e, value) => setCurrentPage(value);
   const handleSearchChange = (e) => setSearchKeyword(e.target.value);
 
-  useEffect(() => {
-    if (location.pathname.includes("/admins")) setActiveTab(4);
-    else if (location.pathname.includes("/owners")) setActiveTab(1);
-    else if (location.pathname.includes("/cowners")) setActiveTab(2);
-    else if (location.pathname.includes("/reports")) setActiveTab(3);
-    else setActiveTab(0);
-  }, [location.pathname]);
+  
 
   useEffect(() => {
     const load = async () => {
@@ -101,11 +105,11 @@ const MemberAdmin = () => {
             회원 관리
           </Typography>
           <Tabs value={activeTab} onChange={handleTabChange} textColor="primary" indicatorColor="primary">
-            <Tab label="전체 회원" />
-            <Tab label="물주" />
-            <Tab label="차주" />
-            <Tab label="신고내역" />
-            <Tab label="관리자" />
+            <Tab label="전체 회원" component={NavLink} to="/admin/memberAll" />
+            <Tab label="물주" component={NavLink} to="/admin/memberOwner" />
+            <Tab label="차주" component={NavLink} to="/admin/memberCowner" />
+            <Tab label="신고내역" component={NavLink} to="/admin/memberReport" />
+            <Tab label="관리자" component={NavLink} to="/admin/memberAdmin" />
           </Tabs>
         </Box>
         <TextField

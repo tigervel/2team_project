@@ -5,13 +5,14 @@ import {
   Checkbox, Chip, Pagination, CircularProgress, TextField, Tabs, Tab
 } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate, useLocation, NavLink } from "react-router-dom";
 import { fetchMembers } from "../../../api/adminApi/adminMembersApi";
 
 const MemberOwner = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
+  
   const [activeTab, setActiveTab] = useState(1);
   const [page, setPage] = useState(1);
   const [size] = useState(10);
@@ -24,21 +25,23 @@ const MemberOwner = () => {
   const sort = useMemo(() => "memCreateidDateTime,desc", []);
 
   useEffect(() => {
-    if (location.pathname.includes("/admins")) setActiveTab(4);
-    else if (location.pathname.includes("/owners")) setActiveTab(1);
-    else if (location.pathname.includes("/cowners")) setActiveTab(2);
-    else if (location.pathname.includes("/reports")) setActiveTab(3);
-    else setActiveTab(0);
+    if (location.pathname.includes("/admin/memberOwner")) setActiveTab(1);
+    else if (location.pathname.includes("/admin/memberCowner")) setActiveTab(2);
+    else if (location.pathname.includes("/admin/memberReport")) setActiveTab(3);
+    else if (location.pathname.includes("/admin/memberAdmin")) setActiveTab(4);
+    else setActiveTab(0); // Default to "전체 회원"
   }, [location.pathname]);
+
+  
 
   const handleTabChange = (_e, v) => {
     setActiveTab(v);
-    setPage(1);
-    if (v === 0) navigate("/g2i4/admin/members/all");
-    if (v === 1) navigate("/g2i4/admin/members/owners");
-    if (v === 2) navigate("/g2i4/admin/members/cowners");
-    if (v === 3) navigate("/g2i4/admin/members/reports");
-    if (v === 4) navigate("/g2i4/admin/members/admins");
+    setPage(1); // Reset page when changing tabs
+    if (v === 0) navigate("/admin/memberAll");
+    else if (v === 1) navigate("/admin/memberOwner");
+    else if (v === 2) navigate("/admin/memberCowner");
+    else if (v === 3) navigate("/admin/memberReport");
+    else if (v === 4) navigate("/admin/memberAdmin");
   };
 
   const handleSearchChange = (e) => setKeyword(e.target.value);
@@ -73,11 +76,11 @@ const MemberOwner = () => {
         <Box>
           <Typography variant="h5" fontWeight="bold" mb={1}>물주</Typography>
           <Tabs value={activeTab} onChange={handleTabChange} textColor="primary" indicatorColor="primary">
-            <Tab label="전체 회원" />
-            <Tab label="물주" />
-            <Tab label="차주" />
-            <Tab label="신고내역" />
-            <Tab label="관리자" />
+            <Tab label="전체 회원" component={NavLink} to="/admin/memberAll" />
+            <Tab label="물주" component={NavLink} to="/admin/memberOwner" />
+            <Tab label="차주" component={NavLink} to="/admin/memberCowner" />
+            <Tab label="신고내역" component={NavLink} to="/admin/memberReport" />
+            <Tab label="관리자" component={NavLink} to="/admin/memberAdmin" />
           </Tabs>
         </Box>
         <TextField
