@@ -1,14 +1,72 @@
-import React, { useEffect, useState } from 'react';
+// DeliveryInfoPage.jsx (replace all)
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   Box, Typography, Table, TableBody, TableCell,
   TableContainer, TableHead, TableRow, Paper, Divider, Container, Button
 } from '@mui/material';
 import PageComponent from '../common/PageComponent';
-import { getMyUnpaidEstimateList, getMyPaidEstimateList } from '../../../api/estimateApi/estimateApi';
 import { useNavigate } from "react-router-dom";
+import { getMyUnpaidEstimateList, getMyPaidEstimateList } from '../../../api/estimateApi/estimateApi';
 import { simplifyBatch } from "../../../api/addressApi/addressApi";
+import axios from 'axios';
 
-// 날짜/페이지/불리언 처리 
+// ===== 공통 API 베이스/인스턴스 =====
+const API_BASE =
+  import.meta?.env?.VITE_API_BASE ||
+  process.env.REACT_APP_API_BASE ||
+  'http://localhost:8080';
+
+const api = axios.create({ baseURL: API_BASE });
+api.interceptors.request.use((config) => {
+  const token =
+    localStorage.getItem('accessToken') ||
+    sessionStorage.getItem('accessToken') ||
+    localStorage.getItem('ACCESS_TOKEN') ||
+    sessionStorage.getItem('ACCESS_TOKEN');
+  if (token) config.headers.Authorization = `Bearer ${token}`;
+  return config;
+});
+// 맨 위에 axios 인스턴스는 그대로 두고, 타입 파서만 추가
+const parseUserType = (raw) => {
+  // EditMyInform처럼 방어적으로
+  const t = raw?.userType || raw?.type || raw?.role || raw?.loginType || null;
+  if (t === 'MEMBER' || t === 'CARGO_OWNER') return t;
+  // 혹시 payload 안에 들어있는 경우
+  const data = raw?.data || raw?.user || raw?.payload || raw?.profile || raw?.account || raw?.result || {};
+  const guess =
+    data?.userType || data?.type || data?.role || data?.loginType || null;
+  return (guess === 'MEMBER' || guess === 'CARGO_OWNER') ? guess : null;
+};
+
+
+// ===== 기존 회원용 API (그대로 사용하되 import 대신 여기서 호출도 가능) =====
+const asList = (data) => {
+  if (Array.isArray(data)) return data;
+  if (Array.isArray(data?.dtoList)) return data.dtoList;
+  return [];
+};
+
+// ===== 차주용 API (백엔드에 맞춰 endpoint만 수정해서 쓰면 됨) =====
+// 진행중/대기(결제됨) 목록
+const getOwnerPaidList = async ({ page, size }) => {
+  const { data } = await api.get('/g2i4/owner/deliveries/paid', { params: { page, size } });
+  return data ?? [];
+};
+// 완료 목록
+const getOwnerCompletedList = async ({ page, size }) => {
+  const { data } = await api.get('/g2i4/owner/deliveries/completed', { params: { page, size } });
+  return data ?? [];
+};
+// 배송 완료 처리
+const completeDelivery = async (matchingNo) => {
+  // POST가 아니고 PUT/PATCH면 바꿔줘
+  const { data } = await api.post(`/g2i4/owner/deliveries/${matchingNo}/complete`);
+  return data;
+};
+
+
+
+// ===== 유틸 =====
 const initState = {
   dtoList: [], pageNumList: [],
   prev: false, next: false, totalCount: 0,
@@ -24,7 +82,6 @@ const isAfterDay = (a, b) => {
 
 const parseDateSmart = (v) => {
   if (v == null) return null;
-
   if (typeof v === 'number') {
     const d = new Date(v);
     return isNaN(d.getTime()) ? null : d;
@@ -32,7 +89,6 @@ const parseDateSmart = (v) => {
   if (typeof v === 'string') {
     const raw = v.trim();
     if (!raw) return null;
-
     const ymdDash = /^(\d{4})-(\d{2})-(\d{2})$/;
     const ymdDot = /^(\d{4})\.(\d{2})\.(\d{2})$/;
     const ymdSlash = /^(\d{4})\/(\d{2})\/(\d{2})$/;
@@ -45,7 +101,6 @@ const parseDateSmart = (v) => {
       const d = new Date(year, month, day, 23, 59, 59, 999);
       return isNaN(d.getTime()) ? null : d;
     }
-
     const isoLike = raw.includes(' ') ? raw.replace(' ', 'T') : raw;
     const d = new Date(isoLike);
     return isNaN(d.getTime()) ? null : d;
@@ -100,6 +155,7 @@ const paginate = (data, { page, size }) => {
     current,
   };
 };
+
 const formatDateHour = (v) => {
   const d = parseDateSmart(v);
   return d
@@ -108,91 +164,122 @@ const formatDateHour = (v) => {
         month: '2-digit',
         day: '2-digit',
         hour: '2-digit',
-        hour12: false,     // 24시간제 (13시 형태)
+        hour12: false,
       })
     : '-';
 };
+
 const statusKo = (s) =>
   s === 'IN_TRANSIT' ? '배송 중'
     : s === 'COMPLETED' ? '배송 완료'
       : '대기';
 
-// 페이지
+// ===== 메인 컴포넌트 =====
 const DeliveryInfoPage = () => {
   const navigate = useNavigate();
 
-  // 미결제
+  // 로그인 사용자 타입
+  const [userType, setUserType] = useState(null); // 'MEMBER' | 'CARGO_OWNER'
+  const isMember = userType === 'MEMBER';
+  const isOwner = userType === 'CARGO_OWNER';
+
+  // 회원용 상태
   const [serverData, setServerData] = useState(initState);
   const [pageParams, setPageParams] = useState({ page: 1, size: 5 });
 
-  // 결제됨(진행/대기만)
   const [paidData, setPaidData] = useState(initState);
   const [paidPage, setPaidPage] = useState({ page: 1, size: 5 });
 
-  // 완료
   const [completedData, setCompletedData] = useState(initState);
   const [completedPage, setCompletedPage] = useState({ page: 1, size: 5 });
+
+  // 차주용 상태 (진행/완료는 위의 paidData/completedData를 재활용)
+  // => unpaid 섹션은 숨김
 
   const handleConfirmClick = (matchingNo) => {
     navigate("/order", { state: { matchingNo } });
   };
 
-  // 미결제 로딩
+  // 초기: 사용자 타입 조회
   useEffect(() => {
-    getMyUnpaidEstimateList(pageParams)
-      .then(async (data) => {
-        // eno 내림차순
-        const sorted = [...data].sort((a, b) => {
-          const A = typeof a.eno === "string" ? parseInt(a.eno, 10) : a.eno ?? 0;
-          const B = typeof b.eno === "string" ? parseInt(b.eno, 10) : b.eno ?? 0;
-          return B - A;
-        });
+    let cancelled = false;
+    (async () => {
+      try {
+        const { data } = await api.get('/g2i4/user/info');
+       const t = parseUserType(data);
+       if (!cancelled) setUserType(t || 'MEMBER'); // 안전망
+      } catch (e) {
+        console.error('사용자 타입 조회 실패', e);
+        if (!cancelled) setUserType('MEMBER'); // 안전망: 기본 회원 처리
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
-        // 주소 축약 서버 호출: [start, end, start, end, ...]
-        const addresses = [];
-        for (const it of sorted) {
-          addresses.push(it.startAddress || "");
-          addresses.push(it.endAddress || "");
-        }
-        const results = await simplifyBatch(addresses);
-
-        const withShort = sorted.map((it, idx) => ({
-          ...it,
-          startAddressShort: results[idx * 2] ?? "",
-          endAddressShort: results[idx * 2 + 1] ?? "",
-        }));
-
-        setServerData(paginate(withShort, pageParams));
-      })
-      .catch((err) => console.error("미결제 견적 로딩 실패:", err));
-  }, [pageParams]);
-
-  // 결제됨 + 완료 로딩/분리
+  // ======== 회원(MEMBER): 미결제 로딩 ========
   useEffect(() => {
-    getMyPaidEstimateList(paidPage)
-      .then((data) => {
-        // eno 내림차순
-        const sorted = [...data].sort((a, b) => {
-          const A = typeof a.eno === "string" ? parseInt(a.eno, 10) : a.eno ?? 0;
-          const B = typeof b.eno === "string" ? parseInt(b.eno, 10) : b.eno ?? 0;
-          return B - A;
-        });
+  if (userType !== 'MEMBER') return;
+  getMyUnpaidEstimateList(pageParams)
+    .then(async (raw) => {
+      const base = asList(raw);
 
-        // 완료/진행 분리
-        const completed = sorted.filter((it) => it.deliveryStatus === 'COMPLETED');
-        const inProgressOrWaiting = sorted.filter((it) => it.deliveryStatus !== 'COMPLETED'); // null 포함
+      const sorted = [...base].sort((a, b) => {
+        const A = typeof a.eno === "string" ? parseInt(a.eno, 10) : a.eno ?? 0;
+        const B = typeof b.eno === "string" ? parseInt(b.eno, 10) : b.eno ?? 0;
+        return B - A;
+      });
 
-        setPaidData(paginate(inProgressOrWaiting, paidPage));
-        setCompletedData(paginate(completed, completedPage));
-      })
-      .catch((err) => console.error("결제된 견적 로딩 실패:", err));
-  }, [paidPage, completedPage]);
+      // 주소 축약
+      const addresses = [];
+      for (const it of sorted) {
+        addresses.push(it.startAddress || "");
+        addresses.push(it.endAddress || "");
+      }
+      const results = await simplifyBatch(addresses);
 
+      const withShort = sorted.map((it, idx) => ({
+        ...it,
+        startAddressShort: results[idx * 2] ?? "",
+        endAddressShort: results[idx * 2 + 1] ?? "",
+      }));
+
+      setServerData(paginate(withShort, pageParams));
+    })
+    .catch((err) => console.error("미결제 견적 로딩 실패:", err));
+}, [userType, pageParams]);
+
+  useEffect(() => {
+  if (userType !== 'MEMBER') return;
+
+  (async () => {
+    try {
+      const raw = await getMyPaidEstimateList(paidPage);
+      const base = asList(raw);
+
+      const sorted = [...base].sort((a, b) => {
+        const A = typeof a.eno === "string" ? parseInt(a.eno, 10) : a.eno ?? 0;
+        const B = typeof b.eno === "string" ? parseInt(b.eno, 10) : b.eno ?? 0;
+        return B - A;
+      });
+
+      const completed = sorted.filter((it) => it.deliveryStatus === 'COMPLETED');
+      const inProgressOrWaiting = sorted.filter((it) => it.deliveryStatus !== 'COMPLETED');
+
+      setPaidData(paginate(inProgressOrWaiting, paidPage));
+      setCompletedData(paginate(completed, completedPage));
+    } catch (err) {
+      console.error("결제된 견적 로딩 실패:", err);
+    }
+  })();
+}, [userType, paidPage, completedPage]);
+
+  // ======== 페이지 이동 핸들러 ========
   const movePage = (pageObj) => setPageParams((prev) => ({ ...prev, ...pageObj }));
   const movePaidPage = (pageObj) => setPaidPage((prev) => ({ ...prev, ...pageObj }));
   const moveCompletedPage = (pageObj) => setCompletedPage((prev) => ({ ...prev, ...pageObj }));
 
-  const tableColgroup = (
+  // ======== 테이블 공통 ========
+  const tableColgroup = useMemo(() => (
     <colgroup>
       <col style={{ width: '10%' }} />
       <col style={{ width: '10%' }} />
@@ -202,12 +289,11 @@ const DeliveryInfoPage = () => {
       <col style={{ width: '8%' }} />
       <col style={{ width: '8%' }} />
     </colgroup>
-  );
+  ), []);
 
-  // 미결제 행 렌더러
+  // ======== 렌더러 (회원: 미결제) ========
   const renderUnpaidRows = (list) => {
     const now = new Date();
-
     if (!list || list.length === 0) {
       return (
         <TableRow>
@@ -252,14 +338,13 @@ const DeliveryInfoPage = () => {
             <span style={{whiteSpace:'nowrap'}}>{formatDateHour(item.startTime)}</span>
           </TableCell>
           <TableCell align="center">{item.driverName ?? '-'}</TableCell>
-
           <TableCell align="center">{rightCell}</TableCell>
         </TableRow>
       );
     });
   };
 
-  // 결제됨(진행/대기) 렌더러
+  // ======== 렌더러 (결제됨: 회원/차주 공용) ========
   const renderPaidRows = (list) => {
     if (!list || list.length === 0) {
       return (
@@ -271,6 +356,36 @@ const DeliveryInfoPage = () => {
 
     return list.map((item) => {
       const s = item.deliveryStatus ?? null;
+
+      // 차주 전용: IN_TRANSIT면 "배송 완료 처리" 버튼 노출
+      const ownerAction = isOwner && s === 'IN_TRANSIT' ? (
+        <Button
+          variant="contained"
+          color="success"
+          size="small"
+          onClick={async () => {
+            try {
+              await completeDelivery(item.matchingNo ?? item.mno ?? item.matching_no);
+              // UX: 목록 갱신
+              setPaidPage((p) => ({ ...p }));      // 트리거
+              setCompletedPage((p) => ({ ...p })); // 트리거
+            } catch (e) {
+              alert('완료 처리에 실패했습니다.');
+              console.error(e);
+            }
+          }}
+        >
+          배송 완료 처리
+        </Button>
+      ) : (
+        <Typography
+          variant="body2"
+          sx={{ color: s === 'IN_TRANSIT' ? 'info.main' : 'text.secondary' }}
+        >
+          {statusKo(s)}
+        </Typography>
+      );
+
       return (
         <TableRow key={item.eno}>
           <TableCell align="center">{item.cargoType}</TableCell>
@@ -278,31 +393,25 @@ const DeliveryInfoPage = () => {
           <TableCell align="center">{item.startAddress}</TableCell>
           <TableCell align="center">{item.endAddress}</TableCell>
           <TableCell align="center">
-           <span style={{whiteSpace:'nowrap'}}>{formatDateHour(item.startTime)}</span>
+            <span style={{whiteSpace:'nowrap'}}>{formatDateHour(item.startTime)}</span>
           </TableCell>
           <TableCell align="center">{item.driverName ?? '-'}</TableCell>
-
           <TableCell align="center">
-            <Typography
-              variant="body2"
-              sx={{ color: s === 'IN_TRANSIT' ? 'info.main' : 'text.secondary' }}
-            >
-              {statusKo(s)}
-            </Typography>
+            {isOwner ? ownerAction : (
+              <Typography
+                variant="body2"
+                sx={{ color: s === 'IN_TRANSIT' ? 'info.main' : 'text.secondary' }}
+              >
+                {statusKo(s)}
+              </Typography>
+            )}
           </TableCell>
         </TableRow>
       );
     });
   };
 
-  // 완료 렌더러
-  // 보조: 공통 포맷터
-  const formatDate = (v) => {
-    const d = parseDateSmart(v);
-    return d ? d.toLocaleDateString() : '-';
-  };
-
-  // 완료 렌더러
+  // ======== 렌더러 (완료 공용) ========
   const renderCompletedRows = (list) => {
     if (!list || list.length === 0) {
       return (
@@ -314,7 +423,6 @@ const DeliveryInfoPage = () => {
 
     return list.map((item) => {
       const doneAt = item.deliveryCompletedAt ?? item.endTime ?? null;
-
       return (
         <TableRow key={item.eno}>
           <TableCell align="center">{item.cargoType}</TableCell>
@@ -331,46 +439,50 @@ const DeliveryInfoPage = () => {
     });
   };
 
+  // ======== 렌더 ========
+  if (!userType) return <Box sx={{ p: 6 }}>사용자 타입 확인 중…</Box>;
+
   return (
     <Box sx={{ bgcolor: '#f7f9fc', minHeight: '100vh', py: 6 }}>
       <Container maxWidth="xl" disableGutters sx={{ px: { xs: 1, sm: 2 } }}>
         <Typography variant="h5" fontWeight="bold" gutterBottom textAlign="center">
-          배송 정보 관리
+          {isMember ? '배송 정보 관리' : '차주 배송 관리'}
         </Typography>
 
-        {/* 1) 미결제 */}
-        <Box mt={6}>
-          <Typography variant="h6" fontWeight="bold" gutterBottom>
-            견적 의뢰 진행 상황 (미결제)
-          </Typography>
-          <TableContainer component={Paper} elevation={1} sx={{ height: 470, position: 'relative', pb: 0 }}>
-            <Table sx={{ '& .MuiTableCell-root': { height: 60, py: 0 } }}>
-              {tableColgroup}
-              <TableHead>
-                <TableRow>
-                  <TableCell align="center">화물명</TableCell>
-                  <TableCell align="center">무게</TableCell>
-                  <TableCell align="center">출발지</TableCell>
-                  <TableCell align="center">도착지</TableCell>
-                  <TableCell align="center">배송 시작일</TableCell>
-                  <TableCell align="center">운전 기사</TableCell>
-                  <TableCell align="center">승인 여부</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>{renderUnpaidRows(serverData.dtoList)}</TableBody>
-            </Table>
-            <Box sx={{ position: 'absolute', left: 0, right: 0, bottom: 0, py: 1.5, display: 'flex', justifyContent: 'center', bgcolor: 'background.paper' }}>
-              <PageComponent serverData={serverData} movePage={movePage} />
-            </Box>
-          </TableContainer>
-        </Box>
+        {/* 회원 전용: 미결제 */}
+        {isMember && (
+          <Box mt={6}>
+            <Typography variant="h6" fontWeight="bold" gutterBottom>
+              견적 의뢰 진행 상황 (미결제)
+            </Typography>
+            <TableContainer component={Paper} elevation={1} sx={{ height: 470, position: 'relative', pb: 0 }}>
+              <Table sx={{ '& .MuiTableCell-root': { height: 60, py: 0 } }}>
+                {tableColgroup}
+                <TableHead>
+                  <TableRow>
+                    <TableCell align="center">화물명</TableCell>
+                    <TableCell align="center">무게</TableCell>
+                    <TableCell align="center">출발지</TableCell>
+                    <TableCell align="center">도착지</TableCell>
+                    <TableCell align="center">배송 시작일</TableCell>
+                    <TableCell align="center">운전 기사</TableCell>
+                    <TableCell align="center">승인 여부</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>{renderUnpaidRows(serverData.dtoList)}</TableBody>
+              </Table>
+              <Box sx={{ position: 'absolute', left: 0, right: 0, bottom: 0, py: 1.5, display: 'flex', justifyContent: 'center', bgcolor: 'background.paper' }}>
+                <PageComponent serverData={serverData} movePage={movePage} />
+              </Box>
+            </TableContainer>
+          </Box>
+        )}
 
-        {/* 2) 결제됨 (대기/배송 중) */}
-        
+        {/* 결제됨 (대기/배송 중) */}
         <Divider sx={{ my: 8 }} />
         <Box mt={6}>
           <Typography variant="h6" fontWeight="bold" gutterBottom>
-            견적 의뢰 진행 상황 (결제됨)
+            {isMember ? '견적 의뢰 진행 상황 (결제됨)' : '진행 중 배송 (결제됨)'}
           </Typography>
           <TableContainer component={Paper} elevation={1} sx={{ height: 470, position: 'relative', pb: 0 }}>
             <Table sx={{ '& .MuiTableCell-root': { height: 60, py: 0 } }}>
@@ -383,7 +495,7 @@ const DeliveryInfoPage = () => {
                   <TableCell align="center">도착지</TableCell>
                   <TableCell align="center">배송 시작일</TableCell>
                   <TableCell align="center">운전 기사</TableCell>
-                  <TableCell align="center">상태</TableCell>
+                  <TableCell align="center">{isOwner ? '처리' : '상태'}</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>{renderPaidRows(paidData.dtoList)}</TableBody>
@@ -394,11 +506,11 @@ const DeliveryInfoPage = () => {
           </TableContainer>
         </Box>
 
-        {/* 3) 배송 완료 */}
+        {/* 완료 */}
         <Divider sx={{ my: 8 }} />
         <Box mt={6}>
           <Typography variant="h6" fontWeight="bold" gutterBottom>
-            배송 완료 된 화물
+            {isMember ? '배송 완료 된 화물' : '완료된 배송'}
           </Typography>
           <TableContainer component={Paper} elevation={1}>
             <Table sx={{ '& .MuiTableCell-root': { height: 60, py: 0 } }}>
@@ -409,7 +521,7 @@ const DeliveryInfoPage = () => {
                   <TableCell align="center">무게</TableCell>
                   <TableCell align="center">출발지</TableCell>
                   <TableCell align="center">도착지</TableCell>
-                  <TableCell align="center">배송 완료일</TableCell>
+                  <TableCell align="center">{isMember ? '배송 완료일' : '완료일'}</TableCell>
                   <TableCell align="center">운전 기사</TableCell>
                   <TableCell align="center">상태</TableCell>
                 </TableRow>
