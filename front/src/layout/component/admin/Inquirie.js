@@ -17,6 +17,7 @@ import {
     CircularProgress,
 } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
+import { getPostList } from "../../../api/qaboardApi";
 
 const Inquirie = () => {
     const [activeTab, setActiveTab] = useState(0);
@@ -24,6 +25,7 @@ const Inquirie = () => {
     const [users, setUsers] = useState([]);
     const [searchKeyword, setSearchKeyword] = useState("");
     const [isLoading, setIsLoading] = useState(false);
+    const [totalPages, setTotalPages] = useState(1);
 
     const handleTabChange = (e, newValue) => {
         setActiveTab(newValue);
@@ -35,40 +37,34 @@ const Inquirie = () => {
     const handleSearchChange = (e) => setSearchKeyword(e.target.value);
 
     useEffect(() => {
-        const fetchUsers = async () => {
-            setIsLoading(true);
-            setTimeout(() => {
-                setUsers([
-                    {
-                        name: "화주3",
-                        title: "문의 제목1",
-                        content: "문의 내용1",
-                        userSort: "물주",
-                        InquirieDate: "2025.08.01",
-                        inquirie: "답변대기"
-                    },
-                    {
-                        name: "화주3",
-                        title: "문의 제목2",
-                        content: "문의 내용2",
-                        userSort: "물주",
-                        InquirieDate: "2025.08.01",
-                        inquirie: "답변대기"
-                    },
-                    {
-                        name: "화주3",
-                        title: "문의 제목3",
-                        content: "문의 내용3",
-                        userSort: "물주",
-                        InquirieDate: "2025.08.01",
-                        inquirie: "답변완료"
-                    },
-                ]);
-                setIsLoading(false);
-            }, 500);
+        const fetchInquiries = async () => {
+            if (activeTab === 1) { // Only fetch inquiries when '문의사항' tab is active
+                setIsLoading(true);
+                try {
+                    const response = await getPostList({ page: currentPage - 1, size: 10, keyword: searchKeyword }, {}, true); // isAdmin: true
+                    setUsers(response.content.map(post => ({
+                        name: post.authorName, // Assuming authorName is available
+                        title: post.title,
+                        content: post.content, // Or a truncated version
+                        userSort: post.authorType, // Assuming authorType is available
+                        InquirieDate: new Date(post.createdAt).toLocaleDateString(), // Format date
+                        inquirie: post.hasResponse ? "답변완료" : "답변대기", // Check for admin response
+                        postId: post.postId // Keep postId for detail view/response
+                    })));
+                    setTotalPages(response.totalPages);
+                } catch (error) {
+                    console.error("Failed to fetch inquiries:", error);
+                    setUsers([]);
+                } finally {
+                    setIsLoading(false);
+                }
+            } else if (activeTab === 0) {
+                // TODO: Fetch notices for '공지사항' tab
+                setUsers([]); // Clear users if not on inquiries tab
+            }
         };
 
-        fetchUsers();
+        fetchInquiries();
     }, [currentPage, activeTab, searchKeyword]);
 
     return (
@@ -106,7 +102,7 @@ const Inquirie = () => {
                             <TableCell padding="checkbox">
                                 <Checkbox />
                             </TableCell>
-                            <TableCell>사용자ID</TableCell>
+                            <TableCell>이름</TableCell>
                             <TableCell>제목</TableCell>
                             <TableCell>내용</TableCell>
                             <TableCell>사용자구분</TableCell>
