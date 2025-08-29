@@ -1,11 +1,11 @@
-import { Box, Button, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow } from "@mui/material";
+import { Box, Button, Dialog, DialogActions, DialogContent, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography } from "@mui/material";
 import useCustomMove from "../../../hooks/useCustomMove";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { getEstimateList, postAccepted, postRejected } from "../../../api/estimateApi/estimateApi";
 import PageComponent from "../common/PageComponent";
 import { useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
-import { useRef } from "react";
+import dayjs from "dayjs";
 
 const initState = {
   dtoList: [],
@@ -26,6 +26,9 @@ const EstimateListComponent = () => {
   const navigate = useNavigate();
   const { roles, email } = useSelector(state => state.login);
   const authChecked = useRef(false); // ✅ 실행 여부 플래그
+  const [openEstimateListAccept, setOpenEstimateListAccept] = useState(false)
+  const [selectedEno, setSelectedEno] = useState(null)
+  const [accepting, setAccepting] = useState(false)
 
   useEffect(() => {
     if (authChecked.current) {
@@ -63,18 +66,64 @@ const EstimateListComponent = () => {
     }
   }, [page, size, refresh, navigate, roles, email]);
 
+  const handleCancelClose = () => {
+    setOpenEstimateListAccept(false);
+    setSelectedEno(null);
+  };
+
   const clickRejected = (esNo) => {
     postRejected(esNo).then(data => {
       console.log(data)
       setRefresh(!refresh)
     })
   }
-  const clickAccepted = (esNo) => {
-    postAccepted(esNo).then((data) => {
-      setRefresh(!refresh)
-    })
+  const clickAccepted = (enNo) => {
+    setOpenEstimateListAccept(true)
+    setSelectedEno(enNo);
   }
+  const handleClickFinalCheck = async () => {
+    if (!selectedEno || accepting) return;
+    try {
+      setAccepting(true);
+      await postAccepted(selectedEno);
+      alert('견적이 수락되었습니다')
+      setOpenEstimateListAccept(false);
+      setSelectedEno(null);
+      setRefresh(!refresh);
+    } catch (e) {
+      alert("수락 처리 중 오류가 발생했습니다.");
+    } finally {
+      setAccepting(false);
+    }
+  
 
+  }
+  const renderData =(list)=>{
+    if (!list|| list.length === 0){
+      return (
+        <TableRow>
+          <TableCell colSpan={9} align="center">견적의뢰가 없습니다</TableCell>
+        </TableRow>
+      )
+    }
+    return list.map((estimate, idx) => (
+              <TableRow key={estimate.eno}>
+                <TableCell align="center">No.{estimate.eno}</TableCell>
+                <TableCell align="center">{estimate.route}</TableCell>
+                <TableCell align="center">{estimate.distanceKm}</TableCell>
+                <TableCell align="center">{estimate.cargoWeight}</TableCell>
+                <TableCell align="center">{dayjs(estimate.startTime).format('YYYY년 MM월 DD일 A hh:mm')}</TableCell>
+                <TableCell align="center">{estimate.cargoType}</TableCell>
+                <TableCell align="center">{estimate.totalCost}</TableCell>
+                <TableCell align="center">
+                  <Button variant="contained" color="success" onClick={() => clickAccepted(estimate.eno)}>수락</Button>
+                </TableCell>
+                <TableCell align="center">
+                  <Button variant="outlined" color="error" onClick={() => clickRejected(estimate.eno)}>거절</Button>
+                </TableCell>
+              </TableRow>
+            ))
+  }
 
   return (
     <>
@@ -95,29 +144,42 @@ const EstimateListComponent = () => {
             </TableRow>
           </TableHead>
           <TableBody>
-            {serverData.dtoList.map((est, idx) => (
-              <TableRow key={est.eno}>
-                <TableCell align="center">No.{est.eno}</TableCell>
-                <TableCell align="center">{est.route}</TableCell>
-                <TableCell align="center">{est.distanceKm}</TableCell>
-                <TableCell align="center">{est.cargoWeight}</TableCell>
-                <TableCell align="center">{est.startTime}</TableCell>
-                <TableCell align="center">{est.cargoType}</TableCell>
-                <TableCell align="center">{est.totalCost}</TableCell>
-                <TableCell align="center">
-                  <Button variant="contained" color="success" onClick={() => clickAccepted(est.eno)}>수락</Button>
-                </TableCell>
-                <TableCell align="center">
-                  <Button variant="outlined" color="error" onClick={() => clickRejected(est.eno)}>거절</Button>
-                </TableCell>
-              </TableRow>
-            ))}
+            {renderData(serverData.dtoList)}
           </TableBody>
         </Table>
       </TableContainer>
       <Box mt={2} display="flex" justifyContent="center" gap={1} sx={{ paddingBottom: 5 }}>
         <PageComponent serverData={serverData} movePage={moveToList} />
       </Box>
+
+
+      <Dialog
+        open={openEstimateListAccept}
+        onClose={handleCancelClose}
+        PaperProps={{
+          sx: {
+            width: 400,
+            height: 150,
+            borderRadius: 2,
+            p: 2,
+          },
+        }}
+      >
+
+        <DialogContent >
+          <Typography fontSize={20} fontWeight='bold'>해당 견적을 수락하시겠습니까?</Typography>
+
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleClickFinalCheck} color="error" disabled={accepting}>
+            확인
+          </Button>
+          <Button onClick={handleCancelClose} color="inherit">
+            아니요
+          </Button>
+
+        </DialogActions>
+      </Dialog>
     </>
   );
 };

@@ -3,6 +3,7 @@ import { Box, Grid, Paper, Typography, CircularProgress, Alert } from "@mui/mate
 import { ArcElement, BarElement, CategoryScale, Chart, Legend, LinearScale, Title, Tooltip } from "chart.js";
 import { Bar, Doughnut } from "react-chartjs-2";
 import axios from "axios";
+import { fetchDashboardData } from "../../../api/adminApi/adminDashboardApi";
 
 
 Chart.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, ArcElement);
@@ -15,8 +16,9 @@ const AdminPage = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const response = await axios.get('/g2i4/admin/dashboard');
-        setDashboardData(response.data);
+        const response = await fetchDashboardData();
+        console.log("Axios Response:", response);
+        setDashboardData(response);
       } catch (err) {
         setError("데이터를 불러오지 못했습니다. 다시 시도해 주세요.");
         console.error("Failed to fetch dashboard data:", err);
@@ -45,6 +47,7 @@ const AdminPage = () => {
   }
 
   if (!dashboardData) {
+    console.log("Dashboard Data (when no data):", dashboardData);
     return (
       <Box sx={{ p: 3 }}>
         <Alert severity="warning">표시할 데이터가 없습니다.</Alert>

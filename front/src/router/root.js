@@ -7,7 +7,9 @@ import adminRouter from "./adminRouter";
 import SignUpPage from "../pages/SignUpPage";
 import estimateRouter from "./estimateRouter";
 import orderRouter from "./orderRouter";
-
+import BulletinBoard from "../layout/component/noboard/NoBoard"; // ✅ Import NoBoard Component
+import PostView from "../layout/component/noboard/NoboardPostView";
+import WritePost from "../layout/component/noboard/NoboardWritePost";
 const Loading = <div>Loading 중....</div>;
 
 // 레이아웃 & 페이지 lazy 로딩
@@ -72,6 +74,22 @@ const root = createBrowserRouter([
             {
                 path: "qaboard",
                 element: <Suspense fallback={Loading}><QABoard /></Suspense>
+            },
+            {
+                path: "noboard",
+                element: <Suspense fallback={Loading}><BulletinBoard /></Suspense>
+            },
+            {
+                path: "noboard/post/:id",
+                element: <Suspense fallback={Loading}><PostView /></Suspense>
+            },
+            {
+                path: "noboard/write",
+                element: <Suspense fallback={Loading}><WritePost /></Suspense>
+            },
+            {
+                path: "noboard/write/:id",
+                element: <Suspense fallback={Loading}><WritePost /></Suspense>
             },
             {
                 path: "order",
