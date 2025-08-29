@@ -21,11 +21,13 @@ import {
   Alert,
   Stack
 } from '@mui/material';
-import { Add as AddIcon } from '@mui/icons-material';
+import { Add as AddIcon, Lock as LockIcon, AdminPanelSettings as AdminIcon } from '@mui/icons-material';
 import { getNotices } from '../../../api/noticeApi';
+import useCustomLogin from '../../../hooks/useCustomLogin';
 
 const BulletinBoard = () => {
   const navigate = useNavigate();
+  const { isAdmin, isLogin, loginState } = useCustomLogin();
   const [currentPage, setCurrentPage] = useState(0); // 백엔드는 0 기반 페이지
   const [notices, setNotices] = useState([]);
   const [totalElements, setTotalElements] = useState(0);
@@ -109,6 +111,44 @@ const BulletinBoard = () => {
         >
           최신 업데이트와 중요한 안내사항을 확인하세요
         </Typography>
+        
+        {/* 권한 상태 표시 */}
+        <Box sx={{ 
+          mt: 2, 
+          p: 1.5, 
+          backgroundColor: 'rgba(255,255,255,0.1)', 
+          borderRadius: 2,
+          border: '1px solid rgba(255,255,255,0.2)'
+        }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, justifyContent: 'center' }}>
+            {isAdmin && <AdminIcon sx={{ color: 'primary.contrastText' }} />}
+            {!isLogin && <LockIcon sx={{ color: 'primary.contrastText' }} />}
+            <Typography 
+              variant="body2" 
+              sx={{ 
+                color: 'primary.contrastText',
+                opacity: 0.95,
+                fontWeight: 500
+              }}
+            >
+              {!isLogin ? '로그인이 필요합니다' : 
+               isAdmin ? `관리자 모드 - ${loginState.nickname || loginState.email}` :
+               `일반 사용자 - ${loginState.nickname || loginState.email} (읽기 전용)`
+              }
+            </Typography>
+            {isLogin && loginState.roles && (
+              <Chip 
+                label={`권한: ${loginState.roles.join(', ')}`}
+                size="small"
+                sx={{ 
+                  bgcolor: 'rgba(255,255,255,0.2)', 
+                  color: 'primary.contrastText',
+                  ml: 1
+                }}
+              />
+            )}
+          </Box>
+        </Box>
       </Box>
 
       {/* Category Tabs and New Post Button */}
@@ -145,19 +185,45 @@ const BulletinBoard = () => {
           ))}
         </Box>
 
-        {/* New Post Button */}
-        <Button 
-          variant="contained" 
-          onClick={handleNewPost}
-          startIcon={<AddIcon />}
-          sx={{ 
-            minWidth: 140,
-            height: 48,
-            borderRadius: 2
-          }}
-        >
-          새 게시글
-        </Button>
+        {/* New Post Button - 관리자 전용 */}
+        {isAdmin ? (
+          <Button 
+            variant="contained" 
+            onClick={handleNewPost}
+            startIcon={<AddIcon />}
+            sx={{ 
+              minWidth: 140,
+              height: 48,
+              borderRadius: 2,
+              bgcolor: 'success.main',
+              '&:hover': {
+                bgcolor: 'success.dark'
+              }
+            }}
+          >
+            새 게시글 작성
+          </Button>
+        ) : (
+          <Box 
+            sx={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: 1,
+              px: 3,
+              py: 1.5,
+              backgroundColor: 'grey.100',
+              borderRadius: 2,
+              border: '1px solid',
+              borderColor: 'grey.300',
+              color: 'text.secondary'
+            }}
+          >
+            <LockIcon fontSize="small" />
+            <Typography variant="body2" fontWeight={500}>
+              관리자만 작성 가능
+            </Typography>
+          </Box>
+        )}
       </Box>
 
       {/* Notice Table */}

@@ -1,10 +1,13 @@
 // src/hooks/useCustomLogin.js
 // 이 훅은 로그인/로그아웃, 로그인 상태 체크를 공통으로 제공합니다.
 
+import React from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { Navigate, useNavigate } from "react-router-dom";
 import axios from "axios";
-import { logout as logoutAction } from "../slice/loginSlice";
+import { logout as logoutAction, login } from "../slice/loginSlice";
+import { getCurrentUserFromToken, getStoredTokens, isJWTExpired } from "../utils/jwtUtils";
+import { isAdmin as checkIsAdmin, isUser as checkIsUser, hasRole, hasAnyRole } from "../utils/authUtils";
 
 // 백엔드 베이스 URL
 const API_BASE =
@@ -58,10 +61,25 @@ const useCustomLogin = () => {
    // 리덕스 상태 (이메일/역할 등 기존 로직 유지)
    const loginState = useSelector((state) => state.login);
 
-   // 권한/식별자 (기존 필드 유지)
-   const roles = loginState?.roles || [];
-   const isAdmin = roles.includes("ROLE_ADMIN");
-   const isUser = roles.includes("USER");
+   // JWT 토큰 동기화 (새로고침 시 토큰에서 상태 복원)
+   React.useEffect(() => {
+      const { accessToken } = getStoredTokens();
+      if (accessToken && !isJWTExpired(accessToken) && !loginState.email) {
+         const userInfo = getCurrentUserFromToken();
+         if (userInfo) {
+            dispatch(login({
+               email: userInfo.email || `${userInfo.subject}@jwt.user`,
+               nickname: userInfo.nickname || userInfo.subject,
+               roles: userInfo.roles,
+               memberId: userInfo.memberId || userInfo.subject
+            }));
+         }
+      }
+   }, [dispatch, loginState.email]);
+
+   // 권한/식별자 (JWT 토큰 기반 + Redux 호환)
+   const isAdmin = checkIsAdmin(loginState);
+   const isUser = checkIsUser(loginState);
    const currentUserId = loginState?.memberId;
 
    // 로그인 여부: 토큰 존재 OR 기존 email 필드
@@ -129,8 +147,11 @@ const useCustomLogin = () => {
       moveToLogin,
       moveToPath,
       moveToLoginReturn,
+      // 권한 관련 (JWT 토큰 기반)
       isAdmin,
       isUser,
+      hasRole: (role) => hasRole(role, loginState),
+      hasAnyRole: (roles) => hasAnyRole(roles, loginState),
       currentUserId,
    };
 };

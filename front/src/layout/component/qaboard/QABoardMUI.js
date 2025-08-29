@@ -454,8 +454,8 @@ const QABoardMUI = () => {
   const handleTestLogin = (role, userId) => {
     const testLoginData = {
       email: role === 'ADMIN' ? 'admin@test.com' : `user${userId}@test.com`,
-      nickname: role === 'ADMIN' ? 'Admin' : `User${userId}`, // Changed to English to avoid HTTP header encoding issues
-      role: role,
+      nickname: role === 'ADMIN' ? 'Admin' : `User${userId}`,
+      roles: [role, 'USER'], // 기본 USER 권한 + 추가 권한
       memberId: role === 'ADMIN' ? 'admin' : userId,
       pw: 'test123'
     };
@@ -479,7 +479,9 @@ const QABoardMUI = () => {
         <Box mt={3} p={2} sx={{ backgroundColor: '#f5f5f5', borderRadius: 2 }}>
           <Typography variant="subtitle1" gutterBottom>
             테스트 모드 - 현재 로그인: {loginState.email || '로그인 안됨'} 
-            {loginState.role && ` (${loginState.role === 'ADMIN' ? '관리자' : '일반사용자'})`}
+            {loginState.roles && loginState.roles.length > 0 && 
+              ` (${isAdmin ? '관리자' : '일반사용자'}) | 권한: [${loginState.roles.join(', ')}]`
+            }
           </Typography>
           <Stack direction="row" spacing={1} justifyContent="center" flexWrap="wrap">
             <Button 
