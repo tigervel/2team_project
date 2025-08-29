@@ -1,5 +1,12 @@
 package com.giproject.controller;
 
+import java.util.Map;
+
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
 import com.giproject.dto.member.MemberDTO;
 import com.giproject.entity.member.Member;
 import com.giproject.repository.member.MemberRepository;
@@ -11,12 +18,6 @@ import com.giproject.utils.JWTUtil;
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
-
-import java.util.Locale;
-import java.util.Map;
-
-import org.springframework.http.MediaType;
-import org.springframework.web.bind.annotation.*;
 
 @Log4j2
 @RestController

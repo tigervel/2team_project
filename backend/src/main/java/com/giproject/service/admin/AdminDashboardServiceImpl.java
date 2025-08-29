@@ -4,6 +4,7 @@ import com.giproject.dto.admin.DashboardDataDTO;
 import com.giproject.dto.admin.MonthlyDataDTO;
 import com.giproject.entity.delivery.DeliveryStatus;
 import com.giproject.entity.payment.PaymentStatus;
+import com.giproject.repository.cargo.CargoOwnerRepository;
 import com.giproject.repository.delivery.DeliveryRepository;
 import com.giproject.repository.member.MemberRepository;
 import com.giproject.repository.payment.PaymentRepository;
@@ -25,11 +26,13 @@ public class AdminDashboardServiceImpl implements AdminDashboardService {
     private final MemberRepository memberRepository;
     private final DeliveryRepository deliveryRepository;
     private final PaymentRepository paymentRepository;
+    private final CargoOwnerRepository cargoOwnerRepository;
 
     @Override
     public DashboardDataDTO getDashboardData() {
-        long totalUsers = memberRepository.count();
-        long newMembers = memberRepository.countByMemCreateIdDateTimeAfter(LocalDate.now().withDayOfMonth(1).atStartOfDay());
+        long totalUsers = memberRepository.count() + cargoOwnerRepository.count();
+        long newMembers = memberRepository.countByMemCreateIdDateTimeAfter(LocalDate.now().withDayOfMonth(1).atStartOfDay())
+                + cargoOwnerRepository.countByCargoCreatedDateTimeAfter(LocalDate.now().withDayOfMonth(1).atStartOfDay());
         long totalDeliveries = deliveryRepository.count();
 
         long monthlyRevenue = paymentRepository.findAllByPaymentStatus(PaymentStatus.PAID).stream()
@@ -55,8 +58,21 @@ public class AdminDashboardServiceImpl implements AdminDashboardService {
         // New Members by Month
         Map<String, Long> newMembersByMonthMap = memberRepository.findNewMembersByMonth().stream()
                 .collect(Collectors.toMap(obj -> (String)obj[0], obj -> (long)obj[1]));
+
+        Map<String, Long> newCargoOwnersByMonthMap = cargoOwnerRepository.findNewCargoOwnersByMonth().stream()
+                .collect(Collectors.toMap(obj -> (String)obj[0], obj -> (long)obj[1]));
+
+        // Combine the two maps
+        Map<String, Long> combinedNewMembersMap = newMembersByMonthMap.entrySet().stream()
+                .collect(Collectors.toMap(
+                        Map.Entry::getKey,
+                        entry -> entry.getValue() + newCargoOwnersByMonthMap.getOrDefault(entry.getKey(), 0L)
+                ));
+        newCargoOwnersByMonthMap.forEach((key, value) -> combinedNewMembersMap.merge(key, value, Long::sum));
+
+
         List<MonthlyDataDTO> newMembersByMonth = last6Months.stream()
-                .map(month -> new MonthlyDataDTO(month, newMembersByMonthMap.getOrDefault(month, 0L)))
+                .map(month -> new MonthlyDataDTO(month, combinedNewMembersMap.getOrDefault(month, 0L)))
                 .collect(Collectors.toList());
 
         List<String> currentDeliveries = deliveryRepository.findTop5ByStatusOrderByCompletTimeDesc(DeliveryStatus.IN_TRANSIT).stream()

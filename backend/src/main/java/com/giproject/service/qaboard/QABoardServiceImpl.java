@@ -15,6 +15,7 @@ import com.giproject.entity.qaboard.AdminResponse;
 import com.giproject.entity.qaboard.AuthorType;
 import com.giproject.entity.qaboard.QACategory;
 import com.giproject.entity.qaboard.QAPost;
+import com.giproject.repository.account.UserIndexRepo;
 import com.giproject.repository.qaboard.AdminResponseRepository;
 import com.giproject.repository.qaboard.QAPostRepository;
 
@@ -36,6 +37,7 @@ public class QABoardServiceImpl implements QABoardService {
 
     private final QAPostRepository qaPostRepository;
     private final AdminResponseRepository adminResponseRepository;
+    private final UserIndexRepo userIndexRepo;
     @Override
     @Transactional
     public QAPostDTO createPost(QAPostDTO.CreateRequest createRequest, String authorId, String authorName) {

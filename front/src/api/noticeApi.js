@@ -1,12 +1,9 @@
 import axios from "axios";
-
-// Backend API Server Host
-export const API_SERVER_HOST = "http://localhost:8080";
+import { API_SERVER_HOST } from "./serverConfig";
 
 const noticeHost = `${API_SERVER_HOST}/api/notices`;
 
-// 공지사항 목록 조회
-export const getNotices = async (params = {}) => {
+export const getNoticeList = async (params = {}) => {
     const { keyword, page = 0, size = 10 } = params;
     
     const queryParams = new URLSearchParams();
@@ -19,59 +16,36 @@ export const getNotices = async (params = {}) => {
     return res.data;
 };
 
-// 공지사항 상세 조회
 export const getNoticeDetail = async (noticeId) => {
     const res = await axios.get(`${noticeHost}/${noticeId}`);
     return res.data;
 };
 
-// 공지사항 생성 (관리자 전용)
 export const createNotice = async (noticeData, userInfo) => {
     const headers = {
         'Content-Type': 'application/json',
         'X-User-Id': userInfo.userId,
-        'X-User-Name': encodeURIComponent(userInfo.userName || '') // URL 인코딩으로 한국어 문자 처리
+        'X-User-Name': encodeURIComponent(userInfo.userName || '')
     };
-    
-    const res = await axios.post(noticeHost, noticeData, { headers });
+    const res = await axios.post(`${noticeHost}`, noticeData, { headers });
     return res.data;
 };
 
-// 공지사항 수정 (관리자 전용)
 export const updateNotice = async (noticeId, noticeData, userInfo) => {
     const headers = {
         'Content-Type': 'application/json',
         'X-User-Id': userInfo.userId,
-        'X-User-Name': encodeURIComponent(userInfo.userName || '') // URL 인코딩으로 한국어 문자 처리
+        'X-User-Name': encodeURIComponent(userInfo.userName || '')
     };
-    
-    console.log('=== updateNotice API 호출 ===');
-    console.log('noticeId:', noticeId);
-    console.log('noticeData:', noticeData);
-    console.log('userInfo:', userInfo);
-    console.log('headers:', headers);
-    console.log('URL:', `${noticeHost}/${noticeId}`);
-    
-    try {
-        const res = await axios.put(`${noticeHost}/${noticeId}`, noticeData, { headers });
-        console.log('=== updateNotice API 응답 ===');
-        console.log('응답 데이터:', res.data);
-        return res.data;
-    } catch (error) {
-        console.error('=== updateNotice API 에러 ===');
-        console.error('에러 상세:', error);
-        console.error('응답 데이터:', error.response?.data);
-        console.error('상태 코드:', error.response?.status);
-        throw error;
-    }
+    const res = await axios.put(`${noticeHost}/${noticeId}`, noticeData, { headers });
+    return res.data;
 };
 
-// 공지사항 삭제 (관리자 전용)
 export const deleteNotice = async (noticeId, userInfo) => {
     const headers = {
-        'X-User-Id': userInfo.userId
+        'X-User-Id': userInfo.userId,
+        'X-User-Name': encodeURIComponent(userInfo.userName || '')
     };
-    
     const res = await axios.delete(`${noticeHost}/${noticeId}`, { headers });
     return res.data;
 };

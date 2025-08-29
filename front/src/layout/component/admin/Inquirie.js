@@ -1,4 +1,3 @@
-//물주 페이지
 import React, { useState, useEffect } from "react";
 import {
     Box,
@@ -18,17 +17,19 @@ import {
 } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
 import { getPostList } from "../../../api/qaboardApi";
+import { useNavigate, useLocation, NavLink } from "react-router-dom";
 
 const Inquirie = () => {
-    const [activeTab, setActiveTab] = useState(0);
     const [currentPage, setCurrentPage] = useState(1);
+    const navigate = useNavigate();
+    const location = useLocation();
     const [users, setUsers] = useState([]);
     const [searchKeyword, setSearchKeyword] = useState("");
     const [isLoading, setIsLoading] = useState(false);
     const [totalPages, setTotalPages] = useState(1);
 
-    const handleTabChange = (e, newValue) => {
-        setActiveTab(newValue);
+    const handleTabChange = (event, newValue) => {
+        navigate(newValue);
         setCurrentPage(1);
     };
 
@@ -38,18 +39,23 @@ const Inquirie = () => {
 
     useEffect(() => {
         const fetchInquiries = async () => {
-            if (activeTab === 1) { // Only fetch inquiries when '문의사항' tab is active
+            if (location.pathname === '/admin/inquirie') {
                 setIsLoading(true);
                 try {
-                    const response = await getPostList({ page: currentPage - 1, size: 10, keyword: searchKeyword }, {}, true); // isAdmin: true
+                    const response = await getPostList({ page: currentPage - 1, size: 10, keyword: searchKeyword }, {}, true);
+                    const authorTypeMap = {
+                      "MEMBER": "물주",
+                      "CARGO": "차주",
+                      "ADMIN": "관리자",
+                    };
                     setUsers(response.content.map(post => ({
-                        name: post.authorName, // Assuming authorName is available
+                        name: post.authorName,
                         title: post.title,
-                        content: post.content, // Or a truncated version
-                        userSort: post.authorType, // Assuming authorType is available
-                        InquirieDate: new Date(post.createdAt).toLocaleDateString(), // Format date
-                        inquirie: post.hasResponse ? "답변완료" : "답변대기", // Check for admin response
-                        postId: post.postId // Keep postId for detail view/response
+                        content: post.content,
+                        userSort: authorTypeMap[post.authorType] || post.authorType,
+                        InquirieDate: new Date(post.createdAt).toLocaleDateString(),
+                        inquirie: post.hasResponse ? "답변완료" : "답변대기",
+                        postId: post.postId
                     })));
                     setTotalPages(response.totalPages);
                 } catch (error) {
@@ -58,14 +64,11 @@ const Inquirie = () => {
                 } finally {
                     setIsLoading(false);
                 }
-            } else if (activeTab === 0) {
-                // TODO: Fetch notices for '공지사항' tab
-                setUsers([]); // Clear users if not on inquiries tab
             }
         };
 
         fetchInquiries();
-    }, [currentPage, activeTab, searchKeyword]);
+    }, [currentPage, location.pathname, searchKeyword]);
 
     return (
         <Box flexGrow={1} p={4}>
@@ -74,9 +77,9 @@ const Inquirie = () => {
                     <Typography variant="h5" fontWeight="bold" mb={1}>
                         공지/문의
                     </Typography>
-                    <Tabs value={activeTab} onChange={handleTabChange} textColor="primary" indicatorColor="primary">
-                        <Tab label="공지사항" />
-                        <Tab label="문의사항" />
+                    <Tabs value={location.pathname} onChange={handleTabChange} textColor="primary" indicatorColor="primary">
+                        <Tab label="공지사항" value="/admin/notice" component={NavLink} to="/admin/notice" />
+                        <Tab label="문의사항" value="/admin/inquirie" component={NavLink} to="/admin/inquirie" />
                     </Tabs>
                 </Box>
                 <TextField

@@ -109,77 +109,94 @@ const AdminPage = () => {
 
   return (
     <Box sx={{ p: 3 }}>
-      <Typography variant="h4" fontWeight="bold" gutterBottom>
-        이용 통계
-      </Typography>
+      <Box sx={{ p: 3, maxWidth: 1400, mx: "auto" }}>
+        <Typography variant="h4" fontWeight="bold" gutterBottom>
+          이용 통계
+        </Typography>
 
-      <Box display="flex" gap={2} mb={4}>
-        {[
-          { label: "사용자수", value: dashboardData.totalUsers },
-          { label: "이번달 매출", value: dashboardData.monthlyRevenue },
-          { label: "신규회원", value: dashboardData.newMembers },
-          { label: "총 배송건", value: dashboardData.totalDeliveries },
-        ].map((item, idx) => (
-          <Paper
-            key={idx}
-            elevation={3}
-            sx={{
-              flex: 1,
-              minHeight: 120,
-              display: "flex",
-              flexDirection: "column",
-              justifyContent: "center",
-              alignItems: "center",
-              borderRadius: 2,
-            }}
-          >
-            <Typography variant="subtitle1">{item.label}</Typography>
-            <Typography variant="h5" fontWeight="bold">
-              {item.value}
-            </Typography>
+        <Box display="flex" gap={2} mb={4}>
+          {[
+            { label: "사용자수", value: dashboardData.totalUsers },
+            { label: "이번달 매출", value: dashboardData.monthlyRevenue },
+            { label: "신규회원", value: dashboardData.newMembers },
+            { label: "총 배송건", value: dashboardData.totalDeliveries },
+          ].map((item, idx) => (
+            <Paper
+              key={idx}
+              elevation={3}
+              sx={{
+                flex: 1,
+                minHeight: 120,
+                display: "flex",
+                flexDirection: "column",
+                justifyContent: "center",
+                alignItems: "center",
+                borderRadius: 2,
+              }}
+            >
+              <Typography variant="subtitle1">{item.label}</Typography>
+              <Typography variant="h5" fontWeight="bold">
+                {item.value.toLocaleString()}
+              </Typography>
+            </Paper>
+          ))}
+        </Box>
+
+        <Box
+          sx={{
+            display: "grid",
+            gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" },
+            gap: 2,
+            mb: 4,
+          }}
+        >
+          <Paper sx={{ p: 3, height: { xs: 360, sm: 420, md: 480 }, width: "100%", minWidth: 0, boxSizing: "border-box", overflow: "hidden" }}>
+            <Bar
+              data={bar2Data}
+              options={{
+                ...bar2Options,
+                responsive: true,
+                maintainAspectRatio: false,
+                layout: { padding: 8 },
+                scales: {
+                  x: { grid: { display: false }, ticks: { maxRotation: 0, minRotation: 0, autoSkip: true } },
+                  y: { beginAtZero: true, grid: { drawBorder: false } },
+                },
+                plugins: {
+                  title: { display: true, text: "신규 회원가입", font: { size: 18, weight: "bold" } },
+                  legend: { display: true, position: "bottom" },
+                  tooltip: { mode: "index", intersect: false },
+                },
+                categoryPercentage: 0.6,
+                barPercentage: 0.8,
+              }}
+            />
           </Paper>
-        ))}
+
+          <Paper sx={{ p: 3, height: { xs: 360, sm: 420, md: 480 }, width: "100%", minWidth: 0, boxSizing: "border-box", overflow: "hidden" }}>
+            <Bar
+              data={barData}
+              options={{
+                ...barOptions,
+                responsive: true,
+                maintainAspectRatio: false,
+                layout: { padding: 8 },
+                scales: {
+                  x: { grid: { display: false }, ticks: { maxRotation: 0, minRotation: 0, autoSkip: true } },
+                  y: { beginAtZero: true, grid: { drawBorder: false } },
+                },
+                plugins: {
+                  title: { display: true, text: "월별 배송 내역", font: { size: 18, weight: "bold" } },
+                  legend: { display: true, position: "bottom" },
+                  tooltip: { mode: "index", intersect: false },
+                },
+                categoryPercentage: 0.6,
+                barPercentage: 0.8,
+              }}
+            />
+          </Paper>
+        </Box>
       </Box>
-
-      <Grid container spacing={2} mb={4} >
-        <Grid item xs={12} md={6}>
-          <Paper sx={{ p: 2, height: 400 }}>
-            <Bar data={bar2Data} options={bar2Options} />
-          </Paper>
-        </Grid>
-
-        <Grid item xs={12} md={6}>
-          <Paper sx={{ p: 2, height: 400 }}>
-            <Bar data={barData} options={barOptions} />
-          </Paper>
-        </Grid>
-      </Grid >
-      
-      <Paper sx={{ p: 2, mb: 3 }}>
-        <Typography fontSize={16} fontWeight="bold" mb={2}>
-          현재 배송 진행건
-        </Typography>
-        <Box component="ul" sx={{ pl: 2, m: 0 }}>
-          {dashboardData.currentDeliveries.map((item, idx) => (
-            <li key={idx}>
-              <Typography fontSize={14}>{item}</Typography>
-            </li>
-          ))}
-        </Box>
-      </Paper>
-
-      <Paper sx={{ p: 2 }}>
-        <Typography fontSize={16} fontWeight="bold" mb={2}>
-          지난 배송 내역
-        </Typography>
-        <Box component="ul" sx={{ pl: 2, m: 0 }}>
-          {dashboardData.pastDeliveries.map((item, idx) => (
-            <li key={idx}>
-              <Typography fontSize={14}>{item}</Typography>
-            </li>
-          ))}
-        </Box>
-      </Paper>
     </Box>
   );
 };

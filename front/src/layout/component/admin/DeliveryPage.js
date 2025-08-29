@@ -40,6 +40,7 @@ const DeliveryPage = () => {
 
     const handleUserSelect = (user) => {
         setSelectedUser(user);
+        window.selectedUser = user;//테스트~~~
     };
 
     return (
@@ -77,7 +78,7 @@ const DeliveryPage = () => {
                     <TableBody>
                         {userList.length > 0 ? (
                             userList.map((user) => (
-                                <TableRow key={user.email} onClick={() => handleUserSelect(user)} style={{ cursor: 'pointer' }}>
+                                <TableRow key={user.userId} onClick={() => handleUserSelect(user)} style={{ cursor: 'pointer' }}>
                                     <TableCell>{user.name}</TableCell>
                                     <TableCell>{user.email}</TableCell>
                                     <TableCell>{user.phone}</TableCell>
@@ -99,38 +100,56 @@ const DeliveryPage = () => {
                 </Table>
             </Paper>
 
-            {selectedUser && selectedUser.details && (
+            {selectedUser && (selectedUser.details || []).length > 0 ? (
                 <Paper variant="outlined" sx={{ mb: 2, p: 2 }}>
-                    <Table size="small">
-                        <TableHead>
-                            <TableRow>
-                                <TableCell>출발 날짜</TableCell>
-                                <TableCell>출발지</TableCell>
-                                <TableCell>도착지</TableCell>
-                                <TableCell>거리</TableCell>
-                                <TableCell>종류</TableCell>
-                                <TableCell>금액</TableCell>
-                                <TableCell>화물주</TableCell>
-                            </TableRow>
-                        </TableHead>
-                        <TableBody>
-                            {selectedUser.details.map((d, i) => (
-                                <TableRow key={i}>
-                                    <TableCell>{d.date}</TableCell>
-                                    <TableCell>{d.start}</TableCell>
-                                    <TableCell>{d.end}</TableCell>
-                                    <TableCell>{d.distance}</TableCell>
-                                    <TableCell>{d.type}</TableCell>
-                                    <TableCell>{d.amount}</TableCell>
-                                    <TableCell>{d.owner}</TableCell>
+                    <Typography variant="subtitle1" fontWeight="bold" mb={1}>
+                        배송 내역
+                    </Typography>
+                    {selectedUser.details.length === 0 ? (
+                        <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 2 }}>
+                            {selectedUser.userType === 'OWNER' ? '주문 기록이 없습니다(물주)' : '배송 기록이 없습니다(차주)'}
+                        </Typography>
+                    ) : (
+                        <Table size="small">
+                            <TableHead>
+                                <TableRow>
+                                    <TableCell>출발 날짜</TableCell>
+                                    <TableCell>출발지</TableCell>
+                                    <TableCell>도착지</TableCell>
+                                    <TableCell>거리</TableCell>
+                                    <TableCell>종류</TableCell>
+                                    <TableCell>금액</TableCell>
+                                    <TableCell>화물주</TableCell>
                                 </TableRow>
-                            ))}
-                        </TableBody>
-                    </Table>
+                            </TableHead>
+                            <TableBody>
+                                {selectedUser.details.map((d, i) => (
+                                    <TableRow key={i}>
+                                        <TableCell>{d.date}</TableCell>
+                                        <TableCell>{d.start}</TableCell>
+                                        <TableCell>{d.end}</TableCell>
+                                        <TableCell>{d.distance}</TableCell>
+                                        <TableCell>{d.type}</TableCell>
+                                        <TableCell>{d.amount}</TableCell>
+                                        <TableCell>{d.owner}</TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    )}
+                </Paper>
+            ) : selectedUser && (
+                <Paper variant="outlined" sx={{ mb: 2, p: 2 }}>
+                    <Typography variant="subtitle1" fontWeight="bold" mb={1}>
+                        배송 내역
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 2 }}>
+                        {selectedUser.userType === 'OWNER' ? '주문 기록이 없습니다(물주)' : '배송 기록이 없습니다(차주)'}
+                    </Typography>
                 </Paper>
             )}
 
-            {selectedUser && selectedUser.history && (
+            {selectedUser && (selectedUser.history || []).length > 0 ? (
                 <Paper variant="outlined" sx={{ p: 2 }}>
                     <Typography variant="subtitle1" fontWeight="bold" mb={1}>
                         지난 배송 내역
@@ -142,6 +161,15 @@ const DeliveryPage = () => {
                             <Typography>{h.date}</Typography>
                         </Box>
                     ))}
+                </Paper>
+            ) : selectedUser && (
+                <Paper variant="outlined" sx={{ p: 2 }}>
+                    <Typography variant="subtitle1" fontWeight="bold" mb={1}>
+                        지난 배송 내역
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 2 }}>
+                        {selectedUser.userType === 'OWNER' ? '지난 주문 기록이 없습니다(물주)' : '지난 배송 기록이 없습니다(차주)'}
+                    </Typography>
                 </Paper>
             )}
         </Box>

@@ -1,4 +1,3 @@
-//물주 페이지
 import React, { useState, useEffect } from "react";
 import {
     Box,
@@ -17,53 +16,42 @@ import {
     CircularProgress,
 } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
+import { getNoticeList } from "../../../api/noticeApi";
 
 const Notice = () => {
-    const [activeTab, setActiveTab] = useState(0);
     const [currentPage, setCurrentPage] = useState(1);
-    const [users, setUsers] = useState([]);
     const [searchKeyword, setSearchKeyword] = useState("");
     const [isLoading, setIsLoading] = useState(false);
-
-    const handleTabChange = (e, newValue) => {
-        setActiveTab(newValue);
-        setCurrentPage(1);
-    };
+    const [users, setUsers] = useState([]);
+    const [totalPages, setTotalPages] = useState(1);
 
     const handlePageChange = (e, value) => setCurrentPage(value);
 
     const handleSearchChange = (e) => setSearchKeyword(e.target.value);
 
     useEffect(() => {
-        const fetchUsers = async () => {
+        const fetchNotices = async () => {
             setIsLoading(true);
-            setTimeout(() => {
-                setUsers([
-                    {
-                        adminId: "관리자1",
-                        title: "공지 제목1",
-                        content: "공지 내용1",
-                        noticeDate: "2025.08.01",
-                    },
-                    {
-                        adminId: "관리자1",
-                        title: "공지 제목2",
-                        content: "공지 내용2",
-                        noticeDate: "2025.08.01",
-                    },
-                    {
-                        adminId: "관리자3",
-                        title: "공지 제목3",
-                        content: "공지 내용3",
-                        noticeDate: "2025.08.01",
-                    },
-                ]);
+            try {
+                const response = await getNoticeList({ page: currentPage - 1, size: 10, keyword: searchKeyword });
+                setUsers(response.content.map(notice => ({
+                    adminId: notice.authorId,
+                    title: notice.title,
+                    content: notice.content,
+                    noticeDate: new Date(notice.createdAt).toLocaleDateString(),
+                    noticeId: notice.noticeId
+                })));
+                setTotalPages(response.totalPages);
+            } catch (error) {
+                console.error("Failed to fetch notices:", error);
+                setUsers([]);
+            } finally {
                 setIsLoading(false);
-            }, 500);
+            }
         };
 
-        fetchUsers();
-    }, [currentPage, activeTab, searchKeyword]);
+        fetchNotices();
+    }, [currentPage, searchKeyword]);
 
     return (
         <Box flexGrow={1} p={4}>
@@ -72,10 +60,6 @@ const Notice = () => {
                     <Typography variant="h5" fontWeight="bold" mb={1}>
                         공지/문의
                     </Typography>
-                    <Tabs value={activeTab} onChange={handleTabChange} textColor="primary" indicatorColor="primary">
-                        <Tab label="공지사항" />
-                        <Tab label="문의사항" />
-                    </Tabs>
                 </Box>
                 <TextField
                     variant="outlined"
@@ -123,7 +107,7 @@ const Notice = () => {
             )}
 
             <Box display="flex" justifyContent="center" mt={3}>
-                <Pagination count={11} page={currentPage} onChange={handlePageChange} color="primary" />
+                <Pagination count={totalPages} page={currentPage} onChange={handlePageChange} color="primary" />
             </Box>
         </Box>
     );
