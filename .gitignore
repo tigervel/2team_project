@@ -47,3 +47,7 @@ backend/gradlew
 /.taskmaster
 backend/.gitattributes
 backend/.gitattributes
+front/package-lock.json
+front/yarn.lock
+front/yarn.lock
+front/yarn.lock
