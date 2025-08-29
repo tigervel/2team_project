@@ -24,6 +24,7 @@ public class OwnerDeliveryService {
     private final OwnerDeliveryQueryRepository queryRepo;
     private final DeliveryRepository deliveryRepo;
     private final PaymentRepository paymentRepo;
+    private final DeliveryService deliveryService; 
 
     public List<DeliveryRowDTO> getUnpaid(String cargoId) {
         return queryRepo.findUnpaidByCargoId(cargoId);
@@ -37,25 +38,29 @@ public class OwnerDeliveryService {
         return queryRepo.findCompletedByCargoId(cargoId);
     }
 
-    /** 배송 완료 처리 */
     @Transactional
     public void completeByMatchingNo(Long matchingNo, String cargoId) {
-        // 1) matchingNo로 Delivery 찾기(없으면 Payment 찾아서 생성)
-        Optional<Delivery> opt = deliveryRepo.findByMatchingNo(matchingNo);
+        // Delivery가 있으면 사용하고, 없으면 Payment로 생성
+        Delivery delivery = deliveryRepo.findByMatchingNo(matchingNo)
+                .orElseGet(() -> paymentRepo.findByOrderSheet_Matching_MatchingNo(matchingNo)
+                    .map(p -> deliveryRepo.save(
+                        Delivery.builder().payment(p).status(DeliveryStatus.PENDING).build()
+                    ))
+                    .orElseThrow(() -> new IllegalArgumentException("결제 정보가 없습니다."))
+                );
 
-        Delivery delivery = opt.orElseGet(() -> {
-            // Delivery가 없으면 Payment를 찾고 새로 만든다.
-            Payment p = paymentRepo.findByOrderSheet_Matching_MatchingNo(matchingNo)
-                    .orElseThrow(() -> new IllegalArgumentException("결제 정보가 없습니다."));
-            Delivery d = Delivery.builder()
-                    .payment(p)
-                    .status(DeliveryStatus.PENDING)
-                    .build();
-            return deliveryRepo.save(d);
-        });
+        deliveryService.changeStatusCompleted(delivery.getDeliveryNo());
+    }
+    @Transactional
+    public void markInTransit(Long matchingNo, String cargoId) {
+        var delivery = deliveryRepo
+            .findByMatchingNoAndCargoId(matchingNo, cargoId)
+            .orElseGet(() -> {
+                var p = paymentRepo.findByOrderSheet_Matching_MatchingNo(matchingNo)
+                        .orElseThrow(() -> new IllegalArgumentException("결제 정보가 없습니다."));
+                return deliveryRepo.save(Delivery.builder().payment(p).build());
+            });
 
-        // 2) 완료로 전환
-        delivery.markCompleted();
-        // JPA dirty checking
+        delivery.markInTransit(); // 상태 PENDING -> IN_TRANSIT
     }
 }

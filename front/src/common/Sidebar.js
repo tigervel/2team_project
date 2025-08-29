@@ -1,7 +1,7 @@
 // Sidebar.js
 import React, { useEffect, useState } from 'react';
 import {
-  Drawer, List, ListItem, ListItemIcon, ListItemText,
+  Drawer, List, ListItemIcon, ListItemText, ListItemButton,
   Typography, Avatar, Divider, Box
 } from '@mui/material';
 import { NavLink } from 'react-router-dom';
@@ -13,7 +13,7 @@ import axios from 'axios';
 
 const drawerWidth = 240;
 
-// 백엔드 베이스 URL
+// === API 베이스 ===
 const API_BASE =
   import.meta?.env?.VITE_API_BASE ||
   process.env.REACT_APP_API_BASE ||
@@ -24,13 +24,12 @@ const DEFAULT_AVATAR = '/image/placeholders/avatar.svg';
 // 파일명/웹경로 모두 처리
 const normalizeProfileUrl = (v) => {
   if (!v) return null;
-  if (v.startsWith('http')) return v;
-  if (v.startsWith('/g2i4/uploads/')) return `${API_BASE}${v}`;
-  // 파일명만 온 경우
+  if (String(v).startsWith('http')) return v;
+  if (String(v).startsWith('/g2i4/uploads/')) return `${API_BASE}${v}`;
   return `${API_BASE}/g2i4/uploads/user_profile/${encodeURIComponent(v)}`;
 };
 
-// 토큰 집계
+// 토큰 고르기
 const pickToken = () =>
   localStorage.getItem('accessToken') ||
   sessionStorage.getItem('accessToken') ||
@@ -38,8 +37,29 @@ const pickToken = () =>
   sessionStorage.getItem('ACCESS_TOKEN') ||
   null;
 
-const Sidebar = ({ ownerId }) => {
+// 유저타입 파싱
+const parseUserType = (raw) => {
+  const t = raw?.userType || raw?.type || raw?.role || raw?.loginType || null;
+  if (t === 'MEMBER' || t === 'CARGO_OWNER') return t;
+  const data = raw?.data || raw?.user || raw?.payload || raw?.profile || raw?.account || raw?.result || {};
+  const guess = data?.userType || data?.type || data?.role || data?.loginType || null;
+  return (guess === 'MEMBER' || guess === 'CARGO_OWNER') ? guess : null;
+};
+
+// cargoId 추출 (백엔드 응답 형태 다양성 대응)
+const pickCargoId = (raw) => {
+  const sources = [
+    raw?.cargoId, raw?.cargo_id, raw?.ownerId, raw?.cid,
+    raw?.data?.cargoId, raw?.data?.cargo_id, raw?.result?.cargoId,
+    raw?.profile?.cargoId, raw?.user?.cargoId,
+  ];
+  return sources.find(Boolean) ?? null;
+};
+
+const Sidebar = () => {
   const [avatarUrl, setAvatarUrl] = useState(null);
+  const [cargoId, setCargoId] = useState(null);
+  const [isOwner, setIsOwner] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -50,10 +70,9 @@ const Sidebar = ({ ownerId }) => {
           headers: token ? { Authorization: `Bearer ${token}` } : {},
         });
 
+        // 프로필 이미지
         const data =
           raw?.data || raw?.user || raw?.payload || raw?.profile || raw?.account || raw?.result || {};
-
-        // 서버가 어떤 키로 주든 커버(webPath 우선)
         const nameOrWebPath =
           data.webPath ||
           data.profileImage ||
@@ -63,10 +82,20 @@ const Sidebar = ({ ownerId }) => {
           '';
 
         const url = normalizeProfileUrl(nameOrWebPath);
-        if (!cancelled) setAvatarUrl(url);
+        const type = parseUserType(raw);
+        const cid = pickCargoId(raw);
+
+        if (!cancelled) {
+          setAvatarUrl(url);
+          setIsOwner(type === 'CARGO_OWNER');
+          setCargoId(cid);
+        }
       } catch {
-        // 실패 시 폴백 아이콘 사용
-        if (!cancelled) setAvatarUrl(null);
+        if (!cancelled) {
+          setAvatarUrl(null);
+          setIsOwner(false);
+          setCargoId(null);
+        }
       }
     })();
     return () => { cancelled = true; };
@@ -84,7 +113,7 @@ const Sidebar = ({ ownerId }) => {
         [`& .MuiDrawer-paper`]: {
           width: drawerWidth,
           boxSizing: 'border-box',
-          top: '79px', // AppBar 높이
+          top: '79px',
           height: 'calc(100% - 79px)',
           position: 'fixed'
         }
@@ -100,7 +129,7 @@ const Sidebar = ({ ownerId }) => {
           src={avatarUrl || DEFAULT_AVATAR}
           imgProps={{
             referrerPolicy: 'no-referrer',
-            onError: () => setAvatarUrl(null), // 이미지 깨지면 아이콘 폴백
+            onError: () => setAvatarUrl(null),
           }}
           alt="프로필"
         >
@@ -113,38 +142,39 @@ const Sidebar = ({ ownerId }) => {
       <List>
         <NavLink to="/mypage" end style={navStyle}>
           {({ isActive }) => (
-            <ListItem button sx={isActive ? activeStyle : null}>
+            <ListItemButton sx={isActive ? activeStyle : null}>
               <ListItemIcon><HomeIcon /></ListItemIcon>
               <ListItemText primary="내 정보" />
-            </ListItem>
+            </ListItemButton>
           )}
         </NavLink>
 
         <NavLink to="/mypage/delivery" style={navStyle}>
           {({ isActive }) => (
-            <ListItem button sx={isActive ? activeStyle : null}>
+            <ListItemButton sx={isActive ? activeStyle : null}>
               <ListItemIcon><DescriptionIcon /></ListItemIcon>
               <ListItemText primary="배송 정보 관리" />
-            </ListItem>
+            </ListItemButton>
           )}
         </NavLink>
 
         <NavLink to="/mypage/edit" style={navStyle}>
           {({ isActive }) => (
-            <ListItem button sx={isActive ? activeStyle : null}>
+            <ListItemButton sx={isActive ? activeStyle : null}>
               <ListItemIcon><PersonIcon /></ListItemIcon>
               <ListItemText primary="회원 정보 수정" />
-            </ListItem>
+            </ListItemButton>
           )}
         </NavLink>
 
-        {ownerId !== null && (
-          <NavLink to="/mypage/vehicle" style={navStyle}>
+        {/* 차주이고 cargoId가 있을 때만 노출 */}
+        {isOwner && cargoId && (
+          <NavLink to={`/mypage/vehicle/${cargoId}`} style={navStyle}>
             {({ isActive }) => (
-              <ListItem button sx={isActive ? activeStyle : null}>
+              <ListItemButton sx={isActive ? activeStyle : null}>
                 <ListItemIcon><BuildIcon /></ListItemIcon>
                 <ListItemText primary="내 차량 관리" />
-              </ListItem>
+              </ListItemButton>
             )}
           </NavLink>
         )}

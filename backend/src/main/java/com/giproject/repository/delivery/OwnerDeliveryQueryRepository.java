@@ -1,69 +1,114 @@
 package com.giproject.repository.delivery;
 
 import java.util.List;
+import java.util.Optional;
 
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.Repository;
+import org.springframework.data.repository.query.Param;
 
 import com.giproject.dto.delivery.DeliveryRowDTO;
-import com.giproject.entity.delivery.DeliveryStatus;
+import com.giproject.entity.delivery.Delivery;
 
 public interface OwnerDeliveryQueryRepository extends Repository<com.giproject.entity.delivery.Delivery, Long> {
 
-    // 미결제: 매칭O, 주문서O, Payment 없음
+    /** 미결제: 매칭 승인됨 + 주문서는 존재 + 해당 주문서에 결제 없음 */
     @Query("""
         select new com.giproject.dto.delivery.DeliveryRowDTO(
-            e.eno, e.cargoType, e.cargoWeight, e.startAddress, e.endAddress, e.startTime,
-            co.cargoName, null, m.matchingNo, null
+            e.eno,
+            e.cargoType,
+            cast(e.cargoWeight as string),
+            e.startAddress,
+            e.endAddress,
+            e.startTime,
+            co.cargoName,
+            null,
+            m.matchingNo,
+            null
         )
-        from Matching m
+        from com.giproject.entity.matching.Matching m
         join m.estimate e
         join m.cargoOwner co
         left join m.orderSheet os
-        left join os.payment p
         where co.cargoId = :cargoId
           and m.isAccepted = true
           and os is not null
-          and p is null
+          and not exists (
+                select p.paymentNo
+                from com.giproject.entity.payment.Payment p
+                where p.orderSheet = os
+          )
         order by e.eno desc
     """)
-    List<DeliveryRowDTO> findUnpaidByCargoId(String cargoId);
+    List<DeliveryRowDTO> findUnpaidByCargoId(@Param("cargoId") String cargoId);
 
-    // 결제됨(진행중/대기): Payment 있음 + Delivery.status != COMPLETED (또는 Delivery가 없으면 PENDING으로 간주하고 생성 시점에 만들게 할 수도 있음)
+    /** 결제됨(대기/배송중): 해당 주문서 결제 있음 + Delivery가 없거나(=대기) / 완료가 아님 */
     @Query("""
         select new com.giproject.dto.delivery.DeliveryRowDTO(
-            e.eno, e.cargoType, e.cargoWeight, e.startAddress, e.endAddress, e.startTime,
-            co.cargoName, d.status, m.matchingNo, d.completTime
+            e.eno,
+            e.cargoType,
+            cast(e.cargoWeight as string),
+            e.startAddress,
+            e.endAddress,
+            e.startTime,
+            co.cargoName,
+            case
+                when d.status is null then com.giproject.entity.delivery.DeliveryStatus.PENDING
+                else d.status
+            end,
+            m.matchingNo,
+            d.completTime
         )
-        from Matching m
+        from com.giproject.entity.matching.Matching m
         join m.estimate e
         join m.cargoOwner co
         join m.orderSheet os
-        join os.payment p
+        join com.giproject.entity.payment.Payment p on p.orderSheet = os
         left join com.giproject.entity.delivery.Delivery d on d.payment = p
         where co.cargoId = :cargoId
           and m.isAccepted = true
           and (d.status is null or d.status <> com.giproject.entity.delivery.DeliveryStatus.COMPLETED)
         order by e.eno desc
     """)
-    List<DeliveryRowDTO> findPaidInProgressByCargoId(String cargoId);
+    List<DeliveryRowDTO> findPaidInProgressByCargoId(@Param("cargoId") String cargoId);
 
-    // 완료: Delivery.status = COMPLETED
+    /** 완료: Delivery.status = COMPLETED */
     @Query("""
         select new com.giproject.dto.delivery.DeliveryRowDTO(
-            e.eno, e.cargoType, e.cargoWeight, e.startAddress, e.endAddress, e.startTime,
-            co.cargoName, d.status, m.matchingNo, d.completTime
+            e.eno,
+            e.cargoType,
+            cast(e.cargoWeight as string),
+            e.startAddress,
+            e.endAddress,
+            e.startTime,
+            co.cargoName,
+            d.status,
+            m.matchingNo,
+            d.completTime
         )
-        from Matching m
+        from com.giproject.entity.matching.Matching m
         join m.estimate e
         join m.cargoOwner co
         join m.orderSheet os
-        join os.payment p
+        join com.giproject.entity.payment.Payment p on p.orderSheet = os
         join com.giproject.entity.delivery.Delivery d on d.payment = p
         where co.cargoId = :cargoId
           and m.isAccepted = true
           and d.status = com.giproject.entity.delivery.DeliveryStatus.COMPLETED
-        order by e.eno desc
+        order by d.completTime desc
     """)
-    List<DeliveryRowDTO> findCompletedByCargoId(String cargoId);
+    List<DeliveryRowDTO> findCompletedByCargoId(@Param("cargoId") String cargoId);
+    
+    @Query("""
+    	    select d
+    	    from Delivery d
+    	    join d.payment p
+    	    join p.orderSheet os
+    	    join os.matching m
+    	    join m.cargoOwner co
+    	    where m.matchingNo = :matchingNo
+    	      and co.cargoId = :cargoId
+    	""")
+    	Optional<Delivery> findByMatchingNoAndCargoId(@Param("matchingNo") Long matchingNo,
+    	                                              @Param("cargoId") String cargoId);
 }

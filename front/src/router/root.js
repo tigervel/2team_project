@@ -9,6 +9,8 @@ import estimateRouter from "./estimateRouter";
 import orderRouter from "./orderRouter";
 import BulletinBoard from "../layout/component/noboard/NoBoard"; // ✅ Import NoBoard Component
 import PostView from "../layout/component/noboard/NoboardPostView";
+import RequireAuth from "../layout/component/auth/RequireAuth";
+
 import WritePost from "../layout/component/noboard/NoboardWritePost";
 const Loading = <div>Loading 중....</div>;
 
@@ -100,8 +102,15 @@ const root = createBrowserRouter([
     },
     {
         path: "mypage",
-        element: <Suspense fallback={Loading}><MyPageLayout /></Suspense>,
-        children: mypageRouter
+        element: <RequireAuth />,                
+        children: [{
+                element: (
+                    <Suspense fallback={Loading}>
+                        <MyPageLayout />
+                    </Suspense>
+                ),
+                children: mypageRouter  
+            }]
     },
     {
         path: "admin",

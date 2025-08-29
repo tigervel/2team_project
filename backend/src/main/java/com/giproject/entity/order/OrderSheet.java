@@ -48,5 +48,4 @@ public class OrderSheet {
 	private String Addressee;
 	private String phone;
 	private String AddresseeEmail;
-	
 }

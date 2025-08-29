@@ -19,8 +19,7 @@ const mypageRouter = [
     element: <Suspense fallback={Loading}><EditMyInform /></Suspense>
   },
   {
-    path: "vehicle",
-    element: <Suspense fallback={Loading}><EditVehicleInform /></Suspense>
+   path: "vehicle/:cargoId", element: <Suspense fallback={Loading}><EditVehicleInform /></Suspense>
   },
   {
     path: "delivery",
@@ -33,7 +32,8 @@ const mypageRouter = [
   {
     path: "order-summary",
     element: <Suspense fallback={Loading}><OrderSummaryReadOnly /></Suspense>
-  }
+  },
+  
 ];
 
 export default mypageRouter;
