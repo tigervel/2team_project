@@ -22,8 +22,8 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class CustomOAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler {
 
-    private final JwtService jwtService;             // ✅ 액세스/리프레시 & 프리필 토큰 생성
-    private final MemberRepository memberRepository; // ✅ 가입 여부 확인
+    private final JwtService jwtService;             // 액세스/리프레시 & 프리필(임시) 토큰 생성
+    private final MemberRepository memberRepository; // 가입 여부 확인
 
     @Value("${frontend.base-url:http://localhost:3000}")
     private String frontendBaseUrl;
@@ -50,16 +50,18 @@ public class CustomOAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHa
             return;
         }
 
-        // 2) 기존 회원이면: 토큰을 URL 해시에 실어 콜백 페이지로 리다이렉트 (프론트가 localStorage에 저장)
+        // 2) 기존 회원: 액세스/리프레시 토큰 발급 → 콜백 페이지로 전달(#hash)
         boolean exists = memberRepository.existsByMemEmail(email);
         if (exists) {
-            Map<String, Object> claims = Map.of("memEmail", email, "provider", provider);
+            Map<String, Object> claims = Map.of(
+                "memEmail", email,
+                "provider", provider
+            );
 
             String access  = jwtService.createAccessToken(claims);
             String refresh = jwtService.createRefreshToken(claims);
 
-            // 해시(#)는 네트워크로 전송되지 않아 쿼리스트링보다 안전하고,
-            // 프론트에서만 읽어 localStorage에 저장할 수 있습니다.
+            // 해시(#)로 전달하면 네트워크/서버 로그에 덜 남고 프론트에서만 읽을 수 있음
             String hash = "#access="  + URLEncoder.encode(access,  StandardCharsets.UTF_8)
                         + "&refresh=" + URLEncoder.encode(refresh, StandardCharsets.UTF_8);
 
@@ -67,11 +69,11 @@ public class CustomOAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHa
             return;
         }
 
-        // 3) 첫 소셜 로그인(미가입): 프리필용 임시 토큰을 해시에 실어 가입 페이지로
+        // 3) 첫 소셜 로그인(미가입): 프리필용 임시 토큰(5분) 발급 → 가입 페이지로 전달(#hash)
         Map<String, Object> prefillClaims = Map.of(
-                "email", email,
-                "provider", provider,
-                "name", name
+            "email", email,
+            "provider", provider,
+            "name", name
         );
         String signupTicket = jwtService.createTempToken(prefillClaims, 5 * 60); // 5분 유효
 

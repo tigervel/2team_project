@@ -18,7 +18,8 @@ import { postAdd, postSaveEs, postSearchFeesBasic, postSearchFeesExtra } from ".
 import useCustomMove from "../../../hooks/useCustomMove";
 import { calculateDistanceBetweenAddresses } from "../common/calculateDistanceBetweenAddresses";
 import { useNavigate } from "react-router-dom";
-import { getAccessToken, parseJwt } from "../../../utils/jwt";
+import { useSelector } from "react-redux";
+import { useRef } from "react";
 
 
 
@@ -57,20 +58,26 @@ const EstimateComponent = () => {
   const { moveToHome } = useCustomMove();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
+  const isDesktop = useMediaQuery('(min-width:1151px)');
   const navigate = useNavigate();
+  const { roles, email } = useSelector(state => state.login);
+  const authChecked = useRef(false);
+
   useEffect(() => {
-    // const token = getAccessToken();
-    // const payload = parseJwt(token);
-    // const roles = payload?.roles || payload?.authorities || [];
+    if (authChecked.current) {
+      return;
+    }
 
-    // const isDriver = Array.isArray(roles)
-    //   ? roles.includes("ROLE_SHIPPER")
-    //   : roles === "ROLE_SHIPPER";
+    const isShipper = roles.includes("ROLE_SHIPPER");
+    const isAdmin = roles.includes("ROLE_ADMIN");
 
-    // if (!token || !isDriver) {
-    //   alert("회원만 작성이 가능합니다.");
-    //   navigate("/", { replace: true });
-    // }
+    if (!email || (!isShipper && !isAdmin)) {
+      authChecked.current = true;
+      alert("화주 또는 관리자만 작성이 가능합니다.");
+      navigate("/", { replace: true });
+      return;
+    }
+
     const fetchData = async () => {
       try {
         const data = await postSearchFeesBasic();
@@ -90,7 +97,7 @@ const EstimateComponent = () => {
       }
     }
     extraFetchData();
-  }, []);
+  }, [roles, email, navigate]);
   useEffect(() => {
     const fee = fees.find(f => f.weight === estimate.cargoWeight) || null
     const base = fee ? Number(fee.initialCharge) : 0;
@@ -144,7 +151,11 @@ const EstimateComponent = () => {
     if ((estimate.distanceKm !== '')) {
       if (estimate.cargoType !== '') {
         if (estimate.cargoWeight !== '') {
-          postAdd(estimate)
+          const estimateToSend = {
+            ...estimate,
+            startTime: estimate.startTime.format('YYYY-MM-DDTHH:mm:ss')
+          };
+          postAdd(estimateToSend)
             .then(result => {
               alert('견적서 제출이 완료되었습니다.')
               moveToHome();
@@ -217,54 +228,52 @@ const EstimateComponent = () => {
         justifyContent="center"
       >
         <Stack
-          direction={isMobile ? "column" : "row"}
-          spacing={4}
-          justifyContent="center"
-          alignItems="flex-start"
-          sx={{ mb: 4 }}
+          direction={isDesktop ? 'row' : 'column'}
+          spacing={2}
+          sx={{
+            width: '100%',
+            maxWidth: isDesktop ? 1064 : (isMobile ? '100%' : 520),
+            alignItems: isMobile ? 'stretch' : 'center',
+            mb: 4,
+            mx: 'auto'
+          }}
         >
           <TextField
             placeholder="출발지 주소"
             name="startAddress"
             value={estimate.startAddress}
-
+            fullWidth
             InputProps={{
               readOnly: true,
               endAdornment: (
                 <InputAdornment position="end">
                   <IconButton onClick={() => handleAddressSearch(addr => (
-                    setEstimate(prev => ({
-                      ...prev, startAddress: addr
-                    }))
+                    setEstimate(prev => ({ ...prev, startAddress: addr }))
                   ))}>
                     <SearchIcon />
                   </IconButton>
                 </InputAdornment>
               ),
             }}
-            sx={{ width: 520 }}
           />
 
           <TextField
             placeholder="도착지 주소"
             name="endAddress"
             value={estimate.endAddress}
-
+            fullWidth
             InputProps={{
               readOnly: true,
               endAdornment: (
                 <InputAdornment position="end">
                   <IconButton onClick={() => handleAddressSearch(addr => (
-                    setEstimate(prev => ({
-                      ...prev, endAddress: addr
-                    }))
+                    setEstimate(prev => ({ ...prev, endAddress: addr }))
                   ))}>
                     <SearchIcon />
                   </IconButton>
                 </InputAdornment>
               ),
             }}
-            sx={{ width: 520 }}
           />
         </Stack>
 
@@ -416,7 +425,7 @@ const EstimateComponent = () => {
 
       {/* 제출 버튼들 */}
       <Stack
-        direction={isMobile ? "column" : "row"}
+        direction="row"
         spacing={2}
         mt={5}
         justifyContent="center"

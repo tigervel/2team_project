@@ -5,43 +5,41 @@ import {
     Chip, Paper
 } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
+import { searchUserForDeliveryPage } from "../../../api/adminApi/adminDeliveryApi";
 
 const DeliveryPage = () => {
     const [tab, setTab] = useState(0);
     const [search, setSearch] = useState("");
+    const [userList, setUserList] = useState([]);
     const [selectedUser, setSelectedUser] = useState(null);
+    const [noResults, setNoResults] = useState(false);
 
-    const handleSearch = (e) => {
-        setSearch(e.target.value);
-        if (e.target.value === "김물주") {
-            setSelectedUser({
-                name: "김물주",
-                email: "mulzu@gmail.com",
-                phone: "010-1234-5678",
-                orders: 3,
-                status: "배송",
-                details: [
-                    {
-                        date: "2025.09.18",
-                        start: "서울특별시 강서구 공항대로 200",
-                        end: "강원특별자치도 춘천시 동산면 근처리 12",
-                        distance: "105KM",
-                        type: "목재",
-                        amount: "559,000원",
-                        owner: "이화주"
-                    }
-                ],
-                history: [
-                    { route: "충주", roend: "부산", date: "2025.02.02"},
-                    { route: "충주", roend: "부산", date: "2025.02.03"},
-                    { route: "충주", roend: "부산", date: "2025.02.04"},
-                    { route: "충주", roend: "부산", date: "2025.02.05"},
-                    { route: "충주", roend: "부산", date: "2025.02.06"},
-                ]
-            });
-        } else {
-            setSelectedUser(null);
+    const handleSearch = async (e) => {
+        const query = e.target.value;
+        setSearch(query);
+        setNoResults(false);
+        setSelectedUser(null);
+
+        if (!query) {
+            setUserList([]);
+            return;
         }
+
+        try {
+            const users = await searchUserForDeliveryPage(query);
+            setUserList(users);
+            if (users.length === 0) {
+                setNoResults(true);
+            }
+        } catch (error) {
+            console.error("Error searching user:", error);
+            setUserList([]);
+            setNoResults(true);
+        }
+    };
+
+    const handleUserSelect = (user) => {
+        setSelectedUser(user);
     };
 
     return (
@@ -77,21 +75,23 @@ const DeliveryPage = () => {
                         </TableRow>
                     </TableHead>
                     <TableBody>
-                        {selectedUser ? (
-                            <TableRow>
-                                <TableCell>{selectedUser.name}</TableCell>
-                                <TableCell>{selectedUser.email}</TableCell>
-                                <TableCell>{selectedUser.phone}</TableCell>
-                                <TableCell>{selectedUser.orders}</TableCell>
-                                <TableCell>
-                                    <Chip label={selectedUser.status} color="warning" size="small" />
-                                </TableCell>
-                                <TableCell>⋯</TableCell>
-                            </TableRow>
+                        {userList.length > 0 ? (
+                            userList.map((user) => (
+                                <TableRow key={user.email} onClick={() => handleUserSelect(user)} style={{ cursor: 'pointer' }}>
+                                    <TableCell>{user.name}</TableCell>
+                                    <TableCell>{user.email}</TableCell>
+                                    <TableCell>{user.phone}</TableCell>
+                                    <TableCell>{user.orders}</TableCell>
+                                    <TableCell>
+                                        <Chip label={user.status} color="warning" size="small" />
+                                    </TableCell>
+                                    <TableCell>⋯</TableCell>
+                                </TableRow>
+                            ))
                         ) : (
                             <TableRow>
                                 <TableCell colSpan={6} align="center">
-                                    ...
+                                    {noResults ? "검색 결과가 없습니다." : "검색어를 입력하세요."}
                                 </TableCell>
                             </TableRow>
                         )}
@@ -99,7 +99,7 @@ const DeliveryPage = () => {
                 </Table>
             </Paper>
 
-            {selectedUser && (
+            {selectedUser && selectedUser.details && (
                 <Paper variant="outlined" sx={{ mb: 2, p: 2 }}>
                     <Table size="small">
                         <TableHead>
@@ -130,7 +130,7 @@ const DeliveryPage = () => {
                 </Paper>
             )}
 
-            {selectedUser && (
+            {selectedUser && selectedUser.history && (
                 <Paper variant="outlined" sx={{ p: 2 }}>
                     <Typography variant="subtitle1" fontWeight="bold" mb={1}>
                         지난 배송 내역

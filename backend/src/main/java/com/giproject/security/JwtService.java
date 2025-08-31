@@ -1,10 +1,15 @@
 package com.giproject.security;
 
-import io.jsonwebtoken.*;
+import com.giproject.dto.cargo.CargoOwnerDTO;
+import com.giproject.dto.member.MemberDTO;
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.Jws;
+import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.stereotype.Service;
 
@@ -13,6 +18,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.Date;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 public class JwtService {
@@ -29,16 +35,16 @@ public class JwtService {
     @Value("${jwt.refresh.expSeconds:604800}") // 7일
     private long refreshExpSeconds;
 
-    // ✅ SecretKey 생성은 하나만
+    // ✅ SecretKey는 공용 메서드 하나로
     private SecretKey key() {
         return Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
     }
 
     // =========================
-    // 임시/프리필 토큰 (소셜 첫가입 컨텍스트)
+    // 소셜 첫가입/프리필용 임시 토큰
     // =========================
 
-    /** 프리필 전용 짧은 토큰 생성 (예: 5분 = 300초) */
+    /** 프리필 전용 짧은 토큰 생성 (예: 300초) */
     public String createTempToken(Map<String, Object> claims, long expiresInSeconds) {
         Instant now = Instant.now();
         return Jwts.builder()
@@ -50,7 +56,7 @@ public class JwtService {
                 .compact();
     }
 
-    /** 프리필 전용 토큰 파싱/검증 → Claim Map 반환 */
+    /** 프리필 전용 토큰 파싱 → Claim Map 반환 */
     public Map<String, Object> parseTempToken(String token) {
         Jws<Claims> jws = Jwts.parser()
                 .requireIssuer(issuer)
@@ -59,7 +65,11 @@ public class JwtService {
                 .parseSignedClaims(token);
         return jws.getPayload();
     }
-    
+
+    // =========================
+    // 액세스 / 리프레시 토큰 (Claim 직접 주입 버전)
+    // =========================
+
     public String createAccessToken(Map<String, Object> claims) {
         Instant now = Instant.now();
         return Jwts.builder()
@@ -71,11 +81,6 @@ public class JwtService {
                 .compact();
     }
 
-    public Claims parseSignupToken(String token) {
-        // 이미 있는 parseToken()이 있다면 그대로 재사용해도 됩니다.
-        return parseToken(token);
-    }
-    
     public String createRefreshToken(Map<String, Object> claims) {
         Instant now = Instant.now();
         return Jwts.builder()
@@ -87,15 +92,35 @@ public class JwtService {
                 .compact();
     }
 
+    /** (필요 시) 가입용 토큰 파서 별칭 */
+    public Claims parseSignupToken(String token) {
+        return parseToken(token);
+    }
+
     // =========================
-    // 액세스 / 리프레시 토큰
+    // 액세스 / 리프레시 토큰 (Authentication 기반)
     // =========================
 
-    public String generateAccessToken(String username) {
+    /** Authentication 기반 액세스 토큰 생성 (email + roles 포함) */
+    public String generateAccessToken(Authentication authentication) {
         Date now = new Date();
         Date exp = new Date(now.getTime() + accessExpSeconds * 1000);
+
+        Object principal = authentication.getPrincipal();
+        String email = "";
+
+        if (principal instanceof MemberDTO) {
+            email = ((MemberDTO) principal).getMemEmail();
+        } else if (principal instanceof CargoOwnerDTO) {
+            email = ((CargoOwnerDTO) principal).getCargoEmail();
+        }
+
         return Jwts.builder()
-                .subject(username)
+                .subject(authentication.getName()) // sub
+                .claim("email", email)              // ✅ 이메일 Claim 포함
+                .claim("roles", authentication.getAuthorities().stream()
+                        .map(GrantedAuthority::getAuthority)
+                        .collect(Collectors.toList()))
                 .issuer(issuer)
                 .issuedAt(now)
                 .expiration(exp)
@@ -103,11 +128,13 @@ public class JwtService {
                 .compact();
     }
 
-    public String generateRefreshToken(String username) {
+    /** Authentication 기반 리프레시 토큰 생성 (민감 Claim 최소화) */
+    public String generateRefreshToken(Authentication authentication) {
         Date now = new Date();
         Date exp = new Date(now.getTime() + refreshExpSeconds * 1000);
+
         return Jwts.builder()
-                .subject(username)
+                .subject(authentication.getName())
                 .issuer(issuer)
                 .issuedAt(now)
                 .expiration(exp)
@@ -117,6 +144,10 @@ public class JwtService {
 
     public long getRefreshExpSeconds() {
         return refreshExpSeconds;
+    }
+
+    public long getAccessExpiresInSeconds() {
+        return accessExpSeconds;
     }
 
     // =========================
@@ -148,9 +179,5 @@ public class JwtService {
     public Authentication toAuthentication(String token, UserDetailsService uds) {
         var user = uds.loadUserByUsername(getUsername(token));
         return new UsernamePasswordAuthenticationToken(user, token, user.getAuthorities());
-    }
-
-    public long getAccessExpiresInSeconds() {
-        return accessExpSeconds;
     }
 }

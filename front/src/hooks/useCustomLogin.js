@@ -59,8 +59,9 @@ const useCustomLogin = () => {
    const loginState = useSelector((state) => state.login);
 
    // 권한/식별자 (기존 필드 유지)
-   const isAdmin = loginState?.role === "ADMIN";
-   const isUser = loginState?.role === "USER";
+   const roles = loginState?.roles || [];
+   const isAdmin = roles.includes("ROLE_ADMIN");
+   const isUser = roles.includes("USER");
    const currentUserId = loginState?.memberId;
 
    // 로그인 여부: 토큰 존재 OR 기존 email 필드

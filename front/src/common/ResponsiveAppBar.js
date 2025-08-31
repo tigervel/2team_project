@@ -14,29 +14,52 @@ import Avatar from '@mui/material/Avatar';
 import Button from '@mui/material/Button';
 import Tooltip from '@mui/material/Tooltip';
 import MenuItem from '@mui/material/MenuItem';
+import axios from 'axios';
 
 import { login as loginAction, logout as logoutAction } from '../slice/loginSlice';
 
-// ✅ 백엔드 베이스 URL
+// ✅ 백엔드 베이스 URL (단일 정의)
 const API_BASE =
-  (typeof import.meta !== "undefined" && import.meta.env?.VITE_API_BASE) ||
+  (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE) ||
   process.env.REACT_APP_API_BASE ||
-  "http://localhost:8080";
+  'http://localhost:8080';
 
 const pages = [
   { label: '견적서 작성', path: '/estimatepage' },
   { label: '운송 접수 사항', path: '/estimatepage/list' },
   { label: '고객지원', path: '/qaboard' },
-  { label: '문의사항', path: '/qaboard' }
+  { label: '공지사항', path: '/noboard' },
 ];
 
-// 요청: settings 삭제하지 않기
 const settings = [
   { label: '마이페이지', path: '/mypage' },
   { label: '주문내역 확인', path: '/mypage' },
   { label: '배송상태', path: '/mypage' },
-  { label: '로그아웃', path: '/logout' }
+  { label: '로그아웃', path: '/logout' },
 ];
+
+const settingsAdmin = [
+  { label: '관리자페이지', path: '/admin' },
+  { label: '회원조회', path: '/admin/memberAll' },
+  { label: '배송상태', path: '/admin/deliveryPage' },
+  { label: '로그아웃', path: '/logout' },
+];
+
+const DEFAULT_AVATAR = '/image/placeholders/avatar.svg';
+
+const pickToken = () =>
+  localStorage.getItem('accessToken') ||
+  sessionStorage.getItem('accessToken') ||
+  localStorage.getItem('ACCESS_TOKEN') ||
+  sessionStorage.getItem('ACCESS_TOKEN') ||
+  null;
+
+const normalizeProfileUrl = (v) => {
+  if (!v) return null;
+  if (v.startsWith('http')) return v;
+  if (v.startsWith('/g2i4/uploads/')) return `${API_BASE}${v}`;
+  return `${API_BASE}/g2i4/uploads/user_profile/${encodeURIComponent(v)}`;
+};
 
 // 간단한 JWT 디코더
 function decodeJwt(token) {
@@ -44,7 +67,10 @@ function decodeJwt(token) {
     const base64Url = token.split('.')[1];
     const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
     const json = decodeURIComponent(
-      atob(base64).split('').map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join('')
+      atob(base64)
+        .split('')
+        .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+        .join('')
     );
     return JSON.parse(json);
   } catch {
@@ -53,61 +79,67 @@ function decodeJwt(token) {
 }
 
 export default function ResponsiveAppBar() {
-  const dispatch  = useDispatch();
-  const navigate  = useNavigate();
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
 
-  const loginState     = useSelector(state => state?.login);
-  const hasReduxLogin  = Boolean(loginState?.email || loginState?.memberId);
+  // Redux 상태
+  const loginState = useSelector((state) => state?.login);
+  const hasReduxLogin = Boolean(loginState?.email || loginState?.memberId);
 
-  const accessToken = (typeof window !== 'undefined')
-    ? localStorage.getItem('accessToken')
-    : null;
+  // 저장된 토큰
+  const accessToken = (typeof window !== 'undefined') ? pickToken() : null;
   const hasToken = Boolean(accessToken);
 
+  // 로그인 여부
   const isLogin = hasReduxLogin || hasToken;
 
-  // ✅ 1) 앱 로드 시: accessToken 없고 refresh 쿠키만 있을 때 사일런트 리프레시
+  // 관리자 여부 계산 (Redux.roles 또는 토큰 payload에서)
+  const calcIsAdmin = () => {
+    const rolesFromRedux = loginState?.roles || loginState?.rolenames || [];
+    const rolesArr = Array.isArray(rolesFromRedux) ? rolesFromRedux : [rolesFromRedux].filter(Boolean);
+
+    if (rolesArr.some((r) => String(r).toUpperCase() === 'ADMIN')) return true;
+
+    const t = pickToken();
+    if (!t) return false;
+    const payload = decodeJwt(t) || {};
+    const tokenRoles = payload.roles || payload.rolenames || payload.authorities || [];
+    const trArr = Array.isArray(tokenRoles) ? tokenRoles : [tokenRoles].filter(Boolean);
+    return trArr.some((r) => String(r).toUpperCase() === 'ADMIN');
+  };
+  const isAdmin = calcIsAdmin();
+
+  const [avatarUrl, setAvatarUrl] = React.useState(null);
+
+  // ✅ 1) 앱 로드 시: accessToken 없고 refreshToken(로컬 저장)만 있을 때 JSON POST 리프레시
   React.useEffect(() => {
     if (hasReduxLogin || accessToken) return;
 
     let aborted = false;
 
-    const tryParseAccessFromResponse = async (res) => {
-      const ct = res.headers.get('content-type') || '';
-      if (ct.includes('application/json')) {
-        const data = await res.json();
-        return data.accessToken || data.access || data.token || null;
-      }
-      const text = await res.text();
-      try {
-        const j = JSON.parse(text);
-        return j.accessToken || j.access || j.token || null;
-      } catch {
-        return text && text.length > 20 ? text : null;
-      }
-    };
-
     const silentRefresh = async () => {
       try {
-        // 보통 POST /api/auth/refresh (쿠키 포함)
-        let res = await fetch(`${API_BASE}/api/auth/refresh`, {
+        const storedRefresh =
+          localStorage.getItem('refreshToken') ||
+          sessionStorage.getItem('refreshToken');
+
+        if (!storedRefresh) return; // 리프레시 토큰이 없으면 종료
+
+        const res = await fetch(`${API_BASE}/api/auth/refresh`, {
           method: 'POST',
-          credentials: 'include',
-          headers: { Accept: 'application/json' }
+          headers: {
+            'Content-Type': 'application/json',
+            Accept: 'application/json',
+          },
+          // 쿠키 미사용 설계 → credentials 불필요
+          body: JSON.stringify({ refreshToken: storedRefresh }),
         });
 
-        // 서버가 GET만 열려있다면 폴백
-        if (!res.ok && res.status !== 401) {
-          res = await fetch(`${API_BASE}/api/auth/refresh`, {
-            method: 'GET',
-            credentials: 'include',
-            headers: { Accept: 'application/json' }
-          });
-        }
+        if (!res.ok) return; // 비로그인/만료 등
 
-        if (!res.ok) return; // 비로그인/만료
+        const data = await res.json().catch(() => ({}));
+        const newAccess = data.accessToken || data.access || data.token || null;
 
-        const newAccess = await tryParseAccessFromResponse(res);
         if (!newAccess || aborted) return;
 
         localStorage.setItem('accessToken', newAccess);
@@ -117,46 +149,93 @@ export default function ResponsiveAppBar() {
             email: payload.email || payload.memEmail || '',
             nickname: payload.name || '',
             pw: '',
-            role: (payload.rolenames && payload.rolenames[0]) || payload.role || 'USER',
+            role:
+              (payload.rolenames && payload.rolenames[0]) ||
+              payload.role ||
+              'USER',
+            roles: payload.roles || payload.rolenames || ['USER'],
             memberId: payload.memId || payload.cargoId || payload.sub || null,
           })
         );
       } catch {
-        // 무시
+        // ignore
       }
     };
 
     silentRefresh();
-    return () => { aborted = true; };
+    return () => {
+      aborted = true;
+    };
   }, [hasReduxLogin, accessToken, dispatch]);
 
   // ✅ 2) 새로고침 시 accessToken으로 Redux 하이드레이트
   React.useEffect(() => {
-    if (!hasReduxLogin && accessToken) {
-      const payload = decodeJwt(accessToken);
+    const t = pickToken();
+    if (isLogin && t) {
+      const payload = decodeJwt(t);
       if (payload) {
         dispatch(
           loginAction({
             email: payload.email || payload.memEmail || '',
             nickname: payload.name || '',
             pw: '',
-            role: (payload.rolenames && payload.rolenames[0]) || payload.role || 'USER',
+            roles: payload.roles || payload.rolenames || ['USER'],
             memberId: payload.memId || payload.cargoId || payload.sub || null,
           })
         );
       }
     }
-  }, [hasReduxLogin, accessToken, dispatch]);
+  }, [isLogin, dispatch]);
 
-  const [anchorElNav, setAnchorElNav]   = React.useState(null);
+  // ✅ 3) 아바타 이미지 로드
+  React.useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      if (!isLogin) {
+        setAvatarUrl(null);
+        return;
+      }
+      try {
+        const token = pickToken();
+        const { data: raw } = await axios.get(`${API_BASE}/g2i4/user/info`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+          withCredentials: true,
+        });
+        const data =
+          raw?.data ||
+          raw?.user ||
+          raw?.payload ||
+          raw?.profile ||
+          raw?.account ||
+          raw?.result ||
+          {};
+        const nameOrWebPath =
+          data?.webPath ||
+          data?.profileImage ||
+          data?.mem_profile_image ||
+          data?.cargo_profile_image ||
+          data?.profile ||
+          '';
+        const url = normalizeProfileUrl(nameOrWebPath);
+        if (!cancelled) setAvatarUrl(url);
+      } catch {
+        if (!cancelled) setAvatarUrl(null);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [isLogin]);
+
+  const [anchorElNav, setAnchorElNav] = React.useState(null);
   const [anchorElUser, setAnchorElUser] = React.useState(null);
 
-  const handleOpenNavMenu   = (e) => setAnchorElNav(e.currentTarget);
-  const handleOpenUserMenu  = (e) => setAnchorElUser(e.currentTarget);
-  const handleCloseNavMenu  = () => setAnchorElNav(null);
+  const handleOpenNavMenu = (e) => setAnchorElNav(e.currentTarget);
+  const handleOpenUserMenu = (e) => setAnchorElUser(e.currentTarget);
+  const handleCloseNavMenu = () => setAnchorElNav(null);
   const handleCloseUserMenu = () => setAnchorElUser(null);
 
-  // ✅ 3) 로그아웃: 서버에도 알림 보내 쿠키 만료 권장
+  // ✅ 4) 로그아웃
   const handleLogout = async () => {
     try {
       localStorage.removeItem('accessToken');
@@ -165,9 +244,10 @@ export default function ResponsiveAppBar() {
       try {
         await fetch(`${API_BASE}/api/auth/logout`, {
           method: 'POST',
-          credentials: 'include'
         });
-      } catch { /* ignore */ }
+      } catch {
+        /* ignore */
+      }
 
       dispatch(logoutAction());
     } finally {
@@ -176,11 +256,12 @@ export default function ResponsiveAppBar() {
     }
   };
 
+  const currentSettings = isAdmin ? settingsAdmin : settings;
+
   return (
     <AppBar position="static" sx={{ zIndex: (t) => t.zIndex.drawer + 1, bgcolor: '#299AF0' }}>
       <Container maxWidth="xl">
         <Toolbar disableGutters>
-
           {/* 데스크톱 로고 */}
           <Typography
             variant="h6"
@@ -194,7 +275,7 @@ export default function ResponsiveAppBar() {
               fontWeight: 700,
               letterSpacing: '.3rem',
               color: 'inherit',
-              textDecoration: 'none'
+              textDecoration: 'none',
             }}
           >
             <img src="/image/logo/KakaoTalk_20250508_113520617.png" alt="Logo" style={{ height: 40 }} />
@@ -244,7 +325,7 @@ export default function ResponsiveAppBar() {
               fontWeight: 700,
               letterSpacing: '.3rem',
               color: 'inherit',
-              textDecoration: 'none'
+              textDecoration: 'none',
             }}
           >
             <img src="/image/logo/KakaoTalk_20250508_113520617.png" alt="Logo" style={{ height: 40 }} />
@@ -270,7 +351,17 @@ export default function ResponsiveAppBar() {
             <Box sx={{ flexGrow: 0 }}>
               <Tooltip title="Open settings">
                 <IconButton onClick={handleOpenUserMenu} sx={{ p: 0 }}>
-                  <Avatar alt="User" src="/image/icon/channels4_profile.jpg" sx={{ width: 48, height: 48 }} />
+                  <Avatar
+                    alt="User"
+                    src={avatarUrl || DEFAULT_AVATAR}
+                    sx={{ width: 48, height: 48 }}
+                    imgProps={{
+                      referrerPolicy: 'no-referrer',
+                      onError: (e) => {
+                        e.currentTarget.src = DEFAULT_AVATAR;
+                      },
+                    }}
+                  />
                 </IconButton>
               </Tooltip>
               <Menu
@@ -283,7 +374,7 @@ export default function ResponsiveAppBar() {
                 open={Boolean(anchorElUser)}
                 onClose={handleCloseUserMenu}
               >
-                {settings.map((s) => {
+                {currentSettings.map((s) => {
                   if (s.label === '로그아웃') {
                     return (
                       <MenuItem key={s.label} onClick={handleLogout}>

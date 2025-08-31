@@ -8,6 +8,14 @@ import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.List;
+
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 @Repository
@@ -25,6 +33,9 @@ public interface MemberRepository extends JpaRepository<Member, String> {
 
     // 아이디로 조회
     Optional<Member> findByMemId(String memId);
+    
+    Optional<Member> findByMemEmail(String memEmail);
+    
 
     // 검색
     List<Member> findByMemIdContainingOrMemNameContaining(String memIdKeyword, String memNameKeyword);
@@ -38,4 +49,9 @@ public interface MemberRepository extends JpaRepository<Member, String> {
     @EntityGraph(attributePaths = { "memberRoleList" })
     @Query("SELECT m FROM Member m WHERE m.memEmail = :memEmail")
     Optional<Member> getWithRolesByEmail(@Param("memEmail") String memEmail);
+
+    long countByMemCreateIdDateTimeAfter(LocalDateTime date);
+
+    @Query("SELECT FUNCTION('DATE_FORMAT', m.memCreateIdDateTime, '%Y-%m'), COUNT(m) FROM Member m GROUP BY FUNCTION('DATE_FORMAT', m.memCreateIdDateTime, '%Y-%m')")
+    List<Object[]> findNewMembersByMonth();
 }

@@ -71,7 +71,9 @@ public class MemberDTO extends User {
                 ? new ArrayList<>(List.of("USER"))
                 : new ArrayList<>(roles);
         // 도메인 역할(화주) 자동 포함해 인가 편의 제공
-        if (!r.contains("SHIPPER")) r.add("SHIPPER");
+        if (m.getUserIndex() != null && m.getUserIndex().getRole() != null) {
+            r.add(m.getUserIndex().getRole().name());
+        }
 
         return new MemberDTO(
             m.getMemId(),

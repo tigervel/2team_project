@@ -1,3 +1,4 @@
+// src/layout/component/users/SignUpComponent.jsx
 import * as React from 'react';
 import ToggleButton from '@mui/material/ToggleButton';
 import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
@@ -8,24 +9,39 @@ import {
 import Visibility from '@mui/icons-material/Visibility';
 import VisibilityOff from '@mui/icons-material/VisibilityOff';
 import SearchIcon from '@mui/icons-material/Search';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import useIdForm from '../../../hooks/useIdForm';
 import usePasswordForm from '../../../hooks/usePasswordForm';
-import EmailVerifyDialog from "../auth/EmailVerifyDialog";
+import EmailVerifyDialog from '../auth/EmailVerifyDialog';
+
+// 백엔드 베이스 URL
+const API_BASE =
+    (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE) ||
+    process.env.REACT_APP_API_BASE ||
+    'http://localhost:8080';
+
+// 해시에 signup_ticket이 실려 온 경우를 대비한 파서
+function getTicketFromHash(hash) {
+    const h = (hash || '').replace(/^#/, '');
+    if (!h) return null;
+    const map = new URLSearchParams(h);
+    return map.get('signup_ticket') || map.get('signupTicket') || map.get('ticket');
+}
 
 const SignUpComponent = () => {
     const navigate = useNavigate();
+    const { hash } = useLocation();
 
     // 사용자 유형 (화주/차주)
     const [alignment, setAlignment] = React.useState('user'); // user=화주, car=차주
     const handleAlignment = (_, v) => { if (v) setAlignment(v); };
-    const role = alignment === 'car' ? 'DRIVER' : 'SHIPPER';
+    const roles = alignment === 'car' ? 'DRIVER' : 'SHIPPER';
 
     // ID 폼 상태
     const { id, handleChange, isIdValid } = useIdForm();
     const [idChecked, setIdChecked] = React.useState(false);
     const [idAvailable, setIdAvailable] = React.useState(null); // true | false | null
-    const [idStatus, setIdStatus] = React.useState('idle'); // idle | checking | available | taken | error
+    const [idStatus, setIdStatus] = React.useState('idle');     // idle | checking | available | taken | error
     const [idTouched, setIdTouched] = React.useState(false);
 
     // 비밀번호 폼 상태
@@ -73,33 +89,49 @@ const SignUpComponent = () => {
     };
 
     // ===============================
-    // 마운트 시 소셜 첫가입 컨텍스트 로드 (이메일 잠금)
+    // 소셜 첫가입 컨텍스트 로드 (이메일/이름 프리필 & 잠금)
+    // - 우선 해시에서 signup_ticket이 왔으면 세션에 저장
+    // - 세션의 signup_ticket로 컨텍스트 요청
     // ===============================
     React.useEffect(() => {
+        const fromHash = getTicketFromHash(hash);
+        if (fromHash) {
+            try {
+                sessionStorage.setItem('signup_ticket', fromHash);
+                // URL 해시 제거 (민감 데이터 흔적 제거)
+                window.history.replaceState({}, document.title, window.location.pathname + window.location.search);
+            } catch { }
+        }
+
+        const ticket = sessionStorage.getItem('signup_ticket');
+        if (!ticket) return; // 일반 가입 플로우
+
         (async () => {
             try {
-                const r = await fetch(`http://localhost:8080/api/auth/social/signup-context`, {
-                    headers: { Accept: 'application/json' },
-                    credentials: 'include', // 쿠키에서 signup_ticket 읽음
-                });
-                if (!r.ok) return; // 토큰 없으면 그냥 일반 가입 흐름
-                const data = await r.json(); // { email, provider }
+                const r = await fetch(
+                    `${API_BASE}/api/auth/social/signup-context?ticket=${encodeURIComponent(ticket)}`,
+                    { headers: { Accept: 'application/json' } }
+                );
+                if (!r.ok) return; // 티켓 만료/없음 → 일반 가입으로
+                const data = await r.json(); // { email, provider, name }
                 if (data?.email) {
                     const [local, ...rest] = String(data.email).split('@');
                     setEmailLocal(local || '');
                     setEmailDomain(rest.join('@') || '');
-                    setEmailVerified(true); // ✅ 서버 이메일이므로 바로 인증 완료 처리
-                    setEmailLocked(true);   // ✅ 읽기전용
+                    setEmailVerified(true); // ✅ 서버 이메일이면 인증 완료 처리
+                    setEmailLocked(true);   // ✅ 읽기 전용
                 }
-            } catch (e) {
+                if (data?.name) {
+                    setName(data.name);
+                }
+            } catch {
                 // 무시: 소셜 컨텍스트 없으면 일반 가입으로
-                // console.warn(e);
             }
         })();
-    }, []);
+    }, [hash]);
 
     // ===============================
-    // ID 중복 확인 (고정 경로: /api/auth/check-id) — 견고 버전
+    // ID 중복 확인 (고정 경로: /api/auth/check-id)
     // ===============================
     const handleCheckId = (() => {
         let reqToken = 0;
@@ -114,12 +146,8 @@ const SignUpComponent = () => {
 
             try {
                 const res = await fetch(
-                    `http://localhost:8080/api/auth/check-id?loginId=${encodeURIComponent(id)}`,
-                    {
-                        method: 'GET',
-                        headers: { Accept: 'application/json' },
-                        credentials: 'include',
-                    }
+                    `${API_BASE}/api/auth/check-id?loginId=${encodeURIComponent(id)}`,
+                    { method: 'GET', headers: { Accept: 'application/json' } }
                 );
 
                 if (myToken !== reqToken) return;
@@ -202,37 +230,71 @@ const SignUpComponent = () => {
         isIdValid &&
         idChecked && idAvailable === true &&
         isPwValid && isPwMatch &&
-        !!fullEmail && emailVerified && // 소셜이면 useEffect에서 true로 세팅됨
+        !!(emailLocked ? (emailLocal && emailDomain) : fullEmail) &&
+        (emailLocked || emailVerified) &&
         name.trim().length > 0 &&
         password1.length >= 8;
 
     // 가입 요청
     const onSubmit = async (e) => {
         e.preventDefault();
-        if (!canSubmit) return;
+        if (!canSubmit || submitting) return;
+
         setSubmitError('');
         setSubmitting(true);
+
         try {
-            const payload = {
-                role,                               // "SHIPPER" or "DRIVER"
-                loginId: id,                        // DTO 키와 동일
+            // 공통 페이로드
+            const payloadBase = {
+                role: roles, // "SHIPPER" | "DRIVER"
+                loginId: id,
                 password: password1,
                 name,
-                email: fullEmail,                   // 서버에서 무시/덮어쓸 수 있음(소셜)
+                email: fullEmail, // (소셜의 경우 서버가 ticket의 email을 우선시)
                 phone,
                 address: `${selectedAddress} ${detailAddress}`.trim()
             };
 
-            // ✅ 소셜 첫가입이면 complete-signup으로, 아니면 기존 signup 사용
-            const submitUrl = emailLocked
-                ? `http://localhost:8080/api/auth/social/complete-signup`
-                : `http://localhost:8080/api/auth/signup`;
+            if (emailLocked) {
+                // ✅ 소셜 첫가입: signup_ticket 포함해 complete-signup 호출
+                const signupTicket = sessionStorage.getItem('signup_ticket');
+                if (!signupTicket) {
+                    setSubmitError('가입 티켓이 없습니다. 소셜 로그인부터 다시 진행해주세요.');
+                    setSubmitting(false);
+                    return;
+                }
 
-            const res = await fetch(submitUrl, {
+                const res = await fetch(`${API_BASE}/api/auth/social/complete-signup`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ signupTicket, ...payloadBase })
+                });
+
+                const text = await res.text();
+                let data;
+                try { data = JSON.parse(text); } catch { data = text; }
+
+                if (!res.ok) {
+                    const msg = Array.isArray(data) ? data.join('\n') : (data || '가입 실패');
+                    setSubmitError(msg);
+                    setSubmitting(false);
+                    return;
+                }
+
+                // 성공 → 토큰 저장 후 홈
+                if (data?.accessToken) localStorage.setItem('accessToken', data.accessToken);
+                if (data?.refreshToken) localStorage.setItem('refreshToken', data.refreshToken);
+                sessionStorage.removeItem('signup_ticket');
+                navigate('/', { replace: true });
+                return;
+            }
+
+            // ✅ 일반 가입: 기존 signup API 사용
+            const res = await fetch(`${API_BASE}/api/auth/signup`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 credentials: 'include',
-                body: JSON.stringify(payload),
+                body: JSON.stringify(payloadBase)
             });
 
             const text = await res.text();
@@ -242,11 +304,12 @@ const SignUpComponent = () => {
             if (!res.ok) {
                 const msg = Array.isArray(data) ? data.join('\n') : (data || '가입 실패');
                 setSubmitError(msg);
+                setSubmitting(false);
                 return;
             }
 
-            // 성공: 메인으로 이동
-            navigate('/', { replace: true });
+            // 일반 가입 성공 UX (필요시 로그인 페이지로 이동하거나 자동 로그인 로직 추가)
+            navigate('/login?joined=1', { replace: true });
         } catch (err) {
             console.error(err);
             setSubmitError('네트워크 오류가 발생했습니다.');
@@ -358,8 +421,8 @@ const SignUpComponent = () => {
                         label="Password 재입력"
                     />
                     {pw2Touched && password2 !== '' && (
-                        <Typography color={isPwMatch ? "success.main" : "error"} variant="caption">
-                            {isPwMatch ? "비밀번호가 일치합니다." : "비밀번호가 일치하지 않습니다."}
+                        <Typography color={isPwMatch ? 'success.main' : 'error'} variant="caption">
+                            {isPwMatch ? '비밀번호가 일치합니다.' : '비밀번호가 일치하지 않습니다.'}
                         </Typography>
                     )}
                 </FormControl>
@@ -370,7 +433,7 @@ const SignUpComponent = () => {
                         label="Email"
                         value={emailLocal}
                         onChange={(e) => { if (!emailLocked) { setEmailLocal(e.target.value); setEmailVerified(false); } }}
-                        InputProps={{ readOnly: emailLocked }} // ✅ 읽기전용
+                        InputProps={{ readOnly: emailLocked }}
                         sx={{ flex: '1 1 0', mr: 1.3 }}
                     />
                     <Typography sx={{ width: 32, height: 56, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>@</Typography>
@@ -383,20 +446,20 @@ const SignUpComponent = () => {
                             <TextField
                                 {...params}
                                 label="선택"
-                                InputProps={{ ...params.InputProps, readOnly: emailLocked }} // ✅ 읽기전용
+                                InputProps={{ ...params.InputProps, readOnly: emailLocked }}
                             />
                         )}
                         sx={{ flex: '1 1 0' }}
                     />
                     <Button
-                        variant={emailVerified ? "contained" : "outlined"}
-                        color={emailVerified ? "success" : "primary"}
+                        variant={emailVerified ? 'contained' : 'outlined'}
+                        color={emailVerified ? 'success' : 'primary'}
                         size="large"
                         sx={{ height: 56, whiteSpace: 'nowrap' }}
                         onClick={onClickVerifyEmail}
-                        disabled={emailLocked || !canOpenVerify} // ✅ 소셜 첫가입이면 잠금
+                        disabled={emailLocked || !canOpenVerify}
                     >
-                        {emailLocked ? "인증완료" : (emailVerified ? "인증완료" : "인증하기")}
+                        {emailLocked ? '인증완료' : (emailVerified ? '인증완료' : '인증하기')}
                     </Button>
                 </Box>
 

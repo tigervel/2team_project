@@ -22,11 +22,14 @@ public interface EstimateService {
 				.cargoWeight(estimate.getCargoWeight())
 				.cargoType(estimate.getCargoType())
 				.startTime(estimate.getStartTime())
+				.baseCost(estimate.getBaseCost())
+				.specialOption(estimate.getSpecialOption())
+				.distanceCost(estimate.getDistanceCost())
 				.totalCost(estimate.getTotalCost())
 				.isTemp(estimate.isTemp())
 				.matched(estimate.isMatched())
 				.isOrdered(estimate.isOrdered())
-				.memberId(estimate.getMember().getMemId())
+				.memberId(estimate.getMember() != null ? estimate.getMember().getMemId() : null)
 				.build();
 		return dto;
 	}
@@ -39,6 +42,9 @@ public interface EstimateService {
 				.distanceKm(dto.getDistanceKm())
 				.cargoType(dto.getCargoType())
 				.startTime(dto.getStartTime())
+				.baseCost(dto.getBaseCost())
+				.distanceCost(dto.getDistanceCost())
+				.specialOption(dto.getSpecialOption())
 				.totalCost(dto.getTotalCost())
 				.isTemp(dto.isTemp())
 				.matched(dto.isMatched())

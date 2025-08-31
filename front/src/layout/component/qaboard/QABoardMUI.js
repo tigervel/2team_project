@@ -40,26 +40,28 @@ import {
   ExpandMore,
   Lock,
   Visibility,
-  Forum
+  Forum,
+  Campaign as CampaignIcon // Import Campaign icon for notices
 } from '@mui/icons-material';
 import { CircularProgress } from '@mui/material';
 
-// 새로 추가된 컴포넌트들
+// Newly added components
 import AdminResponseForm from './AdminResponseForm';
 import AdminResponseEditForm from './AdminResponseEditForm';
 import QAActionButtons from './QAActionButtons';
 import QAEditForm from './QAEditForm';
 import useCustomLogin from '../../../hooks/useCustomLogin';
 import { getPostVisibility, getActionPermissions } from './qaPermissionUtils';
+import NoboardComponent from '../noboard/NoBoard'; // ✅ Import NoBoard Component
 
 const QABoardMUI = () => {
   // Redux dispatch
   const dispatch = useDispatch();
   
-  // 로그인 상태 및 권한 정보
+  // Login state and permissions
   const { isAdmin, currentUserId, loginState } = useCustomLogin();
 
-  const [activeMainTab, setActiveMainTab] = useState(0);
+  const [activeMainTab, setActiveMainTab] = useState(0); // 0: 공지사항, 1: 문의하기, 2: FAQ
   const [activeCategory, setActiveCategory] = useState('all');
   const [activeFaqCategory, setActiveFaqCategory] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
@@ -75,7 +77,7 @@ const QABoardMUI = () => {
   const [expandedFaqs, setExpandedFaqs] = useState(new Set());
   const [currentFaqPage, setCurrentFaqPage] = useState(1);
 
-  // 새로 추가된 상태들
+  // Newly added states
   const [editingItemId, setEditingItemId] = useState(null);
   const [replyingToId, setReplyingToId] = useState(null);
   const [editingResponseId, setEditingResponseId] = useState(null);
@@ -88,7 +90,7 @@ const QABoardMUI = () => {
   const ITEMS_PER_PAGE = 4;
   const FAQ_ITEMS_PER_PAGE = 5;
 
-  // 공통 userInfo 생성 함수
+  // Common userInfo creation function
   const createUserInfo = (defaultUserName = '익명') => ({
     userId: currentUserId || loginState.memberId || 'anonymous',
     userName: loginState.nickname || defaultUserName
@@ -106,26 +108,26 @@ const QABoardMUI = () => {
   // API로부터 게시글 목록 조회
   const fetchPostList = async () => {
     setLoading(true);
-    setError(null); // 에러 상태 초기화
+    setError(null); // Error state initialization
     try {
       const params = {
         category: activeCategory,
         keyword: searchTerm,
-        page: currentPage - 1, // 백엔드는 0부터 시작
+        page: currentPage - 1, // Backend is 0-indexed
         size: ITEMS_PER_PAGE
       };
       
-      // 현재 로그인한 사용자 정보 생성
+      // Create user info for headers
       const userInfo = createUserInfo();
       
       const response = await qaboardApi.getPostList(params, userInfo);
       
-      // Backend API 응답 형태에 맞게 데이터 변환 (사용자명 디코딩 포함)
+      // Transform backend API response (including decoding usernames)
       const transformedData = response.content.map(item => ({
         id: item.postId,
         title: item.title,
         content: item.content || '',
-        author: item.authorName ? decodeURIComponent(item.authorName) : item.authorName, // 사용자명 디코딩
+        author: item.authorName ? decodeURIComponent(item.authorName) : item.authorName, // Decode username
         authorId: item.authorId || '',
         authorType: item.authorType,
         category: item.category,
@@ -135,7 +137,7 @@ const QABoardMUI = () => {
         isPrivate: item.isPrivate,
         adminResponse: item.adminResponse ? {
           content: item.adminResponse.content,
-          author: item.adminResponse.adminName ? decodeURIComponent(item.adminResponse.adminName) : item.adminResponse.adminName, // 관리자명 디코딩
+          author: item.adminResponse.adminName ? decodeURIComponent(item.adminResponse.adminName) : item.adminResponse.adminName, // Decode admin name
           date: item.adminResponse.createdAt ? item.adminResponse.createdAt.split('T')[0] : ''
         } : null
       }));
@@ -146,7 +148,7 @@ const QABoardMUI = () => {
     } catch (error) {
       console.error('Failed to fetch post list:', error);
       
-      // 에러 타입에 따른 처리
+      // Handle different error types
       let errorMessage = '게시글을 불러오는 중 오류가 발생했습니다.';
       if (error.response && error.response.status === 403) {
         errorMessage = '게시글 조회 권한이 없습니다.';
@@ -160,7 +162,7 @@ const QABoardMUI = () => {
       
       setError(errorMessage);
       
-      // 에러 발생 시 빈 배열로 설정
+      // Set to empty array on error
       setQaData([]);
       setTotalPages(0);
       setTotalElements(0);
@@ -169,10 +171,12 @@ const QABoardMUI = () => {
     }
   };
 
-  // 컴포넌트 마운트 시 데이터 로드
+  // Load data on component mount
   useEffect(() => {
-    fetchPostList();
-  }, [activeCategory, searchTerm, currentPage]);
+    if (activeMainTab === 1) { // Only fetch QA posts if '문의하기' tab is active
+      fetchPostList();
+    }
+  }, [activeCategory, searchTerm, currentPage, activeMainTab]);
 
 
   const faqItems = [
@@ -246,11 +250,11 @@ const QABoardMUI = () => {
     if (newExpanded.has(postId)) {
       newExpanded.delete(postId);
     } else {
-      // 게시글을 처음 열 때 상세 정보 API 호출하여 조회수 증가
+      // When a post is first opened, call the detail API to increment view count
       try {
         const userInfo = createUserInfo();
         await qaboardApi.getPostDetail(postId, userInfo);
-        console.log(`조회수 증가: 게시글 ID ${postId}`);
+        console.log(`View count incremented for post ID: ${postId}`);
       } catch (error) {
         console.error('Failed to fetch post detail for view count:', error);
       }
@@ -288,15 +292,15 @@ const QABoardMUI = () => {
       console.log('Creating post with data:', postData);
       console.log('User info:', userInfo);
       
-      // API 호출하여 게시글 생성
+      // Call API to create post
       const response = await qaboardApi.createPost(postData, userInfo);
       console.log('Post created successfully:', response);
       
-      // 다이얼로그 닫기 및 폼 리셋
+      // Close dialog and reset form
       setIsNewInquiryOpen(false);
       setNewInquiry({ title: '', content: '', category: '', isPrivate: false });
       
-      // 게시글 목록 새로고침
+      // Refresh post list
       fetchPostList();
       
     } catch (error) {
@@ -305,7 +309,7 @@ const QABoardMUI = () => {
     }
   };
 
-  // 새로 추가된 핸들러 함수들
+  // New handler functions
   const handleEdit = (itemId) => {
     setEditingItemId(itemId);
   };
@@ -315,11 +319,11 @@ const QABoardMUI = () => {
       try {
         const userInfo = createUserInfo('사용자');
         
-        // API 호출하여 게시글 삭제
+        // Call API to delete post
         const response = await qaboardApi.deletePost(itemId, userInfo);
         console.log('Post deleted successfully:', response);
         
-        // 게시글 목록 새로고침
+        // Refresh post list
         fetchPostList();
         
       } catch (error) {
@@ -333,7 +337,7 @@ const QABoardMUI = () => {
     setReplyingToId(itemId);
   };
 
-  // 관리자 전용 핸들러 함수들
+  // Admin-only handler functions
   const handleAdminEdit = (itemId) => {
     if (window.confirm('관리자 권한으로 이 게시글을 수정하시겠습니까?')) {
       setEditingItemId(itemId);
@@ -345,11 +349,11 @@ const QABoardMUI = () => {
       try {
         const userInfo = createUserInfo('관리자');
         
-        // API 호출하여 게시글 삭제 (관리자 권한)
+        // Call API to delete post (admin privilege)
         const response = await qaboardApi.deletePost(itemId, userInfo);
         console.log('Post deleted by admin successfully:', response);
         
-        // 게시글 목록 새로고침
+        // Refresh post list
         fetchPostList();
         
       } catch (error) {
@@ -367,11 +371,11 @@ const QABoardMUI = () => {
     try {
       const userInfo = createUserInfo('관리자');
       
-      // API 호출하여 관리자 답변 수정
+      // Call API to update admin response
       const response = await qaboardApi.updateAdminResponse(itemId, updatedResponse, userInfo);
       console.log('Admin response updated successfully:', response);
       
-      // 게시글 목록 새로고침
+      // Refresh post list
       fetchPostList();
       setEditingResponseId(null);
       
@@ -388,7 +392,7 @@ const QABoardMUI = () => {
   const handleSaveEdit = async (updatedItem) => {
     try {
       console.log('handleSaveEdit called with:', updatedItem);
-      const userInfo = createUserInfo(); // 현재 로그인된 사용자 정보 사용
+      const userInfo = createUserInfo(); // Use current logged-in user info
       console.log('userInfo:', userInfo);
       
       const updateData = {
@@ -400,11 +404,11 @@ const QABoardMUI = () => {
       console.log('updateData:', updateData);
       console.log('postId:', updatedItem.id);
       
-      // API 호출하여 게시글 수정
+      // Call API to update post
       const response = await qaboardApi.updatePost(updatedItem.id, updateData, userInfo);
       console.log('Post updated successfully:', response);
       
-      // 게시글 목록 새로고침
+      // Refresh post list
       fetchPostList();
       setEditingItemId(null);
       
@@ -422,11 +426,11 @@ const QABoardMUI = () => {
     try {
       const userInfo = createUserInfo('관리자');
       
-      // API 호출하여 관리자 답변 생성
+      // Call API to create admin response
       const response = await qaboardApi.createAdminResponse(responseData.questionId, responseData, userInfo);
       console.log('Admin response created successfully:', response);
       
-      // 게시글 목록 새로고침
+      // Refresh post list
       fetchPostList();
       setReplyingToId(null);
       
@@ -442,19 +446,21 @@ const QABoardMUI = () => {
 
   const handleTabChange = (event, newValue) => {
     setActiveMainTab(newValue);
+    setCurrentPage(1); // Reset page when changing tabs
+    setSearchTerm(''); // Clear search term when changing tabs
   };
 
-  // 테스트용 로그인 함수들
+  // Test login functions
   const handleTestLogin = (role, userId) => {
     const testLoginData = {
       email: role === 'ADMIN' ? 'admin@test.com' : `user${userId}@test.com`,
-      nickname: role === 'ADMIN' ? 'Admin' : `User${userId}`, // 영어로 변경하여 HTTP 헤더 인코딩 문제 해결
+      nickname: role === 'ADMIN' ? 'Admin' : `User${userId}`, // Changed to English to avoid HTTP header encoding issues
       role: role,
       memberId: role === 'ADMIN' ? 'admin' : userId,
       pw: 'test123'
     };
     
-    // API 호출 대신 직접 Redux state 업데이트
+    // Directly update Redux state
     dispatch(login(testLoginData));
   };
 
@@ -469,7 +475,7 @@ const QABoardMUI = () => {
           궁금한 사항이 있으시면 언제든 문의해주세요
         </Typography>
         
-        {/* 테스트용 로그인 상태 및 버튼들 */}
+        {/* Test Login Status and Buttons */}
         <Box mt={3} p={2} sx={{ backgroundColor: '#f5f5f5', borderRadius: 2 }}>
           <Typography variant="subtitle1" gutterBottom>
             테스트 모드 - 현재 로그인: {loginState.email || '로그인 안됨'} 
@@ -512,6 +518,12 @@ const QABoardMUI = () => {
       {/* Main Tabs */}
       <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
         <Tabs value={activeMainTab} onChange={handleTabChange} centered>
+          <Tab // ✅ New "공지사항" tab
+            icon={<CampaignIcon />} 
+            label="공지사항" 
+            iconPosition="start"
+            sx={{ minHeight: 64, fontSize: '1.1rem' }}
+          />
           <Tab 
             icon={<Forum />} 
             label="문의하기" 
@@ -525,7 +537,11 @@ const QABoardMUI = () => {
         </Tabs>
       </Box>
 
-      {activeMainTab === 0 && (
+      {activeMainTab === 0 && ( // ✅ Render NoboardComponent when "공지사항" tab is active
+        <NoboardComponent />
+      )}
+
+      {activeMainTab === 1 && ( // "문의하기" tab content
         <Box>
           {/* Category Tabs */}
           <Box sx={{ mb: 3 }}>
@@ -586,7 +602,7 @@ const QABoardMUI = () => {
 
               return (
                 <Box key={item.id} mb={2}>
-                  {/* 수정 모드 */}
+                  {/* Edit Mode */}
                   {isEditing && (
                     <QAEditForm
                       item={item}
@@ -597,7 +613,7 @@ const QABoardMUI = () => {
                     />
                   )}
 
-                  {/* 일반 표시 모드 */}
+                  {/* Normal Display Mode */}
                   {!isEditing && (
                     <Card 
                       sx={{ cursor: 'pointer', '&:hover': { boxShadow: 3 } }}
@@ -642,7 +658,7 @@ const QABoardMUI = () => {
                         }
                       />
                       
-                      {/* 내용 표시 (권한에 따라) */}
+                      {/* Content Display (based on permissions) */}
                       {visibility.showContent && (
                         <CardContent sx={{ pt: 0 }}>
                           <Typography 
@@ -660,7 +676,7 @@ const QABoardMUI = () => {
                         </CardContent>
                       )}
 
-                      {/* 관리자 답변 표시 */}
+                      {/* Admin Response Display */}
                       {isExpanded && visibility.showContent && item.adminResponse && (
                         <>
                           <Divider />
@@ -682,7 +698,7 @@ const QABoardMUI = () => {
                         </>
                       )}
 
-                      {/* 작성자 정보 및 조회수 */}
+                      {/* Author Info and View Count */}
                       {visibility.showContent && (
                         <CardContent sx={{ pt: 0 }}>
                           <Box display="flex" justifyContent="space-between" alignItems="center">
@@ -707,7 +723,7 @@ const QABoardMUI = () => {
                         </CardContent>
                       )}
 
-                      {/* 액션 버튼들 */}
+                      {/* Action Buttons */}
                       <QAActionButtons
                         item={item}
                         isAdmin={isAdmin}
@@ -724,7 +740,7 @@ const QABoardMUI = () => {
                     </Card>
                   )}
 
-                  {/* 관리자 답글 작성 폼 */}
+                  {/* Admin Reply Form */}
                   {isReplying && (
                     <AdminResponseForm
                       questionId={item.id}
@@ -734,7 +750,7 @@ const QABoardMUI = () => {
                     />
                   )}
 
-                  {/* 관리자 답변 수정 폼 */}
+                  {/* Admin Response Edit Form */}
                   {isEditingResponse && (
                     <AdminResponseEditForm
                       item={item}
@@ -748,7 +764,7 @@ const QABoardMUI = () => {
             })}
           </Box>
 
-          {/* 에러 상태 표시 */}
+          {/* Error State Display */}
           {!loading && error && (
             <Box textAlign="center" py={6}>
               <Typography color="error" gutterBottom>
@@ -764,7 +780,7 @@ const QABoardMUI = () => {
             </Box>
           )}
 
-          {/* 빈 상태 표시 */}
+          {/* Empty State Display */}
           {!loading && !error && qaData.length === 0 && (
             <Box textAlign="center" py={6}>
               <Typography color="text.secondary" variant="h6" gutterBottom>
@@ -859,7 +875,7 @@ const QABoardMUI = () => {
         </Box>
       )}
 
-      {activeMainTab === 1 && (
+      {activeMainTab === 2 && ( // "FAQ" tab content
         <Box>
           {/* FAQ Category Buttons */}
           <Box sx={{ mb: 3 }}>

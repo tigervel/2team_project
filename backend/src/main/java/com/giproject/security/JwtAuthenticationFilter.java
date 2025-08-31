@@ -51,6 +51,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         "/login/oauth2/**",
 
         // === 정적 리소스 ===
+        "/favicon.ico", "/error", "/",
+        "/h2-console/**", "/uploads/**",
+        "/api/auth/login", "/api/auth/refresh", "/api/auth/signup",
+        "/api/signup/check-id", "/api/email/**", "/api/qaboard/**",
+        "/oauth2/authorization/**", "/login/oauth2/**",
         "/css/**", "/js/**", "/images/**", "/webjars/**",
         "/**/*.css", "/**/*.js", "/**/*.png", "/**/*.jpg", "/**/*.jpeg",
         "/**/*.gif", "/**/*.svg", "/**/*.ico"

@@ -42,6 +42,10 @@ public class CustomUserDetailsService implements UserDetailsService {
                     .orElseThrow(() -> new UsernameNotFoundException("차주 정보 없음: " + username));
             // CargoOwnerDTO에 fromCargoOwner(...) 오버로드가 있어야 합니다 (앞서 추가한 버전)
             return CargoOwnerDTO.fromCargoOwner(c); // UserDetails
+        } else if (idx.getRole() == UserIndex.Role.ADMIN) {
+            Member m = memberRepository.findByMemId(username)
+                    .orElseThrow(() -> new UsernameNotFoundException("관리자 정보 없음: " + username));
+            return MemberDTO.fromMember(m);
         }
 
         throw new UsernameNotFoundException("알 수 없는 역할: " + idx.getRole());
