@@ -98,7 +98,7 @@ export default function ResponsiveAppBar() {
     const rolesFromRedux = loginState?.roles || loginState?.rolenames || [];
     const rolesArr = Array.isArray(rolesFromRedux) ? rolesFromRedux : [rolesFromRedux].filter(Boolean);
 
-     if (rolesArr.some((r) => String(r).toUpperCase().endsWith('ADMIN'))) return true;    
+    if (rolesArr.some((r) => String(r).toUpperCase().endsWith('ADMIN'))) return true;
 
     const t = pickToken();
     if (!t) return false;
@@ -189,44 +189,29 @@ export default function ResponsiveAppBar() {
   }, [isLogin, dispatch]);
 
   // ✅ 3) 아바타 이미지 로드
+  const bust = (url) => (url ? `${url}${url.includes('?') ? '&' : '?'}v=${Date.now()}` : null);
+
   React.useEffect(() => {
     let cancelled = false;
     (async () => {
-      if (!isLogin) {
-        setAvatarUrl(null);
-        return;
-      }
+      if (!isLogin) { setAvatarUrl(null); return; }
       try {
         const token = pickToken();
         const { data: raw } = await axios.get(`${API_BASE}/g2i4/user/info`, {
           headers: token ? { Authorization: `Bearer ${token}` } : {},
           withCredentials: true,
         });
-        const data =
-          raw?.data ||
-          raw?.user ||
-          raw?.payload ||
-          raw?.profile ||
-          raw?.account ||
-          raw?.result ||
-          {};
+        const data = raw?.data || raw?.user || raw?.payload || raw?.profile || raw?.account || raw?.result || {};
         const nameOrWebPath =
-          data?.webPath ||
-          data?.profileImage ||
-          data?.mem_profile_image ||
-          data?.cargo_profile_image ||
-          data?.profile ||
-          '';
+          data?.webPath || data?.profileImage || data?.mem_profile_image || data?.cargo_profile_image || data?.profile || '';
         const url = normalizeProfileUrl(nameOrWebPath);
-        if (!cancelled) setAvatarUrl(url);
+        if (!cancelled) setAvatarUrl(bust(url));
       } catch {
         if (!cancelled) setAvatarUrl(null);
       }
     })();
-    return () => {
-      cancelled = true;
-    };
-  }, [isLogin]);
+    return () => { cancelled = true; };
+  }, [isLogin]); // isLogin 변할 때 재조회
 
   const [anchorElNav, setAnchorElNav] = React.useState(null);
   const [anchorElUser, setAnchorElUser] = React.useState(null);

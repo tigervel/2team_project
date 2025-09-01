@@ -13,6 +13,15 @@ import axios from 'axios';
 
 const drawerWidth = 240;
 
+const getToken = () =>
+  localStorage.getItem('accessToken') ||
+  sessionStorage.getItem('accessToken') ||
+  localStorage.getItem('ACCESS_TOKEN') ||
+  sessionStorage.getItem('ACCESS_TOKEN') || null;
+
+const bust = (url) => (url ? `${url}${url.includes('?') ? '&' : '?'}v=${Date.now()}` : null);
+
+
 // === API 베이스 ===
 const API_BASE =
   import.meta?.env?.VITE_API_BASE ||
@@ -61,45 +70,78 @@ const Sidebar = () => {
   const [cargoId, setCargoId] = useState(null);
   const [isOwner, setIsOwner] = useState(false);
 
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const token = pickToken();
-        const { data: raw } = await axios.get(`${API_BASE}/g2i4/user/info`, {
-          headers: token ? { Authorization: `Bearer ${token}` } : {},
-        });
+const getToken = () =>
+  localStorage.getItem('accessToken') ||
+  sessionStorage.getItem('accessToken') ||
+  localStorage.getItem('ACCESS_TOKEN') ||
+  sessionStorage.getItem('ACCESS_TOKEN') || null;
 
-        // 프로필 이미지
-        const data =
-          raw?.data || raw?.user || raw?.payload || raw?.profile || raw?.account || raw?.result || {};
-        const nameOrWebPath =
-          data.webPath ||
-          data.profileImage ||
-          data.mem_profile_image ||
-          data.cargo_profile_image ||
-          data.profile ||
-          '';
+// 이미지 캐시 버스터
+const bust = (url) => (url ? `${url}${url.includes('?') ? '&' : '?'}v=${Date.now()}` : null);
 
-        const url = normalizeProfileUrl(nameOrWebPath);
-        const type = parseUserType(raw);
-        const cid = pickCargoId(raw);
+// useEffect 교체
+useEffect(() => {
+  let cancelled = false;
 
-        if (!cancelled) {
-          setAvatarUrl(url);
-          setIsOwner(type === 'CARGO_OWNER');
-          setCargoId(cid);
-        }
-      } catch {
-        if (!cancelled) {
-          setAvatarUrl(null);
-          setIsOwner(false);
-          setCargoId(null);
+  const token = getToken();
+  if (!token) {
+    // 나중에 토큰이 생기면 다시 시도 (storage 이벤트 활용)
+    const onStorage = (e) => {
+      if (e.key === 'accessToken' || e.key === 'ACCESS_TOKEN') {
+        const t = getToken();
+        if (t && !cancelled) {
+          // 다시 불러오기
+          (async () => {
+            try {
+              const { data: raw } = await axios.get(`${API_BASE}/g2i4/user/info`, {
+                headers: { Authorization: `Bearer ${t}` },
+              });
+              const data = raw?.data || raw?.user || raw?.payload || raw?.profile || raw?.account || raw?.result || {};
+              const nameOrWebPath =
+                data.webPath || data.profileImage || data.mem_profile_image || data.cargo_profile_image || data.profile || '';
+              const url = normalizeProfileUrl(nameOrWebPath);
+              setAvatarUrl(bust(url));
+              setIsOwner(parseUserType(raw) === 'CARGO_OWNER');
+              setCargoId(pickCargoId(raw));
+            } catch {
+              setAvatarUrl(null);
+              setIsOwner(false);
+              setCargoId(null);
+            }
+          })();
         }
       }
-    })();
-    return () => { cancelled = true; };
-  }, []);
+    };
+    window.addEventListener('storage', onStorage);
+    return () => { cancelled = true; window.removeEventListener('storage', onStorage); };
+  }
+
+  // 토큰이 이미 있으면 즉시 호출
+  (async () => {
+    try {
+      const { data: raw } = await axios.get(`${API_BASE}/g2i4/user/info`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = raw?.data || raw?.user || raw?.payload || raw?.profile || raw?.account || raw?.result || {};
+      const nameOrWebPath =
+        data.webPath || data.profileImage || data.mem_profile_image || data.cargo_profile_image || data.profile || '';
+      const url = normalizeProfileUrl(nameOrWebPath);
+      if (!cancelled) {
+        setAvatarUrl(bust(url));
+        setIsOwner(parseUserType(raw) === 'CARGO_OWNER');
+        setCargoId(pickCargoId(raw));
+      }
+    } catch {
+      if (!cancelled) {
+        setAvatarUrl(null);
+        setIsOwner(false);
+        setCargoId(null);
+      }
+    }
+  })();
+
+  return () => { cancelled = true; };
+}, []); 
 
   const navStyle = { textDecoration: 'none', color: 'inherit' };
   const activeStyle = { backgroundColor: '#e0e0e0' };
