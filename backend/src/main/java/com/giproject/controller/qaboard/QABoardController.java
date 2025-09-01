@@ -23,7 +23,10 @@ import com.giproject.dto.qaboard.QAPostDTO;
 import com.giproject.service.qaboard.AdminResponseService;
 import com.giproject.service.qaboard.QABoardService;
 import com.giproject.service.qaboard.QACategoryService;
+import com.giproject.utils.JwtTokenUtils;
+import com.giproject.annotation.RequirePermission;
 
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
@@ -37,8 +40,10 @@ import lombok.extern.log4j.Log4j2;
  * - 카테고리 조회
  * - 페이지네이션 및 검색
  * 
- * TODO: Spring Security JWT 토큰 기반 인증 적용 필요
- * 현재는 테스트용으로 임시 사용자 정보 사용
+ * JWT 토큰 기반 인증 적용 완료
+ * - Authorization: Bearer {token} 헤더에서 사용자 정보 추출
+ * - sub: authorId, roles: 권한 배열
+ * - Admin 권한 또는 작성자 본인인지 검증
  */
 @RestController
 @RequestMapping("/api/qaboard")
@@ -49,6 +54,7 @@ public class QABoardController {
     private final QABoardService qaBoardService;
     private final AdminResponseService adminResponseService;
     private final QACategoryService qaCategoryService;
+    private final JwtTokenUtils jwtTokenUtils;
 
     /**
      * 게시글 목록 조회
@@ -57,6 +63,7 @@ public class QABoardController {
      * @param keyword 검색어 (선택)
      * @param page 페이지 번호 (0부터 시작, 기본값: 0)
      * @param size 페이지 크기 (기본값: 10)
+     * @param request HTTP 요청 객체 (JWT 토큰 추출용)
      * @return 페이지네이션된 게시글 목록
      */
     @GetMapping("/posts")
@@ -65,24 +72,17 @@ public class QABoardController {
             @RequestParam(value = "keyword", required = false) String keyword,
             @RequestParam(value = "page", defaultValue = "0") int page,
             @RequestParam(value = "size", defaultValue = "10") int size,
-            @RequestHeader(value = "X-User-Id", required = false) String userId,
-            @RequestHeader(value = "X-User-Name", required = false) String userName) {
+            HttpServletRequest request) {
         
-        // URL 인코딩된 사용자명 디코딩
-        if (userName != null) {
-            try {
-                userName = java.net.URLDecoder.decode(userName, "UTF-8");
-            } catch (Exception e) {
-                log.warn("Failed to decode user name: {}", userName);
-            }
-        }
+        log.info("GET /api/qaboard/posts - category: {}, keyword: {}, page: {}, size: {}", 
+                 category, keyword, page, size);
         
-        log.info("GET /api/qaboard/posts - category: {}, keyword: {}, page: {}, size: {}, userId: {}, userName: {}", 
-                 category, keyword, page, size, userId, userName);
+        // JWT 토큰에서 사용자 정보 추출
+        JwtTokenUtils.UserInfo userInfo = jwtTokenUtils.getUserInfoFromRequest(request);
+        String userId = userInfo != null ? userInfo.getAuthorId() : "anonymous";
+        boolean isAdmin = userInfo != null && userInfo.isAdmin();
         
-        // TODO: JWT 토큰에서 사용자 정보 추출
-        // 현재는 테스트용으로 userId로 관리자 권한 판단
-        boolean isAdmin = userId != null && userId.toLowerCase().contains("admin");
+        log.info("JWT에서 추출된 사용자 정보 - userId: {}, isAdmin: {}", userId, isAdmin);
         
         Pageable pageable = PageRequest.of(page, size);
         PageResponseDTO<QAPostDTO.ListResponse> response = 
@@ -95,26 +95,21 @@ public class QABoardController {
      * 게시글 상세 조회
      * 
      * @param postId 게시글 ID
+     * @param request HTTP 요청 객체 (JWT 토큰 추출용)
      * @return 게시글 상세 정보
      */
     @GetMapping("/posts/{postId}")
     public ResponseEntity<QAPostDTO> getPostDetail(@PathVariable("postId") Long postId,
-                                                  @RequestHeader(value = "X-User-Id", required = false) String userId,
-                                                  @RequestHeader(value = "X-User-Name", required = false) String userName) {
-        // URL 인코딩된 사용자명 디코딩
-        if (userName != null) {
-            try {
-                userName = java.net.URLDecoder.decode(userName, "UTF-8");
-            } catch (Exception e) {
-                log.warn("Failed to decode user name: {}", userName);
-            }
-        }
+                                                  HttpServletRequest request) {
         
-        log.info("GET /api/qaboard/posts/{} - userId: {}, userName: {}", postId, userId, userName);
+        log.info("GET /api/qaboard/posts/{}", postId);
         
-        // 사용자 정보에 따른 권한 설정
-        boolean isAdmin = userId != null && userId.toLowerCase().contains("admin");
-        String currentUserId = userId != null ? userId : "anonymous";
+        // JWT 토큰에서 사용자 정보 추출
+        JwtTokenUtils.UserInfo userInfo = jwtTokenUtils.getUserInfoFromRequest(request);
+        String currentUserId = userInfo != null ? userInfo.getAuthorId() : "anonymous";
+        boolean isAdmin = userInfo != null && userInfo.isAdmin();
+        
+        log.info("JWT에서 추출된 사용자 정보 - userId: {}, isAdmin: {}", currentUserId, isAdmin);
         
         // 조회수 증가
         qaBoardService.incrementViewCount(postId);
@@ -127,24 +122,47 @@ public class QABoardController {
      * 게시글 작성
      * 
      * @param createRequest 게시글 작성 요청 데이터
+     * @param request HTTP 요청 객체 (JWT 토큰 추출용)
      * @return 생성된 게시글 정보
      */
     @PostMapping("/posts")
     public ResponseEntity<QAPostDTO> createPost(@Valid @RequestBody QAPostDTO.CreateRequest createRequest,
-                                               @RequestHeader("X-User-Id") String authorId,
-                                               @RequestHeader("X-User-Name") String authorName) {
-        // URL 인코딩된 사용자명 디코딩
+                                               HttpServletRequest request) {
+        
+        log.info("POST /api/qaboard/posts - title: {}", createRequest.getTitle());
+        
         try {
-            authorName = java.net.URLDecoder.decode(authorName, "UTF-8");
+            // Authorization 헤더 확인
+            String authHeader = request.getHeader("Authorization");
+            log.info("Authorization 헤더: {}", authHeader != null ? "Bearer " + authHeader.substring(0, Math.min(20, authHeader.length())) + "..." : "없음");
+            
+            // JWT 토큰에서 사용자 정보 추출
+            JwtTokenUtils.UserInfo userInfo = jwtTokenUtils.getUserInfoFromRequest(request);
+            
+            if (userInfo == null) {
+                log.error("JWT 토큰에서 사용자 정보를 추출할 수 없습니다.");
+                throw new RuntimeException("로그인이 필요합니다. JWT 토큰이 유효하지 않습니다.");
+            }
+            
+            String authorId = userInfo.getAuthorId();
+            if (authorId == null || authorId.trim().isEmpty()) {
+                log.error("JWT 토큰에서 authorId가 없습니다.");
+                throw new RuntimeException("사용자 ID를 확인할 수 없습니다.");
+            }
+            
+            // authorName은 현재 authorId를 사용 (실제로는 사용자 서비스에서 조회해야 함)
+            String authorName = authorId;
+            
+            log.info("JWT에서 추출된 작성자 정보 - authorId: {}, authorName: {}, isAdmin: {}", 
+                     authorId, authorName, userInfo.isAdmin());
+            
+            QAPostDTO response = qaBoardService.createPost(createRequest, authorId, authorName);
+            return ResponseEntity.ok(response);
+            
         } catch (Exception e) {
-            log.warn("Failed to decode author name: {}", authorName);
+            log.error("QA 게시글 작성 중 오류 발생", e);
+            throw new RuntimeException("게시글 작성에 실패했습니다: " + e.getMessage());
         }
-        
-        log.info("POST /api/qaboard/posts - title: {}, authorId: {}, authorName: {}", 
-                 createRequest.getTitle(), authorId, authorName);
-        
-        QAPostDTO response = qaBoardService.createPost(createRequest, authorId, authorName);
-        return ResponseEntity.ok(response);
     }
 
     /**
@@ -152,21 +170,13 @@ public class QABoardController {
      * 
      * @param postId 게시글 ID
      * @param updateRequest 게시글 수정 요청 데이터
+     * @param request HTTP 요청 객체 (JWT 토큰 추출용)
      * @return 수정된 게시글 정보
      */
     @PutMapping("/posts/{postId}")
     public ResponseEntity<QAPostDTO> updatePost(@PathVariable("postId") Long postId,
                                                @Valid @RequestBody QAPostDTO.UpdateRequest updateRequest,
-                                               @RequestHeader("X-User-Id") String userId,
-                                               @RequestHeader("X-User-Name") String userName) {
-        // URL 인코딩된 사용자명 디코딩
-        if (userName != null) {
-            try {
-                userName = java.net.URLDecoder.decode(userName, "UTF-8");
-            } catch (Exception e) {
-                log.warn("Failed to decode user name: {}", userName);
-            }
-        }
+                                               HttpServletRequest request) {
         
         // 상세한 요청 데이터 로깅 (디버깅용)
         log.info("PUT /api/qaboard/posts/{} - Request Details:", postId);
@@ -174,10 +184,17 @@ public class QABoardController {
         log.info("  - Content: '{}' (length: {})", updateRequest.getContent() != null ? updateRequest.getContent().substring(0, Math.min(50, updateRequest.getContent().length())) + "..." : "null", updateRequest.getContent() != null ? updateRequest.getContent().length() : "null");
         log.info("  - Category: '{}'", updateRequest.getCategory());
         log.info("  - IsPrivate: {}", updateRequest.getIsPrivate());
-        log.info("  - UserId: '{}', UserName: '{}'", userId, userName);
         
-        // 사용자 정보에 따른 권한 설정
-        boolean isAdmin = userId != null && userId.toLowerCase().contains("admin");
+        // JWT 토큰에서 사용자 정보 추출
+        JwtTokenUtils.UserInfo userInfo = jwtTokenUtils.getUserInfoFromRequest(request);
+        if (userInfo == null) {
+            throw new RuntimeException("로그인이 필요합니다.");
+        }
+        
+        String userId = userInfo.getAuthorId();
+        boolean isAdmin = userInfo.isAdmin();
+        
+        log.info("JWT에서 추출된 사용자 정보 - userId: {}, isAdmin: {}", userId, isAdmin);
         
         QAPostDTO response = qaBoardService.updatePost(postId, updateRequest, userId, isAdmin);
         return ResponseEntity.ok(response);
@@ -187,25 +204,25 @@ public class QABoardController {
      * 게시글 삭제
      * 
      * @param postId 게시글 ID
+     * @param request HTTP 요청 객체 (JWT 토큰 추출용)
      * @return 성공 메시지
      */
     @DeleteMapping("/posts/{postId}")
     public ResponseEntity<Map<String, String>> deletePost(@PathVariable("postId") Long postId,
-                                                         @RequestHeader("X-User-Id") String userId,
-                                                         @RequestHeader("X-User-Name") String userName) {
-        // URL 인코딩된 사용자명 디코딩
-        if (userName != null) {
-            try {
-                userName = java.net.URLDecoder.decode(userName, "UTF-8");
-            } catch (Exception e) {
-                log.warn("Failed to decode user name: {}", userName);
-            }
+                                                         HttpServletRequest request) {
+        
+        log.info("DELETE /api/qaboard/posts/{}", postId);
+        
+        // JWT 토큰에서 사용자 정보 추출
+        JwtTokenUtils.UserInfo userInfo = jwtTokenUtils.getUserInfoFromRequest(request);
+        if (userInfo == null) {
+            throw new RuntimeException("로그인이 필요합니다.");
         }
         
-        log.info("DELETE /api/qaboard/posts/{} - userId: {}, userName: {}", postId, userId, userName);
+        String userId = userInfo.getAuthorId();
+        boolean isAdmin = userInfo.isAdmin();
         
-        // 사용자 정보에 따른 권한 설정
-        boolean isAdmin = userId != null && userId.toLowerCase().contains("admin");
+        log.info("JWT에서 추출된 사용자 정보 - userId: {}, isAdmin: {}", userId, isAdmin);
         
         qaBoardService.deletePost(postId, userId, isAdmin);
         
@@ -217,25 +234,26 @@ public class QABoardController {
      * 
      * @param page 페이지 번호
      * @param size 페이지 크기
+     * @param request HTTP 요청 객체 (JWT 토큰 추출용)
      * @return 내 게시글 목록
      */
     @GetMapping("/posts/my")
     public ResponseEntity<PageResponseDTO<QAPostDTO.ListResponse>> getMyPosts(
             @RequestParam(value = "page", defaultValue = "0") int page,
             @RequestParam(value = "size", defaultValue = "10") int size,
-            @RequestHeader("X-User-Id") String userId,
-            @RequestHeader("X-User-Name") String userName) {
+            HttpServletRequest request) {
         
-        // URL 인코딩된 사용자명 디코딩
-        if (userName != null) {
-            try {
-                userName = java.net.URLDecoder.decode(userName, "UTF-8");
-            } catch (Exception e) {
-                log.warn("Failed to decode user name: {}", userName);
-            }
+        log.info("GET /api/qaboard/posts/my - page: {}, size: {}", page, size);
+        
+        // JWT 토큰에서 사용자 정보 추출
+        JwtTokenUtils.UserInfo userInfo = jwtTokenUtils.getUserInfoFromRequest(request);
+        if (userInfo == null) {
+            throw new RuntimeException("로그인이 필요합니다.");
         }
         
-        log.info("GET /api/qaboard/posts/my - page: {}, size: {}, userId: {}, userName: {}", page, size, userId, userName);
+        String userId = userInfo.getAuthorId();
+        
+        log.info("JWT에서 추출된 사용자 ID: {}", userId);
         
         Pageable pageable = PageRequest.of(page, size);
         PageResponseDTO<QAPostDTO.ListResponse> response = qaBoardService.getMyPosts(userId, pageable);
@@ -248,29 +266,23 @@ public class QABoardController {
      * 
      * @param postId 게시글 ID
      * @param createRequest 답변 작성 요청 데이터
+     * @param request HTTP 요청 객체 (JWT 토큰 추출용)
      * @return 생성된 답변 정보
      */
+    @RequirePermission(RequirePermission.PermissionType.ADMIN_ONLY)
     @PostMapping("/posts/{postId}/response")
     public ResponseEntity<AdminResponseDTO> createAdminResponse(@PathVariable("postId") Long postId,
                                                                @Valid @RequestBody AdminResponseDTO.CreateRequest createRequest,
-                                                               @RequestHeader("X-User-Id") String userId,
-                                                               @RequestHeader("X-User-Name") String userName) {
-        // URL 인코딩된 사용자명 디코딩
-        if (userName != null) {
-            try {
-                userName = java.net.URLDecoder.decode(userName, "UTF-8");
-            } catch (Exception e) {
-                log.warn("Failed to decode user name: {}", userName);
-            }
-        }
+                                                               HttpServletRequest request) {
         
-        log.info("POST /api/qaboard/posts/{}/response - userId: {}, userName: {}", postId, userId, userName);
+        log.info("POST /api/qaboard/posts/{}/response", postId);
         
-        // 관리자 권한 확인
-        boolean isAdmin = userId != null && userId.toLowerCase().contains("admin");
-        if (!isAdmin) {
-            throw new RuntimeException("관리자 권한이 필요합니다.");
-        }
+        // AOP에서 권한 검증 완료, 사용자 정보만 추출
+        JwtTokenUtils.UserInfo userInfo = jwtTokenUtils.getUserInfoFromRequest(request);
+        String userId = userInfo.getAuthorId();
+        String userName = userId; // TODO: 사용자 서비스에서 실제 이름 조회
+        
+        log.info("관리자 답변 작성 - userId: {}, userName: {}", userId, userName);
         
         AdminResponseDTO response = adminResponseService.createResponse(postId, createRequest, userId, userName);
         return ResponseEntity.ok(response);
@@ -299,29 +311,29 @@ public class QABoardController {
      * 
      * @param postId 게시글 ID
      * @param updateRequest 답변 수정 요청 데이터
+     * @param request HTTP 요청 객체 (JWT 토큰 추출용)
      * @return 수정된 답변 정보
      */
     @PutMapping("/posts/{postId}/response")
     public ResponseEntity<AdminResponseDTO> updateAdminResponse(@PathVariable("postId") Long postId,
                                                                @Valid @RequestBody AdminResponseDTO.UpdateRequest updateRequest,
-                                                               @RequestHeader("X-User-Id") String userId,
-                                                               @RequestHeader("X-User-Name") String userName) {
-        // URL 인코딩된 사용자명 디코딩
-        if (userName != null) {
-            try {
-                userName = java.net.URLDecoder.decode(userName, "UTF-8");
-            } catch (Exception e) {
-                log.warn("Failed to decode user name: {}", userName);
-            }
+                                                               HttpServletRequest request) {
+        
+        log.info("PUT /api/qaboard/posts/{}/response", postId);
+        
+        // JWT 토큰에서 사용자 정보 추출 및 관리자 권한 확인
+        JwtTokenUtils.UserInfo userInfo = jwtTokenUtils.getUserInfoFromRequest(request);
+        if (userInfo == null) {
+            throw new RuntimeException("로그인이 필요합니다.");
         }
         
-        log.info("PUT /api/qaboard/posts/{}/response - userId: {}, userName: {}", postId, userId, userName);
-        
-        // 관리자 권한 확인
-        boolean isAdmin = userId != null && userId.toLowerCase().contains("admin");
-        if (!isAdmin) {
+        if (!userInfo.isAdmin()) {
             throw new RuntimeException("관리자 권한이 필요합니다.");
         }
+        
+        String userId = userInfo.getAuthorId();
+        
+        log.info("JWT에서 추출된 관리자 ID: {}", userId);
         
         AdminResponseDTO response = adminResponseService.updateResponse(postId, updateRequest, userId);
         return ResponseEntity.ok(response);
@@ -331,28 +343,28 @@ public class QABoardController {
      * 관리자 답변 삭제
      * 
      * @param postId 게시글 ID
+     * @param request HTTP 요청 객체 (JWT 토큰 추출용)
      * @return 성공 메시지
      */
     @DeleteMapping("/posts/{postId}/response")
     public ResponseEntity<Map<String, String>> deleteAdminResponse(@PathVariable("postId") Long postId,
-                                                                  @RequestHeader("X-User-Id") String userId,
-                                                                  @RequestHeader("X-User-Name") String userName) {
-        // URL 인코딩된 사용자명 디코딩
-        if (userName != null) {
-            try {
-                userName = java.net.URLDecoder.decode(userName, "UTF-8");
-            } catch (Exception e) {
-                log.warn("Failed to decode user name: {}", userName);
-            }
+                                                                  HttpServletRequest request) {
+        
+        log.info("DELETE /api/qaboard/posts/{}/response", postId);
+        
+        // JWT 토큰에서 사용자 정보 추출 및 관리자 권한 확인
+        JwtTokenUtils.UserInfo userInfo = jwtTokenUtils.getUserInfoFromRequest(request);
+        if (userInfo == null) {
+            throw new RuntimeException("로그인이 필요합니다.");
         }
         
-        log.info("DELETE /api/qaboard/posts/{}/response - userId: {}, userName: {}", postId, userId, userName);
-        
-        // 관리자 권한 확인
-        boolean isAdmin = userId != null && userId.toLowerCase().contains("admin");
-        if (!isAdmin) {
+        if (!userInfo.isAdmin()) {
             throw new RuntimeException("관리자 권한이 필요합니다.");
         }
+        
+        String userId = userInfo.getAuthorId();
+        
+        log.info("JWT에서 추출된 관리자 ID: {}", userId);
         
         adminResponseService.deleteResponse(postId, userId);
         

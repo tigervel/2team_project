@@ -20,7 +20,9 @@ import org.springframework.web.bind.annotation.RestController;
 import com.giproject.dto.noboard.NoticeDTO;
 import com.giproject.dto.noboard.NoticePageResponseDTO;
 import com.giproject.service.noboard.NoticeService;
+import com.giproject.utils.JwtTokenUtils;
 
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
@@ -32,8 +34,10 @@ import lombok.extern.log4j.Log4j2;
  * - 게시글 CRUD
  * - 페이지네이션 및 검색
  * 
- * TODO: Spring Security JWT 토큰 기반 인증 적용 필요
- * 현재는 테스트용으로 임시 사용자 정보 사용 (X-User-Id, X-User-Name 헤더)
+ * JWT 토큰 기반 인증 적용 완료
+ * - Authorization: Bearer {token} 헤더에서 사용자 정보 추출
+ * - sub: authorId, roles: 권한 배열
+ * - Admin 권한 검증 (공지사항은 관리자만 작성/수정/삭제 가능)
  */
 @RestController
 @RequestMapping("/api/notices")
@@ -42,6 +46,7 @@ import lombok.extern.log4j.Log4j2;
 public class NoticeController {
 
     private final NoticeService noticeService;
+    private final JwtTokenUtils jwtTokenUtils;
 
     /**
      * 공지사항 목록 조회
@@ -84,28 +89,31 @@ public class NoticeController {
      * 공지사항 작성 (관리자 전용)
      * 
      * @param createRequest 공지사항 작성 요청 데이터
-     * @param authorId 작성자 ID (관리자)
-     * @param authorName 작성자 이름 (관리자)
+     * @param request HTTP 요청 객체 (JWT 토큰 추출용)
      * @return 생성된 공지사항 정보
      */
     @PostMapping
     public ResponseEntity<NoticeDTO> createNotice(@Valid @RequestBody NoticeDTO.CreateRequest createRequest,
-                                               @RequestHeader("X-User-Id") String authorId,
-                                               @RequestHeader("X-User-Name") String authorName) {
-        // URL 인코딩된 사용자명 디코딩
-        try {
-            authorName = java.net.URLDecoder.decode(authorName, "UTF-8");
-        } catch (Exception e) {
-            log.warn("Failed to decode author name: {}", authorName);
+                                               HttpServletRequest request) {
+        
+        log.info("POST /api/notices - title: {}", createRequest.getTitle());
+        
+        // JWT 토큰에서 사용자 정보 추출 및 관리자 권한 확인
+        JwtTokenUtils.UserInfo userInfo = jwtTokenUtils.getUserInfoFromRequest(request);
+        if (userInfo == null) {
+            throw new RuntimeException("로그인이 필요합니다.");
         }
         
-        log.info("POST /api/notices - title: {}, authorId: {}, authorName: {}", 
-                 createRequest.getTitle(), authorId, authorName);
-        
-        // TODO: 실제 관리자 권한 검증 로직 추가 (Spring Security)
-        if (!authorId.toLowerCase().contains("admin")) {
-            throw new SecurityException("공지사항 작성 권한이 없습니다.");
+        if (!userInfo.isAdmin()) {
+            throw new SecurityException("공지사항 작성 권한이 없습니다. 관리자만 작성 가능합니다.");
         }
+        
+        String authorId = userInfo.getAuthorId();
+        // 프론트엔드에서 입력한 작성자명을 사용 (기본값: authorId)
+        String authorName = (createRequest.getAuthor() != null && !createRequest.getAuthor().trim().isEmpty()) 
+                            ? createRequest.getAuthor().trim() : authorId;
+        
+        log.info("JWT에서 추출된 관리자 정보 - authorId: {}, authorName: {}", authorId, authorName);
 
         NoticeDTO response = noticeService.createNotice(createRequest, authorId, authorName);
         return ResponseEntity.ok(response);
@@ -116,34 +124,31 @@ public class NoticeController {
      * 
      * @param noticeId 공지사항 ID
      * @param updateRequest 공지사항 수정 요청 데이터
-     * @param userId 현재 사용자 ID (관리자)
-     * @param authorName 작성자 이름 (관리자)
+     * @param request HTTP 요청 객체 (JWT 토큰 추출용)
      * @return 수정된 공지사항 정보
      */
     @PutMapping("/{noticeId}")
     public ResponseEntity<NoticeDTO> updateNotice(@PathVariable("noticeId") Long noticeId,
                                                @Valid @RequestBody NoticeDTO.UpdateRequest updateRequest,
-                                               @RequestHeader("X-User-Id") String userId,
-                                               @RequestHeader("X-User-Name") String authorName) {
-        log.info("PUT /api/notices/{} - 헤더 수신 확인 - userId: {}, authorName(인코딩됨): {}", noticeId, userId, authorName);
+                                               HttpServletRequest request) {
         
-        // URL 인코딩된 사용자명 디코딩
-        try {
-            String decodedAuthorName = java.net.URLDecoder.decode(authorName, "UTF-8");
-            log.info("authorName 디코딩 결과: '{}' -> '{}'", authorName, decodedAuthorName);
-            authorName = decodedAuthorName;
-        } catch (Exception e) {
-            log.warn("Failed to decode author name: {}", authorName);
+        log.info("PUT /api/notices/{}", noticeId);
+        
+        // JWT 토큰에서 사용자 정보 추출 (권한 확인은 Service에서 수행)
+        JwtTokenUtils.UserInfo userInfo = jwtTokenUtils.getUserInfoFromRequest(request);
+        if (userInfo == null) {
+            throw new RuntimeException("로그인이 필요합니다.");
         }
         
-        log.info("PUT /api/notices/{} - 최종 전달값 - userId: {}, authorName: {}", noticeId, userId, authorName);
+        String userId = userInfo.getAuthorId();
+        boolean isAdmin = userInfo.isAdmin();
+        // 프론트엔드에서 입력한 작성자명을 사용 (기본값: userId)
+        String authorName = (updateRequest.getAuthor() != null && !updateRequest.getAuthor().trim().isEmpty()) 
+                            ? updateRequest.getAuthor().trim() : userId;
         
-        // TODO: 실제 관리자 권한 검증 로직 추가 (Spring Security)
-        if (!userId.toLowerCase().contains("admin")) {
-            throw new SecurityException("공지사항 수정 권한이 없습니다.");
-        }
+        log.info("JWT에서 추출된 사용자 정보 - userId: {}, authorName: {}, isAdmin: {}", userId, authorName, isAdmin);
 
-        NoticeDTO response = noticeService.updateNotice(noticeId, updateRequest, userId, authorName);
+        NoticeDTO response = noticeService.updateNotice(noticeId, updateRequest, userId, authorName, isAdmin);
         return ResponseEntity.ok(response);
     }
 
@@ -151,20 +156,27 @@ public class NoticeController {
      * 공지사항 삭제 (관리자 전용)
      * 
      * @param noticeId 공지사항 ID
-     * @param userId 현재 사용자 ID (관리자)
+     * @param request HTTP 요청 객체 (JWT 토큰 추출용)
      * @return 성공 메시지
      */
     @DeleteMapping("/{noticeId}")
     public ResponseEntity<Map<String, String>> deleteNotice(@PathVariable("noticeId") Long noticeId,
-                                                         @RequestHeader("X-User-Id") String userId) {
-        log.info("DELETE /api/notices/{} - userId: {}", noticeId, userId);
+                                                         HttpServletRequest request) {
         
-        // TODO: 실제 관리자 권한 검증 로직 추가 (Spring Security)
-        if (!userId.toLowerCase().contains("admin")) {
-            throw new SecurityException("공지사항 삭제 권한이 없습니다.");
+        log.info("DELETE /api/notices/{}", noticeId);
+        
+        // JWT 토큰에서 사용자 정보 추출 (권한 확인은 Service에서 수행)
+        JwtTokenUtils.UserInfo userInfo = jwtTokenUtils.getUserInfoFromRequest(request);
+        if (userInfo == null) {
+            throw new RuntimeException("로그인이 필요합니다.");
         }
+        
+        String userId = userInfo.getAuthorId();
+        boolean isAdmin = userInfo.isAdmin();
+        
+        log.info("JWT에서 추출된 사용자 정보 - userId: {}, isAdmin: {}", userId, isAdmin);
 
-        noticeService.deleteNotice(noticeId, userId);
+        noticeService.deleteNotice(noticeId, userId, isAdmin);
         
         return ResponseEntity.ok(Map.of("message", "공지사항이 성공적으로 삭제되었습니다."));
     }

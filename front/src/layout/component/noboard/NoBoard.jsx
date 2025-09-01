@@ -23,6 +23,7 @@ import {
 } from '@mui/material';
 import { Add as AddIcon } from '@mui/icons-material';
 import { getNotices } from '../../../api/noticeApi';
+import { isCurrentUserAdmin } from '../../../utils/jwtUtils';
 
 const BulletinBoard = () => {
   const navigate = useNavigate();
@@ -33,6 +34,7 @@ const BulletinBoard = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [activeCategory, setActiveCategory] = useState('all');
+  const [isAdmin, setIsAdmin] = useState(false);
 
   // 공지사항 카테고리 정의
   const categories = [
@@ -60,6 +62,11 @@ const BulletinBoard = () => {
     }
   };
 
+  // 관리자 권한 확인
+  useEffect(() => {
+    setIsAdmin(isCurrentUserAdmin());
+  }, []);
+
   useEffect(() => {
     loadNotices(currentPage);
   }, [currentPage, activeCategory]);
@@ -79,34 +86,11 @@ const BulletinBoard = () => {
   return (
     <Container maxWidth="lg" sx={{ py: 4 }}>
       {/* Header */}
-      <Box 
-        sx={{ 
-          bgcolor: 'primary.main',
-          py: 6,
-          px: 3,
-          borderRadius: 2,
-          mb: 4,
-          textAlign: 'center'
-        }}
-      >
-        <Typography 
-          variant="h3" 
-          component="h1" 
-          sx={{ 
-            color: 'primary.contrastText',
-            fontWeight: 'bold',
-            mb: 1
-          }}
-        >
+      <Box textAlign="center" mb={4}>
+        <Typography variant="h3" component="h1" gutterBottom fontWeight="bold">
           공지사항
         </Typography>
-        <Typography 
-          variant="h6" 
-          sx={{ 
-            color: 'primary.contrastText',
-            opacity: 0.8
-          }}
-        >
+        <Typography variant="h6" color="text.secondary">
           최신 업데이트와 중요한 안내사항을 확인하세요
         </Typography>
       </Box>
@@ -118,7 +102,7 @@ const BulletinBoard = () => {
           justifyContent: 'space-between', 
           alignItems: 'center', 
           mb: 3,
-          flexWrap: 'wrap',
+          flexWrap: { xs: 'wrap', sm: 'nowrap' },
           gap: 2
         }}
       >
@@ -127,7 +111,8 @@ const BulletinBoard = () => {
           sx={{ 
             display: 'flex', 
             flexWrap: 'wrap', 
-            gap: 1
+            gap: 1,
+            flex: '1 1 auto'
           }}
         >
           {categories.map((category) => (
@@ -145,19 +130,23 @@ const BulletinBoard = () => {
           ))}
         </Box>
 
-        {/* New Post Button */}
-        <Button 
-          variant="contained" 
-          onClick={handleNewPost}
-          startIcon={<AddIcon />}
-          sx={{ 
-            minWidth: 140,
-            height: 48,
-            borderRadius: 2
-          }}
-        >
-          새 게시글
-        </Button>
+        {/* New Post Button - 관리자만 표시 */}
+        {isAdmin && (
+          <Box sx={{ flex: '0 0 auto' }}>
+            <Button 
+              variant="contained" 
+              onClick={handleNewPost}
+              startIcon={<AddIcon />}
+              sx={{ 
+                minWidth: 140,
+                height: 48,
+                borderRadius: 2
+              }}
+            >
+              새 게시글
+            </Button>
+          </Box>
+        )}
       </Box>
 
       {/* Notice Table */}

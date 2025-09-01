@@ -46,7 +46,7 @@ public class QAPostDTO {
     private LocalDateTime createdAt; // 작성일시 (응답 시에만 포함)
     private LocalDateTime updatedAt; // 수정일시 (응답 시에만 포함)
     private Integer viewCount; // 조회수 (응답 시에만 포함)
-    
+
     // 관리자 답변 정보 (응답 시에만 포함)
     private Boolean hasResponse; // 답변 존재 여부
     private AdminResponseDTO adminResponse; // 관리자 답변 상세 정보

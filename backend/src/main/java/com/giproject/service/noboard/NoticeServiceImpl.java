@@ -95,17 +95,17 @@ public class NoticeServiceImpl implements NoticeService {
 
     @Transactional
     @Override
-    public NoticeDTO updateNotice(Long noticeId, NoticeDTO.UpdateRequest updateRequest, String currentUserId, String authorName) {
+    public NoticeDTO updateNotice(Long noticeId, NoticeDTO.UpdateRequest updateRequest, String currentUserId, String authorName, boolean isAdmin) {
         log.info("=== NoticeService.updateNotice 시작 ===");
-        log.info("파라미터 확인 - noticeId: {}, currentUserId: {}, authorName: '{}'", noticeId, currentUserId, authorName);
+        log.info("파라미터 확인 - noticeId: {}, currentUserId: {}, authorName: '{}', isAdmin: {}", noticeId, currentUserId, authorName, isAdmin);
         log.info("updateRequest 내용 - title: '{}', content: '{}'", updateRequest.getTitle(), updateRequest.getContent());
         
         Notice notice = noticeRepository.findById(noticeId)
                 .orElseThrow(() -> new IllegalArgumentException("공지사항을 찾을 수 없습니다: " + noticeId));
         
-        // 권한 확인 (작성자 본인 또는 시스템 관리자)
-        if (!notice.getAuthorId().equals(currentUserId)) {
-            throw new SecurityException("공지사항 수정 권한이 없습니다.");
+        // 권한 확인 (관리자 또는 작성자 본인)
+        if (!isAdmin && !notice.getAuthorId().equals(currentUserId)) {
+            throw new SecurityException("공지사항 수정 권한이 없습니다. 관리자이거나 작성자 본인이어야 합니다.");
         }
         
         log.info("수정 전 기존 데이터 - authorId: {}, authorName: '{}'", notice.getAuthorId(), notice.getAuthorName());
@@ -126,15 +126,15 @@ public class NoticeServiceImpl implements NoticeService {
 
     @Transactional
     @Override
-    public void deleteNotice(Long noticeId, String currentUserId) {
-        log.info("Deleting notice - noticeId: {} by admin: {}", noticeId, currentUserId);
+    public void deleteNotice(Long noticeId, String currentUserId, boolean isAdmin) {
+        log.info("Deleting notice - noticeId: {} by user: {}, isAdmin: {}", noticeId, currentUserId, isAdmin);
         
         Notice notice = noticeRepository.findById(noticeId)
                 .orElseThrow(() -> new IllegalArgumentException("공지사항을 찾을 수 없습니다: " + noticeId));
         
-        // 권한 확인 (작성자 본인 또는 시스템 관리자)
-        if (!notice.getAuthorId().equals(currentUserId)) {
-            throw new SecurityException("공지사항 삭제 권한이 없습니다.");
+        // 권한 확인 (관리자 또는 작성자 본인)
+        if (!isAdmin && !notice.getAuthorId().equals(currentUserId)) {
+            throw new SecurityException("공지사항 삭제 권한이 없습니다. 관리자이거나 작성자 본인이어야 합니다.");
         }
         
         try {

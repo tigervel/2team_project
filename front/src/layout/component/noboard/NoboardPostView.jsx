@@ -28,6 +28,7 @@ import {
   CalendarToday as CalendarIcon
 } from '@mui/icons-material';
 import { getNoticeDetail, deleteNotice } from '../../../api/noticeApi';
+import { isCurrentUserAdmin, getCurrentUserId } from '../../../utils/jwtUtils';
 
 const PostView = () => {
   const { id } = useParams();
@@ -37,6 +38,9 @@ const PostView = () => {
   const [error, setError] = useState(null);
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
   const [deleteDialog, setDeleteDialog] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState(null);
+  const [canEditDelete, setCanEditDelete] = useState(false);
 
   // 공지사항 상세 로드
   const loadNoticeDetail = async () => {
@@ -65,7 +69,22 @@ const PostView = () => {
     if (id) {
       loadNoticeDetail();
     }
+    // 사용자 정보 초기화
+    const adminStatus = isCurrentUserAdmin();
+    const userId = getCurrentUserId();
+    
+    setIsAdmin(adminStatus);
+    setCurrentUserId(userId);
   }, [id]);
+
+  // notice가 로드된 후 권한 확인
+  useEffect(() => {
+    if (notice && currentUserId !== null) {
+      // 관리자이거나 작성자 본인이면 수정/삭제 가능
+      const canModify = isAdmin || (notice.authorId === currentUserId);
+      setCanEditDelete(canModify);
+    }
+  }, [notice, isAdmin, currentUserId]);
 
   const handleGoBack = () => {
     navigate('/noboard');
@@ -82,9 +101,8 @@ const PostView = () => {
   const handleDeleteConfirm = async () => {
     setDeleteDialog(false);
     try {
-      // 임시로 관리자 권한 설정 (실제로는 로그인 정보에서 가져와야 함)
-      const userInfo = { userId: 'admin', userName: 'Administrator' };
-      await deleteNotice(notice.noticeId, userInfo);
+      // JWT 토큰 기반 인증 사용 (userInfo는 실제로 API에서 JWT 토큰을 사용함)
+      await deleteNotice(notice.noticeId);
       setSnackbar({ open: true, message: '삭제가 완료되었습니다.', severity: 'success' });
       // 성공 메시지 표시 후 1.5초 뒤 목록으로 이동
       setTimeout(() => {
@@ -257,23 +275,25 @@ const PostView = () => {
             목록으로
           </Button>
           
-          <Stack direction="row" spacing={1}>
-            <Button
-              variant="outlined"
-              onClick={handleEdit}
-              startIcon={<EditIcon />}
-            >
-              수정
-            </Button>
-            <Button
-              variant="outlined"
-              color="error"
-              onClick={handleDeleteClick}
-              startIcon={<DeleteIcon />}
-            >
-              삭제
-            </Button>
-          </Stack>
+          {canEditDelete && (
+            <Stack direction="row" spacing={1}>
+              <Button
+                variant="outlined"
+                onClick={handleEdit}
+                startIcon={<EditIcon />}
+              >
+                수정
+              </Button>
+              <Button
+                variant="outlined"
+                color="error"
+                onClick={handleDeleteClick}
+                startIcon={<DeleteIcon />}
+              >
+                삭제
+              </Button>
+            </Stack>
+          )}
         </Box>
       </Container>
 

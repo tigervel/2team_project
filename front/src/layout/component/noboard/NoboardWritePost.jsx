@@ -17,15 +17,19 @@ import {
   Save as SaveIcon
 } from '@mui/icons-material';
 import { getNoticeDetail, createNotice, updateNotice } from '../../../api/noticeApi';
+import { getCurrentUserId } from '../../../utils/jwtUtils';
 
 const WritePost = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const isEditing = Boolean(id);
 
+  // JWT에서 현재 사용자 ID를 가져와 디폴트로 설정
+  const currentUserId = getCurrentUserId() || 'admin';
+
   const [formData, setFormData] = useState({
     title: '',
-    author: '관리자',
+    author: currentUserId, // 디폴트로 authorID 설정
     content: ''
   });
   const [errors, setErrors] = useState({});
@@ -86,22 +90,21 @@ const WritePost = () => {
 
     setLoading(true);
     try {
-      // 사용자가 입력한 작성자명을 userInfo에 설정
-      const userInfo = { userId: 'admin', userName: formData.author };
+      // JWT 토큰 기반 인증 사용 (API에서 자동으로 JWT 토큰 처리)
+      // formData.author 값은 백엔드에서 authorName으로 저장됨
       
       console.log('=== 제출 데이터 확인 ===');
       console.log('isEditing:', isEditing);
       console.log('formData:', formData);
-      console.log('userInfo:', userInfo);
       console.log('게시글 ID:', id);
       
       if (isEditing) {
         console.log('수정 API 호출 중...');
-        await updateNotice(id, formData, userInfo);
+        await updateNotice(id, formData);
         setSnackbar({ open: true, message: '게시글이 성공적으로 수정되었습니다.', severity: 'success' });
       } else {
         console.log('생성 API 호출 중...');
-        await createNotice(formData, userInfo);
+        await createNotice(formData);
         setSnackbar({ open: true, message: '새 게시글이 성공적으로 작성되었습니다.', severity: 'success' });
       }
       

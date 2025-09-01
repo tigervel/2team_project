@@ -52,6 +52,9 @@ public class NoticeDTO {
         
         @NotBlank(message = "내용을 입력해주세요")
         private String content;
+        
+        // 프론트엔드에서 사용자가 입력한 작성자명
+        private String author;
     }
     
     /**
@@ -69,6 +72,9 @@ public class NoticeDTO {
         
         @NotBlank(message = "내용을 입력해주세요")
         private String content;
+        
+        // 프론트엔드에서 사용자가 입력한 작성자명
+        private String author;
         
         // 제목과 내용 trim 처리
         public void setTitle(String title) {

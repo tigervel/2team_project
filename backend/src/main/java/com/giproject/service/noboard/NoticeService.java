@@ -52,18 +52,20 @@ public interface NoticeService {
      * 공지사항 수정
      * @param noticeId 공지사항 ID
      * @param updateRequest 수정 요청 데이터
-     * @param currentUserId 현재 사용자 ID (관리자)
-     * @param authorName 작성자 이름 (관리자)
+     * @param currentUserId 현재 사용자 ID
+     * @param authorName 작성자 이름
+     * @param isAdmin 관리자 권한 여부
      * @return 수정된 공지사항 정보
      */
-    NoticeDTO updateNotice(Long noticeId, NoticeDTO.UpdateRequest updateRequest, String currentUserId, String authorName);
+    NoticeDTO updateNotice(Long noticeId, NoticeDTO.UpdateRequest updateRequest, String currentUserId, String authorName, boolean isAdmin);
 
     /**
      * 공지사항 삭제
      * @param noticeId 공지사항 ID
-     * @param currentUserId 현재 사용자 ID (관리자)
+     * @param currentUserId 현재 사용자 ID
+     * @param isAdmin 관리자 권한 여부
      */
-    void deleteNotice(Long noticeId, String currentUserId);
+    void deleteNotice(Long noticeId, String currentUserId, boolean isAdmin);
 
     /**
      * 공지사항 조회수 증가

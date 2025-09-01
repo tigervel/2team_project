@@ -26,29 +26,32 @@ export const getNoticeDetail = async (noticeId) => {
 };
 
 // 공지사항 생성 (관리자 전용)
-export const createNotice = async (noticeData, userInfo) => {
+export const createNotice = async (noticeData, userInfo = null) => {
+    const token = localStorage.getItem('accessToken');
     const headers = {
         'Content-Type': 'application/json',
-        'X-User-Id': userInfo.userId,
-        'X-User-Name': encodeURIComponent(userInfo.userName || '') // URL 인코딩으로 한국어 문자 처리
+        'Authorization': `Bearer ${token}`
     };
+    
+    console.log('NoBoard createNotice - JWT Token:', token ? 'Present' : 'Missing');
+    console.log('NoBoard createNotice - Notice data:', noticeData);
     
     const res = await axios.post(noticeHost, noticeData, { headers });
     return res.data;
 };
 
 // 공지사항 수정 (관리자 전용)
-export const updateNotice = async (noticeId, noticeData, userInfo) => {
+export const updateNotice = async (noticeId, noticeData, userInfo = null) => {
+    const token = localStorage.getItem('accessToken');
     const headers = {
         'Content-Type': 'application/json',
-        'X-User-Id': userInfo.userId,
-        'X-User-Name': encodeURIComponent(userInfo.userName || '') // URL 인코딩으로 한국어 문자 처리
+        'Authorization': `Bearer ${token}`
     };
     
     console.log('=== updateNotice API 호출 ===');
     console.log('noticeId:', noticeId);
     console.log('noticeData:', noticeData);
-    console.log('userInfo:', userInfo);
+    console.log('JWT Token:', token ? 'Present' : 'Missing');
     console.log('headers:', headers);
     console.log('URL:', `${noticeHost}/${noticeId}`);
     
@@ -67,10 +70,14 @@ export const updateNotice = async (noticeId, noticeData, userInfo) => {
 };
 
 // 공지사항 삭제 (관리자 전용)
-export const deleteNotice = async (noticeId, userInfo) => {
+export const deleteNotice = async (noticeId, userInfo = null) => {
+    const token = localStorage.getItem('accessToken');
     const headers = {
-        'X-User-Id': userInfo.userId
+        'Authorization': `Bearer ${token}`
     };
+    
+    console.log('NoBoard deleteNotice - JWT Token:', token ? 'Present' : 'Missing');
+    console.log('NoBoard deleteNotice - Notice ID:', noticeId);
     
     const res = await axios.delete(`${noticeHost}/${noticeId}`, { headers });
     return res.data;
