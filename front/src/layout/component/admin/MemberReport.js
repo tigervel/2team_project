@@ -1,5 +1,4 @@
-// 신고내역 페이지
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Box,
   Typography,
@@ -11,20 +10,23 @@ import {
   TableRow,
   TableCell,
   TableBody,
-  Checkbox,
-  Chip,
   Pagination,
   CircularProgress,
   Button,
   Switch,
   Stack,
+  TableContainer,
+  Paper,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions
 } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
-
+import { useNavigate, useLocation, NavLink } from "react-router-dom";
 import {
   fetchReports,
   fetchUnreadCount,
-  markReportRead,
 } from "../../../api/adminApi/adminReportsApi";
 
 const MemberReport = () => {
@@ -39,8 +41,26 @@ const MemberReport = () => {
   const [error, setError] = useState("");
   const [unreadCount, setUnreadCount] = useState(0);
 
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [selectedReport, setSelectedReport] = useState(null);
+
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  useEffect(() => {
+    if (location.pathname.includes("/admin/memberOwner")) setActiveTab(1);
+    else if (location.pathname.includes("/admin/memberCowner")) setActiveTab(2);
+    else if (location.pathname.includes("/admin/memberReport")) setActiveTab(3);
+    else if (location.pathname.includes("/admin/memberAdmin")) setActiveTab(4);
+    else setActiveTab(0);
+  }, [location.pathname]);
+
   const handleTabChange = (e, newValue) => {
-    setActiveTab(newValue);
+    if (newValue === 0) navigate("/admin/memberAll");
+    else if (newValue === 1) navigate("/admin/memberOwner");
+    else if (newValue === 2) navigate("/admin/memberCowner");
+    else if (newValue === 3) navigate("/admin/memberReport");
+    else if (newValue === 4) navigate("/admin/memberAdmin");
   };
 
   const fmtDate = (dt) =>
@@ -85,13 +105,20 @@ const MemberReport = () => {
     load();
   }, [page, size, keyword, unreadOnly]);
 
-  const onToggleRead = async (id, currentRead) => {
-    try {
-      await markReportRead(id, !currentRead);
-      await Promise.all([load(), loadUnreadCount()]);
-    } catch (e) {
-      console.error(e);
-      alert("상태 변경 실패");
+  const handleView = (report) => {
+    setSelectedReport(report);
+    setDialogOpen(true);
+  };
+
+  const handleClose = () => {
+    setDialogOpen(false);
+    setSelectedReport(null);
+  };
+
+  const handleSanction = () => {
+    if (!selectedReport) return;
+    if (window.confirm(`정말로 ${selectedReport.targetId} 회원을 탈퇴 처리하시겠습니까?`)) {
+        alert("회원탈퇴 기능은 아직 준비되지 않았습니다.");
     }
   };
 
@@ -103,24 +130,16 @@ const MemberReport = () => {
             회원 관리
           </Typography>
           <Tabs value={activeTab} onChange={handleTabChange} textColor="primary" indicatorColor="primary">
-            <Tab label="전체 회원" />
-            <Tab label="물주" />
-            <Tab label="차주" />
-            <Tab
-              label={unreadCount > 0 ? `신고내역 (${unreadCount})` : "신고내역"}
-            />
-            <Tab label="관리자" />
+            <Tab label="전체 회원" component={NavLink} to="/admin/memberAll" />
+            <Tab label="물주" component={NavLink} to="/admin/memberOwner" />
+            <Tab label="차주" component={NavLink} to="/admin/memberCowner" />
+            <Tab label={`신고내역 ${unreadCount > 0 ? `(${unreadCount})` : ''}`} component={NavLink} to="/admin/memberReport" />
+            <Tab label="관리자" component={NavLink} to="/admin/memberAdmin" />
           </Tabs>
         </Box>
 
         <Stack direction="row" spacing={2} alignItems="center">
-          <Stack direction="row" spacing={1} alignItems="center">
-            <Typography variant="body2">미확인만</Typography>
-            <Switch
-              checked={unreadOnly}
-              onChange={(e) => { setPage(1); setUnreadOnly(e.target.checked); }}
-            />
-          </Stack>
+          
 
           <TextField
             variant="outlined"
@@ -142,62 +161,37 @@ const MemberReport = () => {
       ) : error ? (
         <Typography color="error">{error}</Typography>
       ) : (
-        <Table sx={{ minWidth: 800 }}>
-          <TableHead>
-            <TableRow>
-              <TableCell padding="checkbox"><Checkbox /></TableCell>
-              <TableCell>신고대상</TableCell>
-              <TableCell>신고자</TableCell>
-              <TableCell>신고일</TableCell>
-              <TableCell>사유</TableCell>
-              <TableCell>처리상태</TableCell>
-              <TableCell>읽음</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {rows.map((r, i) => (
-              <TableRow key={r.id ?? i}>
-                <TableCell padding="checkbox"><Checkbox /></TableCell>
-                <TableCell>{r.targetId ?? "-"}</TableCell>
-                <TableCell>{r.reporterId ?? "-"}</TableCell>
-                <TableCell>{fmtDate(r.createdAt)}</TableCell>
-                <TableCell>{r.content ?? "-"}</TableCell>
-                <TableCell>
-                  <Chip
-                    label={r.adminRead ? "처리됨" : "미확인"}
-                    color={r.adminRead ? "default" : "warning"}
-                    size="small"
-                  />
-                </TableCell>
-                <TableCell>
-                  {r.adminRead ? (
-                    <Button
-                      variant="outlined"
-                      size="small"
-                      onClick={() => onToggleRead(r.id, !!r.adminRead)}
-                    >
-                      미확인으로 변경
-                    </Button>
-                  ) : (
-                    <Button
-                      variant="contained"
-                      size="small"
-                      color="warning"
-                      onClick={() => onToggleRead(r.id, !!r.adminRead)}
-                    >
-                      확인
-                    </Button>
-                  )}
-                </TableCell>
-              </TableRow>
-            ))}
-            {rows.length === 0 && (
+        <TableContainer component={Paper}>
+          <Table sx={{ minWidth: 800 }}>
+            <TableHead>
               <TableRow>
-                <TableCell colSpan={7} align="center">데이터가 없습니다.</TableCell>
+                <TableCell>신고대상</TableCell>
+                <TableCell>신고자</TableCell>
+                <TableCell>신고일</TableCell>
+                <TableCell>사유</TableCell>
               </TableRow>
-            )}
-          </TableBody>
-        </Table>
+            </TableHead>
+            <TableBody>
+              {rows.map((r, i) => (
+                <TableRow 
+                  key={r.id ?? i}
+                  onClick={() => handleView(r)}
+                  sx={{ cursor: 'pointer', '&:hover': { backgroundColor: '#f5f5f5' } }}
+                >
+                  <TableCell>{r.targetId ?? "-"}</TableCell>
+                  <TableCell>{r.reporterId ?? "-"}</TableCell>
+                  <TableCell>{fmtDate(r.createdAt)}</TableCell>
+                  <TableCell>{r.content ? `${r.content.substring(0, 40)}...` : "-"}</TableCell>
+                </TableRow>
+              ))}
+              {rows.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={4} align="center">데이터가 없습니다.</TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </TableContainer>
       )}
 
       <Box display="flex" justifyContent="center" mt={3}>
@@ -208,6 +202,27 @@ const MemberReport = () => {
           color="primary"
         />
       </Box>
+
+      {selectedReport && (
+        <Dialog open={dialogOpen} onClose={handleClose} fullWidth maxWidth="sm">
+          <DialogTitle>신고 상세 정보</DialogTitle>
+          <DialogContent dividers>
+              <Typography gutterBottom><b>신고 ID:</b> {selectedReport.id}</Typography>
+              <Typography gutterBottom><b>신고대상:</b> {selectedReport.targetId ?? "-"}</Typography>
+              <Typography gutterBottom><b>신고자:</b> {selectedReport.reporterId ?? "-"}</Typography>
+              <Typography gutterBottom><b>신고일:</b> {fmtDate(selectedReport.createdAt)}</Typography>
+              <Typography gutterBottom><b>처리 상태:</b> {selectedReport.adminRead ? '처리됨' : '미확인'}</Typography>
+              <Typography variant="h6" sx={{ mt: 2 }}>신고 사유:</Typography>
+              <Paper variant="outlined" sx={{ p: 2, mt: 1, whiteSpace: 'pre-wrap', minHeight: '100px' }}>
+                  {selectedReport.content ?? "-"}
+              </Paper>
+          </DialogContent>
+          <DialogActions>
+              <Button onClick={handleClose}>닫기</Button>
+              <Button onClick={handleSanction} color="error" variant="contained">회원탈퇴 처리</Button>
+          </DialogActions>
+        </Dialog>
+      )}
     </Box>
   );
 };

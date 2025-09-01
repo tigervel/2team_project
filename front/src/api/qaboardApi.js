@@ -6,7 +6,7 @@ export const API_SERVER_HOST = "http://localhost:8080";
 const qaHost = `${API_SERVER_HOST}/api/qaboard`;
 
 // 게시글 목록 조회
-export const getPostList = async (params = {}, userInfo = {}) => {
+export const getPostList = async (params = {}, userInfo = {}, isAdmin = false) => {
     const { category, keyword, page = 0, size = 10 } = params;
     
     const queryParams = new URLSearchParams();
@@ -14,6 +14,7 @@ export const getPostList = async (params = {}, userInfo = {}) => {
     if (keyword && keyword.trim() !== '') queryParams.append('keyword', keyword.trim());
     queryParams.append('page', page.toString());
     queryParams.append('size', size.toString());
+    if (isAdmin) queryParams.append('isAdmin', 'true');
     
     // 사용자 정보를 헤더에 추가 (필수 헤더로 통일)
     const headers = {

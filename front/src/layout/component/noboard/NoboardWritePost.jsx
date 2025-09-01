@@ -17,11 +17,14 @@ import {
   Save as SaveIcon
 } from '@mui/icons-material';
 import { getNoticeDetail, createNotice, updateNotice } from '../../../api/noticeApi';
+import useCustomLogin from '../../../hooks/useCustomLogin';
 
 const WritePost = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const isEditing = Boolean(id);
+
+  const { currentUserId, loginState } = useCustomLogin();
 
   const [formData, setFormData] = useState({
     title: '',
@@ -87,7 +90,10 @@ const WritePost = () => {
     setLoading(true);
     try {
       // 사용자가 입력한 작성자명을 userInfo에 설정
-      const userInfo = { userId: 'admin', userName: formData.author };
+      const userInfo = {
+        userId: currentUserId || loginState.memberId || 'anonymous',
+        userName: loginState.nickname || '익명' // Use actual nickname, fallback to '익명'
+      };
       
       console.log('=== 제출 데이터 확인 ===');
       console.log('isEditing:', isEditing);
@@ -202,18 +208,7 @@ const WritePost = () => {
                   disabled={loading}
                 />
 
-                {/* Author */}
-                <TextField
-                  label="작성자"
-                  fullWidth
-                  value={formData.author}
-                  onChange={(e) => handleInputChange('author', e.target.value)}
-                  error={!!errors.author}
-                  helperText={errors.author}
-                  placeholder="작성자명을 입력하세요"
-                  required
-                  disabled={loading}
-                />
+                
 
                 {/* Content */}
                 <TextField

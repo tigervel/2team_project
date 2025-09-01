@@ -22,7 +22,7 @@ import {
   Stack
 } from '@mui/material';
 import { Add as AddIcon } from '@mui/icons-material';
-import { getNotices } from '../../../api/noticeApi';
+import { getNoticeList } from '../../../api/noticeApi';
 
 const BulletinBoard = () => {
   const navigate = useNavigate();
@@ -47,7 +47,7 @@ const BulletinBoard = () => {
   const loadNotices = async (page = 0) => {
     try {
       setLoading(true);
-      const response = await getNotices({ page, size: 10 });
+      const response = await getNoticeList({ page, size: 10 });
       setNotices(response.content || []);
       setTotalElements(response.totalElements || 0);
       setTotalPages(response.totalPages || 0);

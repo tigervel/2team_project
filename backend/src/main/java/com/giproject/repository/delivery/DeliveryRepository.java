@@ -19,11 +19,20 @@ public interface DeliveryRepository extends JpaRepository<Delivery, Long> {
 
     List<Delivery> findTop5ByStatusOrderByCompletTimeDesc(DeliveryStatus status);
 
-	Optional<Delivery> findByPayment_PaymentNo(Long paymentNo);
-	@Query("select p from Payment p where p.orderSheet.orderNo = :orderNo")
-	Optional<Payment> findByOrderSheet_OrderNo(@Param("orderNo") Long orderNo);
- // matchingNo로 Delivery 찾기
-	Delivery save(Delivery d);
+   Optional<Delivery> findByPayment_PaymentNo(Long paymentNo);
+   @Query("select p from Payment p where p.orderSheet.orderNo = :orderNo")
+   Optional<Payment> findByOrderSheet_OrderNo(@Param("orderNo") Long orderNo);
+   
+   @Query("SELECT d FROM Delivery d JOIN d.payment p JOIN p.orderSheet os JOIN os.matching mt JOIN mt.estimate e JOIN e.member m WHERE m.memId = :memId")
+   List<Delivery> findDeliveriesByOwnerMemId(@Param("memId") String memId);
+   
+   @Query("SELECT d FROM Delivery d JOIN d.payment p JOIN p.orderSheet os JOIN os.matching mt JOIN mt.cargoOwner co WHERE co.cargoId = :cargoId")
+   List<Delivery> findDeliveriesByCargoOwnerCargoId(@Param("cargoId") String cargoId);
+   
+   
+   
+   // matchingNo로 Delivery 찾기
+   Delivery save(Delivery d);
 
 
     @Query("""
@@ -66,4 +75,22 @@ public interface DeliveryRepository extends JpaRepository<Delivery, Long> {
             ORDER BY y, m
             """, nativeQuery = true)
         List<MonthlyRevenueRow> findMonthlyRevenueByCargoId(@Param("cargoId") String cargoId);
+    
+    // order_sheet.matching_no → payment → delivery
+    @Query("""
+        select d.deliveryNo
+        from Delivery d
+          join d.payment p
+          join p.orderSheet os
+        where os.matching.matchingNo = :matchingNo
+    """)
+    Optional<Long> findDeliveryNoByMatching(@Param("matchingNo") Long matchingNo);
+
+    // payment_no → delivery
+    @Query("""
+        select d.deliveryNo
+        from Delivery d
+        where d.payment.paymentNo = :paymentNo
+    """)
+    Optional<Long> findDeliveryNoByPayment(@Param("paymentNo") Long paymentNo);
 }
