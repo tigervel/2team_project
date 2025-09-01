@@ -117,7 +117,7 @@ public class SecurityConfig {
                 // 프로젝트 개별 공개 경로 (기존 허용 목록 유지)
                 .requestMatchers("/g2i4/subpath/order/**","/g2i4/payment/**","/g2i4/delivery/**","/g2i4/address/**",
                                  "/g2i4/estimate/subpath/**","/g2i4/cargo/**","/g2i4/admin/**","/g2i4/main/**",
-                                 "/g2i4/uploads/**","/mypage/**").permitAll()
+                                 "/g2i4/uploads/**","/g2i4/mypage/**","/g2i4/user/**","/g2i4/cargo/**","/g2i4/member/**","/g2i4/qna/**","/api/**").permitAll()
 
                 // 예시: 특정 권한 필요
                 .requestMatchers("/g2i4/estimate/list").hasAuthority("ROLE_DRIVER")

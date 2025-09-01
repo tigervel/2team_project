@@ -98,10 +98,11 @@ export default function ResponsiveAppBar() {
     const rolesFromRedux = loginState?.roles || loginState?.rolenames || [];
     const rolesArr = Array.isArray(rolesFromRedux) ? rolesFromRedux : [rolesFromRedux].filter(Boolean);
 
-    if (rolesArr.some((r) => String(r).toUpperCase() === 'ADMIN')) return true;
+     if (rolesArr.some((r) => String(r).toUpperCase().endsWith('ADMIN'))) return true;    
 
     const t = pickToken();
     if (!t) return false;
+
     const payload = decodeJwt(t) || {};
     const tokenRoles = payload.roles || payload.rolenames || payload.authorities || [];
     const trArr = Array.isArray(tokenRoles) ? tokenRoles : [tokenRoles].filter(Boolean);
