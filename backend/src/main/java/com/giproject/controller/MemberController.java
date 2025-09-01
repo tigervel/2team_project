@@ -6,7 +6,7 @@ import com.giproject.repository.member.MemberRepository;
 import com.giproject.service.member.GoogleOAuthService;
 import com.giproject.service.member.MemberService;
 import com.giproject.service.member.NaverOAuthService;
-import com.giproject.utils.JwtTokenUtils;
+import com.giproject.utils.JWTUtil;
 
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
@@ -54,8 +54,8 @@ public class MemberController {
         MemberDTO dto = memberService.getKakaoMember(accessToKen);
         Map<String, Object> claims = dto.getClaims();
 
-        String jwtAccessToken = JwtTokenUtils.generateToken(claims, 10 * 6);
-        String jwtRefreshToken = JwtTokenUtils.generateToken(claims, 60 * 24);
+        String jwtAccessToken = JWTUtil.generateToken(claims, 10 * 6);
+        String jwtRefreshToken = JWTUtil.generateToken(claims, 60 * 24);
 
         log.info("jwtAccessToken -----------------> " + jwtAccessToken);
         log.info("jwtRefreshToken -----------------> " + jwtRefreshToken);
@@ -79,8 +79,8 @@ public class MemberController {
         MemberDTO dto = memberService.getGoogleMember(accessToken);
 
         Map<String, Object> claims = dto.getClaims();
-        String jwtAccessToken = JwtTokenUtils.generateToken(claims, 10 * 6);
-        String jwtRefreshToken = JwtTokenUtils.generateToken(claims, 60 * 24);
+        String jwtAccessToken = JWTUtil.generateToken(claims, 10 * 6);
+        String jwtRefreshToken = JWTUtil.generateToken(claims, 60 * 24);
 
         claims.put("accessToken", jwtAccessToken);
         claims.put("refreshToken", jwtRefreshToken);

@@ -11,7 +11,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.giproject.dto.secure.MemberModifyDTO;
 import com.giproject.dto.member.MemberDTO;
 import com.giproject.service.member.MemberService;
-import com.giproject.utils.JwtTokenUtils;
+import com.giproject.utils.JWTUtil;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
@@ -34,8 +34,8 @@ public class SNSController {
 		Map<String, Object> claims = dto.getClaims();
 		
 		// 토큰 생성
-		String jwtAccessToken = JwtTokenUtils.generateToken(claims, 10 * 6);
-		String jwtRefreshToken = JwtTokenUtils.generateToken(claims, 60 * 24);
+		String jwtAccessToken = JWTUtil.generateToken(claims, 10 * 6);
+		String jwtRefreshToken = JWTUtil.generateToken(claims, 60 * 24);
 		
 		log.info("jwtAccessToken -----------------> " + jwtAccessToken);
 		log.info("jwtRefreshToken -----------------> " + jwtRefreshToken);
@@ -59,8 +59,8 @@ public class SNSController {
 	    Map<String, Object> claims = dto.getClaims();
 
 	    // JWT Access / Refresh 토큰 생성 (예: 10분, 24시간)
-	    String jwtAccessToken = JwtTokenUtils.generateToken(claims, 10 * 6);
-	    String jwtRefreshToken = JwtTokenUtils.generateToken(claims, 60 * 24);
+	    String jwtAccessToken = JWTUtil.generateToken(claims, 10 * 6);
+	    String jwtRefreshToken = JWTUtil.generateToken(claims, 60 * 24);
 
 	    log.info("jwtAccessToken -----------------> " + jwtAccessToken);
 	    log.info("jwtRefreshToken -----------------> " + jwtRefreshToken);
