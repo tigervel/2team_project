@@ -155,6 +155,13 @@ const statusKo = (s) => s === 'IN_TRANSIT' ? '배송 중' : s === 'COMPLETED' ? 
 
 // ===== 메인 컴포넌트 =====
 const DeliveryInfoPage = () => {
+  const getRequesterId = (item) =>
+  item?.requesterId ??
+  item?.memberId ??
+  item?.memId ??
+  item?.member_id ??
+  item?.member ??
+  null;
   const navigate = useNavigate();
   const [userType, setUserType] = useState(null); // 'MEMBER' | 'CARGO_OWNER'
   const isMember = userType === 'MEMBER';
@@ -409,7 +416,7 @@ const DeliveryInfoPage = () => {
           <TableCell align="center">
             <span style={{ whiteSpace: 'nowrap' }}>{formatDateHour(item.startTime)}</span>
           </TableCell>
-          <TableCell align="center">{item.driverName ?? '-'}</TableCell>
+          <TableCell align="center"> {isOwner ? (getRequesterId(item) || '-') : (item.driverName ?? '-')}</TableCell>
           <TableCell align="center">{rightCell}</TableCell>
         </TableRow>
       );
@@ -469,7 +476,7 @@ const DeliveryInfoPage = () => {
           <TableCell align="center">
             <span style={{ whiteSpace: 'nowrap' }}>{formatDateHour(item.startTime)}</span>
           </TableCell>
-          <TableCell align="center">{item.driverName ?? '-'}</TableCell>
+          <TableCell align="center"> {isOwner ? (getRequesterId(item) || '-') : (item.driverName ?? '-')}</TableCell>
           <TableCell align="center">
             {isOwner ? ownerAction : (
               <Typography variant="body2" sx={{ color: s === 'IN_TRANSIT' ? 'info.main' : 'text.secondary' }}>
@@ -504,7 +511,7 @@ const DeliveryInfoPage = () => {
           <TableCell align="center">{item.startAddress}</TableCell>
           <TableCell align="center">{item.endAddress}</TableCell>
           <TableCell align="center" style={{ whiteSpace: 'nowrap' }}>{formatDateHour(doneAt)}</TableCell>
-          <TableCell align="center">{item.driverName ?? '-'}</TableCell>
+          <TableCell align="center"> {isOwner ? (getRequesterId(item) || '-') : (item.driverName ?? '-')}</TableCell>
 
           {isMember  && (
             <TableCell align="center">
@@ -558,7 +565,7 @@ const DeliveryInfoPage = () => {
                   <TableCell align="center">출발지</TableCell>
                   <TableCell align="center">도착지</TableCell>
                   <TableCell align="center">배송 시작일</TableCell>
-                  <TableCell align="center">운전 기사</TableCell>
+                  <TableCell align="center">{isOwner ? '의뢰자 ID' : '운전 기사'}</TableCell>
                   <TableCell align="center">{isOwner ? '상태' : '승인 여부'}</TableCell>
                 </TableRow>
               </TableHead>
@@ -586,7 +593,7 @@ const DeliveryInfoPage = () => {
                   <TableCell align="center">출발지</TableCell>
                   <TableCell align="center">도착지</TableCell>
                   <TableCell align="center">배송 시작일</TableCell>
-                  <TableCell align="center">운전 기사</TableCell>
+                  <TableCell align="center">{isOwner ? '의뢰자 ID' : '운전 기사'}</TableCell>
                   <TableCell align="center">{isOwner ? '처리' : '상태'}</TableCell>
                 </TableRow>
               </TableHead>
@@ -614,7 +621,7 @@ const DeliveryInfoPage = () => {
                   <TableCell align="center">출발지</TableCell>
                   <TableCell align="center">도착지</TableCell>
                   <TableCell align="center">{isMember ? '배송 완료일' : '완료일'}</TableCell>
-                  <TableCell align="center">운전 기사</TableCell>
+                  <TableCell align="center">{isOwner ? '의뢰자 ID' : '운전 기사'}</TableCell>
                   {isMember  && <TableCell align="center">신고</TableCell>}
                   <TableCell align="center">상태</TableCell>
                 </TableRow>
