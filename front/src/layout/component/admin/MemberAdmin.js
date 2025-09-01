@@ -10,9 +10,10 @@ import {
   TableRow,
   TableCell,
   TableBody,
-  Checkbox,
   Pagination,
   CircularProgress,
+  TableContainer,
+  Paper
 } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
 import axios from "axios";
@@ -129,39 +130,35 @@ const MemberAdmin = () => {
           <CircularProgress />
         </Box>
       ) : (
-        <Table sx={{ minWidth: 800 }}>
-          <TableHead>
-            <TableRow>
-              <TableCell padding="checkbox">
-                <Checkbox />
-              </TableCell>
-              <TableCell>이름</TableCell>
-              <TableCell>관리자ID</TableCell>
-              <TableCell>전화번호</TableCell>
-              <TableCell>등록일</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {users.map((user, idx) => (
-              <TableRow key={idx}>
-                <TableCell padding="checkbox">
-                  <Checkbox />
-                </TableCell>
-                <TableCell>{user.name}</TableCell>
-                <TableCell>{user.adminId}</TableCell>
-                <TableCell>{user.phone}</TableCell>
-                <TableCell>{user.createdAt}</TableCell>
-              </TableRow>
-            ))}
-            {users.length === 0 && (
+        <TableContainer component={Paper}>
+          <Table sx={{ minWidth: 800 }}>
+            <TableHead>
               <TableRow>
-                <TableCell colSpan={5} align="center">
-                  데이터가 없습니다
-                </TableCell>
+                <TableCell>이름</TableCell>
+                <TableCell>관리자ID</TableCell>
+                <TableCell>전화번호</TableCell>
+                <TableCell>등록일</TableCell>
               </TableRow>
-            )}
-          </TableBody>
-        </Table>
+            </TableHead>
+            <TableBody>
+              {users.map((user, idx) => (
+                <TableRow key={idx}>
+                  <TableCell>{user.name}</TableCell>
+                  <TableCell>{user.adminId}</TableCell>
+                  <TableCell>{user.phone}</TableCell>
+                  <TableCell>{user.createdAt}</TableCell>
+                </TableRow>
+              ))}
+              {users.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={4} align="center">
+                    데이터가 없습니다
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </TableContainer>
       )}
 
       <Box display="flex" justifyContent="center" mt={3}>

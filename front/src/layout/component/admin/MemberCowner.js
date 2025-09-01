@@ -1,7 +1,8 @@
 import React, { useEffect, useState, useMemo } from "react";
 import {
   Box, Typography, Table, TableHead, TableRow, TableCell, TableBody,
-  Checkbox, Chip, Pagination, CircularProgress, TextField, Tabs, Tab
+  Chip, Pagination, CircularProgress, TextField, Tabs, Tab,
+  TableContainer, Paper
 } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
 import { useNavigate, useLocation, NavLink } from "react-router-dom";
@@ -102,37 +103,37 @@ const MemberCowner = () => {
       ) : error ? (
         <Typography color="error">{error}</Typography>
       ) : (
-        <Table sx={{ minWidth: 800 }}>
-          <TableHead>
-            <TableRow>
-              <TableCell padding="checkbox"><Checkbox /></TableCell>
-              <TableCell>이름</TableCell>
-              <TableCell>email</TableCell>
-              <TableCell>전화번호</TableCell>
-              <TableCell>등록일</TableCell>
-              <TableCell>거래수</TableCell>
-              <TableCell>신고내역</TableCell>
-              <TableCell>⋯</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {rows.map((u, i) => (
-              <TableRow key={i}>
-                <TableCell padding="checkbox"><Checkbox /></TableCell>
-                <TableCell>{u.memName}</TableCell>
-                <TableCell>{u.memEmail}</TableCell>
-                <TableCell>{u.memPhone}</TableCell>
-                <TableCell>{fmt(u.memCreateidDateTime)}</TableCell>
-                <TableCell>-</TableCell>
-                <TableCell><Chip label="0" size="small" /></TableCell>
+        <TableContainer component={Paper}>
+          <Table sx={{ minWidth: 800 }}>
+            <TableHead>
+              <TableRow>
+                <TableCell>이름</TableCell>
+                <TableCell>email</TableCell>
+                <TableCell>전화번호</TableCell>
+                <TableCell>등록일</TableCell>
+                <TableCell>거래수</TableCell>
+                <TableCell>신고내역</TableCell>
                 <TableCell>⋯</TableCell>
               </TableRow>
-            ))}
-            {rows.length === 0 && (
-              <TableRow><TableCell colSpan={8} align="center">데이터가 없습니다</TableCell></TableRow>
-            )}
-          </TableBody>
-        </Table>
+            </TableHead>
+            <TableBody>
+              {rows.map((u, i) => (
+                <TableRow key={i}>
+                  <TableCell>{u.memName}</TableCell>
+                  <TableCell>{u.memEmail}</TableCell>
+                  <TableCell>{u.memPhone}</TableCell>
+                  <TableCell>{fmt(u.memCreateidDateTime)}</TableCell>
+                  <TableCell>-</TableCell>
+                  <TableCell><Chip label="0" size="small" /></TableCell>
+                  <TableCell>⋯</TableCell>
+                </TableRow>
+              ))}
+              {rows.length === 0 && (
+                <TableRow><TableCell colSpan={7} align="center">데이터가 없습니다</TableCell></TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </TableContainer>
       )}
 
       <Box display="flex" justifyContent="center" mt={3}>
