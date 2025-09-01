@@ -352,10 +352,10 @@ const DeliveryInfoPage = () => {
       <col style={{ width: '24%' }} />
       <col style={{ width: '12%' }} />
       <col style={{ width: '10%' }} /> {/* 운전 기사 */}
-      {isOwner && <col style={{ width: '8%' }} />} {/* 신고 */}
+      {isMember  && <col style={{ width: '8%' }} />} {/* 신고 */}
       <col style={{ width: '8%' }} />  {/* 상태 */}
     </colgroup>
-  ), [isOwner]);
+  ), [isMember ]);
 
   // 렌더러: 미결제
   const renderUnpaidRows = (list) => {
@@ -487,14 +487,14 @@ const DeliveryInfoPage = () => {
     if (!list || list.length === 0) {
       return (
         <TableRow>
-          <TableCell colSpan={isOwner ? 8 : 7} align="center">항목이 없습니다.</TableCell>
+          <TableCell colSpan={isMember  ? 8 : 7} align="center">항목이 없습니다.</TableCell>
         </TableRow>
       );
     }
     return list.map((item) => {
       const doneAt = item.deliveryCompletedAt ?? item.endTime ?? null;
 
-      // 🔑 matchingNo만 안전 추출
+      // matchingNo만 안전 추출
       const matchingNo = item?.matchingNo ?? item?.mno ?? item?.matching_no ?? null;
 
       return (
@@ -506,7 +506,7 @@ const DeliveryInfoPage = () => {
           <TableCell align="center" style={{ whiteSpace: 'nowrap' }}>{formatDateHour(doneAt)}</TableCell>
           <TableCell align="center">{item.driverName ?? '-'}</TableCell>
 
-          {isOwner && (
+          {isMember  && (
             <TableCell align="center">
               {matchingNo ? (
                 <Button
@@ -615,7 +615,7 @@ const DeliveryInfoPage = () => {
                   <TableCell align="center">도착지</TableCell>
                   <TableCell align="center">{isMember ? '배송 완료일' : '완료일'}</TableCell>
                   <TableCell align="center">운전 기사</TableCell>
-                  {isOwner && <TableCell align="center">신고</TableCell>}
+                  {isMember  && <TableCell align="center">신고</TableCell>}
                   <TableCell align="center">상태</TableCell>
                 </TableRow>
               </TableHead>
