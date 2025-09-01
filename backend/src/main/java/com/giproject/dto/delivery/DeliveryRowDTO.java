@@ -7,19 +7,74 @@ import com.giproject.entity.delivery.DeliveryStatus;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
-@Getter
-@Builder
-@AllArgsConstructor
+@Getter @Setter
+@NoArgsConstructor
 public class DeliveryRowDTO {
-    private Long eno;                 // 견적 번호
-    private String cargoType;         // 화물명
-    private String cargoWeight;       // 무게(문자열 컬럼)
-    private String startAddress;      // 출발지
-    private String endAddress;        // 도착지
-    private LocalDateTime startTime;  // 배송 시작 예정일(견적)
-    private String driverName;        // 차주 이름
-    private DeliveryStatus deliveryStatus; // PENDING/IN_TRANSIT/COMPLETED (미결제는 null)
-    private Long matchingNo;          // 매칭 번호
-    private LocalDateTime deliveryCompletedAt; // 완료 시각
+    private Long eno;
+    private String cargoType;
+    private String cargoWeight;
+    private String startAddress;
+    private String endAddress;
+    private LocalDateTime startTime;
+
+    private String memId;               // 🔹 의뢰자(ID)
+    private String driverName;          // 차주명
+    private DeliveryStatus deliveryStatus;
+    private Long matchingNo;
+    private Long paymentNo;
+
+    private Long deliveryNo;
+    private LocalDateTime deliveryCompletedAt;
+
+    // unpaid (paymentNo 자리엔 null)
+    public DeliveryRowDTO(
+        Long eno, String cargoType, String cargoWeight,
+        String startAddress, String endAddress, LocalDateTime startTime,
+        String memId,                           // 🔹 추가
+        String driverName, DeliveryStatus deliveryStatus,
+        Long matchingNo, Long paymentNo
+    ) {
+        this.eno = eno;
+        this.cargoType = cargoType;
+        this.cargoWeight = cargoWeight;
+        this.startAddress = startAddress;
+        this.endAddress = endAddress;
+        this.startTime = startTime;
+        this.memId = memId;                     // 🔹 세팅
+        this.driverName = driverName;
+        this.deliveryStatus = deliveryStatus;
+        this.matchingNo = matchingNo;
+        this.paymentNo = paymentNo;
+    }
+
+    // paid/in-progress (마지막은 completedAt)
+    public DeliveryRowDTO(
+        Long eno, String cargoType, String cargoWeight,
+        String startAddress, String endAddress, LocalDateTime startTime,
+        String memId,
+        String driverName, DeliveryStatus deliveryStatus,
+        Long matchingNo, LocalDateTime deliveryCompletedAt
+    ) {
+        this(eno, cargoType, cargoWeight, startAddress, endAddress, startTime,
+             memId, driverName, deliveryStatus, matchingNo,  (Long) null);
+        this.deliveryCompletedAt = deliveryCompletedAt;
+    }
+
+    // completed (paymentNo, deliveryNo, completedAt 포함)
+    public DeliveryRowDTO(
+        Long eno, String cargoType, String cargoWeight,
+        String startAddress, String endAddress, LocalDateTime startTime,
+        String memId,
+        String driverName, DeliveryStatus deliveryStatus,
+        Long matchingNo, Long paymentNo,
+        Long deliveryNo, LocalDateTime deliveryCompletedAt
+    ) {
+        this(eno, cargoType, cargoWeight, startAddress, endAddress, startTime,
+             memId, driverName, deliveryStatus, matchingNo, paymentNo);
+        this.deliveryNo = deliveryNo;
+        this.deliveryCompletedAt = deliveryCompletedAt;
+    }
 }

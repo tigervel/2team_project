@@ -413,7 +413,7 @@ const DeliveryInfoPage = () => {
           <TableCell align="center">
             <span style={{ whiteSpace: 'nowrap' }}>{formatDateHour(item.startTime)}</span>
           </TableCell>
-          <TableCell align="center"> {isOwner ? (getRequesterId(item) || '-') : (item.driverName ?? '-')}</TableCell>
+          <TableCell align="center"> {isOwner ? (item.memId || '-') : (item.driverName ?? '-')}</TableCell>
           <TableCell align="center">{rightCell}</TableCell>
         </TableRow>
       );
@@ -473,7 +473,7 @@ const DeliveryInfoPage = () => {
           <TableCell align="center">
             <span style={{ whiteSpace: 'nowrap' }}>{formatDateHour(item.startTime)}</span>
           </TableCell>
-          <TableCell align="center"> {isOwner ? (getRequesterId(item) || '-') : (item.driverName ?? '-')}</TableCell>
+          <TableCell align="center"> {isOwner ? (item.memId || '-') : (item.driverName ?? '-')}</TableCell>
           <TableCell align="center">
             {isOwner ? ownerAction : (
               <Typography variant="body2" sx={{ color: s === 'IN_TRANSIT' ? 'info.main' : 'text.secondary' }}>
@@ -508,7 +508,7 @@ const DeliveryInfoPage = () => {
           <TableCell align="center">{item.startAddress}</TableCell>
           <TableCell align="center">{item.endAddress}</TableCell>
           <TableCell align="center" style={{ whiteSpace: 'nowrap' }}>{formatDateHour(doneAt)}</TableCell>
-          <TableCell align="center"> {isOwner ? (getRequesterId(item) || '-') : (item.driverName ?? '-')}</TableCell>
+          <TableCell align="center"> {isOwner ? (item.memId || '-') : (item.driverName ?? '-')}</TableCell>
 
           {isMember  && (
             <TableCell align="center">
