@@ -1,9 +1,8 @@
-// com.giproject.controller.AuthController
 package com.giproject.controller;
 
 import com.giproject.dto.auth.SignupRequest;
 import com.giproject.dto.member.MemberDTO;
-import com.giproject.security.JwtService;            // ✅ 소셜 첫가입 컨텍스트용 토큰 파싱/생성
+import com.giproject.security.JwtService;
 import com.giproject.service.auth.SimpleSignupService;
 
 import jakarta.validation.Valid;
@@ -31,9 +30,9 @@ import org.springframework.web.bind.annotation.RequestBody;
 public class AuthController {
 
     private final SimpleSignupService signupService;
-    private final JwtService jwtService; // ✅ 주입 (소셜 첫가입 토큰 파싱용)
+    private final JwtService jwtService;
 
-    /** (기존) 일반 회원가입 */
+    /** 일반 회원가입 */
     @PostMapping("/signup")
     public ResponseEntity<?> signup(@Valid @RequestBody SignupRequest req, BindingResult br) {
         if (br.hasErrors()) {
@@ -55,11 +54,11 @@ public class AuthController {
         }
     }
 
-    /** ✅ ID 중복 확인 */
+    /** ID 중복 확인 */
     @GetMapping("/check-id")
     public ResponseEntity<?> checkId(@RequestParam("loginId") String loginId) {
         try {
-            boolean exists = signupService.existsByLoginId(loginId); // SimpleSignupService에 해당 메서드 필요
+            boolean exists = signupService.existsByLoginId(loginId);
             return ResponseEntity.ok(Map.of("available", !exists));
         } catch (Exception e) {
             log.error("check-id failed for {}: {}", loginId, e.getMessage(), e);
@@ -70,7 +69,7 @@ public class AuthController {
         }
     }
 
-    /** ✅ 소셜 첫 로그인 후: 프론트가 이메일을 읽기 위해 호출 */
+    /** 소셜 첫 로그인 후: 프리필 이메일/프로바이더 조회 */
     @GetMapping("/signup-context")
     public ResponseEntity<?> signupContext(
             @CookieValue(value = "signup_token", required = false) String cookieToken,
@@ -79,7 +78,7 @@ public class AuthController {
         String token = extractToken(cookieToken, auth);
         if (token == null) return ResponseEntity.status(401).body(Map.of("error", "NO_TOKEN"));
         try {
-            var claims = jwtService.parseSignupToken(token); // email, provider 등 포함된 짧은 만료 토큰
+            var claims = jwtService.parseSignupToken(token);
             String email = (String) claims.get("email");
             String provider = Optional.ofNullable((String) claims.get("provider")).orElse("social");
             if (email == null || email.isBlank()) {
@@ -92,7 +91,7 @@ public class AuthController {
         }
     }
 
-    /** ✅ 소셜 첫 가입 완료: 폼 제출 시, 토큰의 이메일만 신뢰하여 가입 */
+    /** 소셜 첫 가입 완료: 토큰의 이메일만 신뢰하여 가입 */
     @PostMapping("/complete-signup")
     public ResponseEntity<?> completeSignup(
             @CookieValue(value = "signup_token", required = false) String cookieToken,
@@ -117,13 +116,13 @@ public class AuthController {
                 return ResponseEntity.badRequest().body(Map.of("error", "NO_EMAIL_IN_TOKEN"));
             }
 
-            // 프론트에서 넘어온 email은 무시하고 토큰의 email로 덮어씌움
+            // 프론트 이메일 무시 → 토큰 이메일 사용
             SignupRequest safeReq = new SignupRequest(
                     req.getRole(),
                     req.getLoginId(),
                     req.getPassword(),
                     req.getName(),
-                    email,                          // ← 중요: 토큰 이메일 강제 사용
+                    email,
                     req.getPhone(),
                     req.getAddress()
             );
@@ -141,7 +140,7 @@ public class AuthController {
         }
     }
 
-    /** 토큰 추출: 쿠키 우선, 없으면 Authorization: Bearer */
+    /** 쿠키 우선, 없으면 Authorization: Bearer */
     private String extractToken(String cookieToken, String authHeader) {
         if (cookieToken != null && !cookieToken.isBlank()) return cookieToken;
         if (authHeader != null && authHeader.startsWith("Bearer ")) return authHeader.substring(7);

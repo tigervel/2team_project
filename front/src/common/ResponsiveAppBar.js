@@ -14,6 +14,8 @@ import Avatar from '@mui/material/Avatar';
 import Button from '@mui/material/Button';
 import Tooltip from '@mui/material/Tooltip';
 import MenuItem from '@mui/material/MenuItem';
+import Modal from '@mui/material/Modal'; // For ReportComponent Test
+import ReportComponent from '../layout/component/mypage/ReportComponent'; // For ReportComponent Test
 import axios from 'axios';
 
 import { login as loginAction, logout as logoutAction, getUserInfoAsync } from '../slice/loginSlice';
@@ -182,6 +184,7 @@ export default function ResponsiveAppBar() {
   const [anchorElNav, setAnchorElNav] = React.useState(null);
   const [anchorElUser, setAnchorElUser] = React.useState(null);
 
+
   const handleOpenNavMenu = (e) => setAnchorElNav(e.currentTarget);
   const handleOpenUserMenu = (e) => setAnchorElUser(e.currentTarget);
   const handleCloseNavMenu = () => setAnchorElNav(null);
@@ -230,7 +233,7 @@ export default function ResponsiveAppBar() {
               textDecoration: 'none',
             }}
           >
-            <img src="/image/logo/KakaoTalk_20250508_113520617.png" alt="Logo" style={{ height: 40 }} />
+            <img src="/image/logo/2b24f6f6-4fd6-4a5d-a19c-74b8feb9a7ab.png" alt="Logo" style={{ height: 100,width:130 ,transform: 'scaleX(-1)' }} />
           </Typography>
 
           {/* 모바일 메뉴 버튼 */}
@@ -280,7 +283,7 @@ export default function ResponsiveAppBar() {
               textDecoration: 'none',
             }}
           >
-            <img src="/image/logo/KakaoTalk_20250508_113520617.png" alt="Logo" style={{ height: 40 }} />
+            <img src="/image/logo/2b24f6f6-4fd6-4a5d-a19c-74b8feb9a7ab.png" alt="Logo" style={{ height: 60, width:90 ,transform: 'scaleX(-1)' }} />
           </Typography>
 
           {/* 데스크톱 메뉴 */}
@@ -296,8 +299,8 @@ export default function ResponsiveAppBar() {
                 {page.label}
               </Button>
             ))}
+  
           </Box>
-
           {/* 우측 사용자 영역 */}
           {isLogin ? (
             <Box sx={{ flexGrow: 0 }}>
@@ -354,6 +357,9 @@ export default function ResponsiveAppBar() {
           )}
         </Toolbar>
       </Container>
+
+    
+
     </AppBar>
   );
 }

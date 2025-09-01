@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Box, Typography, Grid, Button, TextField, Card, CardContent, CardMedia, InputAdornment, IconButton, FormControl, InputLabel, Select, MenuItem } from "@mui/material";
+import { Box, Typography, Grid, Button, TextField, Card, CardContent, CardMedia, InputAdornment, IconButton, FormControl, InputLabel, Select, MenuItem, Dialog, DialogContent, DialogActions } from "@mui/material";
 import Carousel from "react-material-ui-carousel";
 import SearchIcon from "@mui/icons-material/Search";
 import { postSearchFeesBasic } from "../api/estimateApi/estimateApi";
@@ -28,7 +28,7 @@ const HomePage = () => {
   const [showAll, setShowAll] = useState(false);
   const visibleFees = showAll ? fees : fees.slice(0, 3);
   const [openFees, setOpenFees] = useState(false);
-
+  const [openPrice, setOpenPrice] = useState(false);
   const { roles } = useSelector(state => state.login);
   const isAdmin = roles.includes("ROLE_ADMIN");
 
@@ -79,6 +79,7 @@ const HomePage = () => {
     }))
 
     setExprice(total);
+    
   }, [estimate.cargoWeight, estimate.distanceKm, fees]);
 
 
@@ -96,6 +97,7 @@ const HomePage = () => {
 
 
   }
+  const handleClickCancel =() => setOpenPrice(false);
 
   const calculateDistance = async () => {
     try {
@@ -104,6 +106,8 @@ const HomePage = () => {
         estimate.endAddress
       );
       setEstimate(prev => ({ ...prev, distanceKm: km }));
+
+      setOpenPrice(true)
     } catch (err) {
       alert("거리 계산 중 문제가 발생했습니다. 주소를 다시 확인해주세요.");
     }
@@ -278,7 +282,7 @@ const HomePage = () => {
                   </Select>
                 </FormControl>
                 {/* <TextField label="화물특수" fullWidth sx={{ mt: 2 }} /> */}
-                <Typography variant="caption" sx={{ mt: 1, mb: 2 }}>*예상단가표 {Number(exPrice)}원</Typography>
+                <Typography variant="caption" sx={{ mt: 1, mb: 2 }}>주소 및 화물 무게를 입력후 조회하기 버튼을 눌러주세요 </Typography>
                 <Box sx={{ mt: 'auto', display: 'flex', justifyContent: 'flex-end' }}>
                   <Button variant="contained" onClick={calculateDistance} >
                     조회하기
@@ -322,7 +326,31 @@ const HomePage = () => {
 
         </Box >
       </Box >
-
+          <Dialog
+                open={openPrice}
+                onClose={handleClickCancel}
+                 PaperProps={{
+                   sx: {
+                     width: 400,
+                     height: 150,
+                     borderRadius: 2,
+                     p: 2,
+                   },
+                 }}
+               >
+         
+                 <DialogContent >
+                   <Typography fontSize={20} fontWeight='bold' >예상금액은 {Number(exPrice)}원 입니다.</Typography>
+                  <Typography fontSize={15} fontWeight='bold'>본 금액은 예상 견적이며 물품에 따라 상세금액과 차이가 있을 수 있습니다.</Typography>
+                 </DialogContent>
+                 <DialogActions>
+                   <Button color="error" onClick={()=>handleClickCancel()} >
+                     확인
+                   </Button>
+            
+         
+                 </DialogActions>
+               </Dialog>       
 
     </Box >
   );
