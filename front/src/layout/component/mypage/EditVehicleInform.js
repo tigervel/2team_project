@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import {
-  Box, Grid, Paper, Typography, Button, Modal, TextField, IconButton
+  Box, Grid, Paper, Typography, Button, Modal, TextField, IconButton, Select, MenuItem, InputLabel, FormControl
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import { useParams, useNavigate } from 'react-router-dom';
@@ -31,10 +31,10 @@ const EditVehicleInform = () => {
   const [vehicles, setVehicles] = useState([]);
   const [open, setOpen] = useState(false);
   const [editingIndex, setEditingIndex] = useState(null);
+  const [weightOptions, setWeightOptions] = useState([]);
   const [formData, setFormData] = useState({
     no: null,
     name: '',
-    address: '',
     weight: '',
     image: null,
     preview: null
@@ -61,8 +61,8 @@ const EditVehicleInform = () => {
         imagePath: cargo.cargoImage,
         preview: cargo.cargoImage
           ? (String(cargo.cargoImage).startsWith('http')
-              ? cargo.cargoImage
-              : `${API_BASE}${cargo.cargoImage}`)
+            ? cargo.cargoImage
+            : `${API_BASE}${cargo.cargoImage}`)
           : null
       }));
       setVehicles(data);
@@ -75,15 +75,34 @@ const EditVehicleInform = () => {
       }
     }
   };
+  const fetchWeightOptions = async () => {
+    try {
+      const res = await api.get(`/g2i4/admin/fees/basic/rows`);
+      // 중복/공백 정리
+      const uniq = Array.from(new Set(res.data || [])).filter(Boolean);
+      setWeightOptions(uniq);
+    } catch (err) {
+      console.error('weight 옵션 불러오기 실패:', err);
+      // 임시 폴백
+      setWeightOptions(['0.5톤', '1톤', '2톤', '3톤', '4톤', '5톤이상']);
+    }
+  };
+  useEffect(() => {
+    fetchVehicles();
+    fetchWeightOptions();
+  }, [cargoId]);
+
+
 
   useEffect(() => { fetchVehicles(); }, [cargoId]); // cargoId 바뀌어도 재호출
 
   const handleOpen = (index = null) => {
     setEditingIndex(index);
     if (index !== null) {
-      setFormData(vehicles[index]);
+      const { no, name, weight, preview } = vehicles[index];
+      setFormData({ no, name, weight: String(weight ?? ''), image: null, preview });
     } else {
-      setFormData({ no: null, name: '', address: '', weight: '', image: null, preview: null });
+      setFormData({ no: null, name: '', weight: '', image: null, preview: null });
     }
     setOpen(true);
   };
@@ -109,32 +128,32 @@ const EditVehicleInform = () => {
   };
 
   const handleSave = async () => {
-    const { no, name, address, weight, image } = formData;
-    if (!cargoId) {
-      alert('접근 권한이 없습니다.');
-      return;
-    }
-    if (!name || !address || !weight) {
-      alert('모든 항목을 입력해주세요.');
-      return;
-    }
+    const { no, name, weight, image } = formData;
+    if (!cargoId) { alert('접근 권한이 없습니다.'); return; }
+    if (!name || !weight) { alert('이름과 적재 무게를 선택/입력해주세요.'); return; }
 
     try {
       let cargoNo = no;
 
+      // 백엔드가 cargoType(=address)을 여전히 요구하면 기존 값만 유지해서 보냄
+      const payload = { name, weight };
+      const existingType = editingIndex !== null ? vehicles[editingIndex]?.address : undefined;
+      if (existingType !== undefined && existingType !== null) {
+        payload.address = existingType; // 필요 시 호환 전송
+      }
+
       if (no != null) {
-        const res = await api.put(`/g2i4/cargo/update/${no}`, { name, address, weight });
+        const res = await api.put(`/g2i4/cargo/update/${no}`, payload);
         cargoNo = res.data.cargoNo;
       } else {
-        const res = await api.post(`/g2i4/cargo/add/${cargoId}`, { name, address, weight });
+        const res = await api.post(`/g2i4/cargo/add/${cargoId}`, payload);
         cargoNo = res.data.cargoNo;
       }
 
       if (image) {
         const fileForm = new FormData();
         fileForm.append('image', image);
-        const cleanCargoNo = String(cargoNo).trim();
-        await api.post(`/g2i4/cargo/upload/${cleanCargoNo}`, fileForm, {
+        await api.post(`/g2i4/cargo/upload/${String(cargoNo).trim()}`, fileForm, {
           headers: { 'Content-Type': 'multipart/form-data' }
         });
       }
@@ -190,8 +209,7 @@ const EditVehicleInform = () => {
               </Box>
               <Box sx={{ textAlign: 'center' }}>
                 <Typography fontWeight="bold">{vehicle.name}</Typography>
-                <Typography>{vehicle.address}</Typography>
-                <Typography>{vehicle.weight}kg</Typography>
+                <Typography>{vehicle.weight}</Typography>
               </Box>
               <Box mt={2} display="flex" gap={1}>
                 <Button fullWidth variant="contained" onClick={() => handleOpen(idx)}>수정</Button>
@@ -224,8 +242,21 @@ const EditVehicleInform = () => {
             </Box>
             <Box flex={1} display="flex" flexDirection="column" gap={2}>
               <TextField label="차량 이름" value={formData.name} onChange={handleChange('name')} fullWidth />
-              <TextField label="차량 종류" value={formData.address} onChange={handleChange('address')} fullWidth />
-              <TextField label="적재 무게(kg)" value={formData.weight} onChange={handleChange('weight')} fullWidth />
+
+       
+              <FormControl fullWidth>
+                <InputLabel id="weight-label">적재 무게</InputLabel>
+                <Select
+                  labelId="weight-label"
+                  label="적재 무게"
+                  value={formData.weight}
+                  onChange={handleChange('weight')}
+                >
+                  {weightOptions.map((w) => (
+                    <MenuItem key={w} value={w}>{w}</MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
               <Button variant="outlined" component="label">
                 이미지 업로드
                 <input hidden accept="image/*" type="file" onChange={handleImageChange} />
