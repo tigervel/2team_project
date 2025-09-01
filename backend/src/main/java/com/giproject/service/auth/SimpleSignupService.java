@@ -28,6 +28,12 @@ public class SimpleSignupService {
     private final CargoOwnerRepository cargoRepo;
     private final PasswordEncoder encoder;
 
+    // 로그인ID 존재여부 조회 (중복확인용)
+    @Transactional(readOnly = true)
+    public boolean existsByLoginId(String loginId) {
+        return userIndexRepo.existsByLoginId(loginId);
+    }
+    
     @Transactional
     public MemberDTO signup(SignupRequest req) {
         // role: "SHIPPER"(화주) | "DRIVER"(차주)

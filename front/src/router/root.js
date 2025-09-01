@@ -26,6 +26,10 @@ const ServiceCenter = lazy(() => import("../pages/ServiceCenterPage"));
 const QABoard = lazy(() => import("../pages/qaboard/qaboardPage"));
 const LogoutPage = lazy(() => import("../pages/LogoutPage"));
 
+const OAuthCallbackPage = lazy(() => import("../pages/OAuthCallbackPage"));
+const FindIdPage = lazy(() => import("../pages/FindIdPage"));
+const FindPasswordPage = lazy(() => import("../pages/FindPasswordPage"));
+
 // ✅ 소셜 콜백 페이지
 const NaverRedirectPage = lazy(() => import("../pages/NaverRedirectPage"));   // /member/naver-callback
 const GoogleRedirectPage = lazy(() => import("../pages/GoogleRedirectPage"));  // /member/google-callback
@@ -62,6 +66,18 @@ const root = createBrowserRouter([
             {
                 path: "member/kakao-callback",
                 element: <Suspense fallback={Loading}><KakaoRedirectPage /></Suspense>
+            },
+            {
+                path: "auth/callback",   // ✅ 서버가 리다이렉트해주는 경로
+                element: <Suspense fallback={Loading}><OAuthCallbackPage /></Suspense>
+            },
+            {
+                path: "find-id",
+                element: <Suspense fallback={Loading}><FindIdPage /></Suspense>
+            },
+            {
+                path: "find-password",
+                element: <Suspense fallback={Loading}><FindPasswordPage /></Suspense>
             },
 
             {
