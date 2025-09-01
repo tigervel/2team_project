@@ -16,7 +16,7 @@ import Tooltip from '@mui/material/Tooltip';
 import MenuItem from '@mui/material/MenuItem';
 import axios from 'axios';
 
-import { login as loginAction, logout as logoutAction } from '../slice/loginSlice';
+import { login as loginAction, logout as logoutAction, getUserInfoAsync } from '../slice/loginSlice';
 
 // ✅ 백엔드 베이스 URL (단일 정의)
 const API_BASE =
@@ -110,8 +110,6 @@ export default function ResponsiveAppBar() {
   };
   const isAdmin = calcIsAdmin();
 
-  const [avatarUrl, setAvatarUrl] = React.useState(null);
-
   // ✅ 1) 앱 로드 시: accessToken 없고 refreshToken(로컬 저장)만 있을 때 JSON POST 리프레시
   React.useEffect(() => {
     if (hasReduxLogin || accessToken) return;
@@ -124,7 +122,7 @@ export default function ResponsiveAppBar() {
           localStorage.getItem('refreshToken') ||
           sessionStorage.getItem('refreshToken');
 
-        if (!storedRefresh) return; // 리프레시 토큰이 없으면 종료
+        if (!storedRefresh) return;
 
         const res = await fetch(`${API_BASE}/api/auth/refresh`, {
           method: 'POST',
@@ -132,11 +130,10 @@ export default function ResponsiveAppBar() {
             'Content-Type': 'application/json',
             Accept: 'application/json',
           },
-          // 쿠키 미사용 설계 → credentials 불필요
           body: JSON.stringify({ refreshToken: storedRefresh }),
         });
 
-        if (!res.ok) return; // 비로그인/만료 등
+        if (!res.ok) return;
 
         const data = await res.json().catch(() => ({}));
         const newAccess = data.accessToken || data.access || data.token || null;
@@ -145,19 +142,9 @@ export default function ResponsiveAppBar() {
 
         localStorage.setItem('accessToken', newAccess);
         const payload = decodeJwt(newAccess) || {};
-        dispatch(
-          loginAction({
-            email: payload.email || payload.memEmail || '',
-            nickname: payload.name || '',
-            pw: '',
-            role:
-              (payload.rolenames && payload.rolenames[0]) ||
-              payload.role ||
-              'USER',
-            roles: payload.roles || payload.rolenames || ['USER'],
-            memberId: payload.memId || payload.cargoId || payload.sub || null,
-          })
-        );
+        dispatch(loginAction(payload));
+        dispatch(getUserInfoAsync()); // Dispatch after silent refresh
+
       } catch {
         // ignore
       }
@@ -172,9 +159,11 @@ export default function ResponsiveAppBar() {
   // ✅ 2) 새로고침 시 accessToken으로 Redux 하이드레이트
   React.useEffect(() => {
     const t = pickToken();
-    if (isLogin && t) {
+    // 프로필 이미지가 없는 경우에만 정보 가져오기 실행
+    if (isLogin && t && !loginState.profileImage) {
       const payload = decodeJwt(t);
       if (payload) {
+        // 1. 토큰에서 기본 정보 복원
         dispatch(
           loginAction({
             email: payload.email || payload.memEmail || '',
@@ -184,34 +173,11 @@ export default function ResponsiveAppBar() {
             memberId: payload.memId || payload.cargoId || payload.sub || null,
           })
         );
+        // 2. 서버에서 프로필 이미지 등 추가 정보 가져오기
+        dispatch(getUserInfoAsync());
       }
     }
-  }, [isLogin, dispatch]);
-
-  // ✅ 3) 아바타 이미지 로드
-  const bust = (url) => (url ? `${url}${url.includes('?') ? '&' : '?'}v=${Date.now()}` : null);
-
-  React.useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      if (!isLogin) { setAvatarUrl(null); return; }
-      try {
-        const token = pickToken();
-        const { data: raw } = await axios.get(`${API_BASE}/g2i4/user/info`, {
-          headers: token ? { Authorization: `Bearer ${token}` } : {},
-          withCredentials: true,
-        });
-        const data = raw?.data || raw?.user || raw?.payload || raw?.profile || raw?.account || raw?.result || {};
-        const nameOrWebPath =
-          data?.webPath || data?.profileImage || data?.mem_profile_image || data?.cargo_profile_image || data?.profile || '';
-        const url = normalizeProfileUrl(nameOrWebPath);
-        if (!cancelled) setAvatarUrl(bust(url));
-      } catch {
-        if (!cancelled) setAvatarUrl(null);
-      }
-    })();
-    return () => { cancelled = true; };
-  }, [isLogin]); // isLogin 변할 때 재조회
+  }, [isLogin, dispatch, loginState.profileImage]);
 
   const [anchorElNav, setAnchorElNav] = React.useState(null);
   const [anchorElUser, setAnchorElUser] = React.useState(null);
@@ -339,7 +305,7 @@ export default function ResponsiveAppBar() {
                 <IconButton onClick={handleOpenUserMenu} sx={{ p: 0 }}>
                   <Avatar
                     alt="User"
-                    src={avatarUrl || DEFAULT_AVATAR}
+                    src={loginState?.profileImage || DEFAULT_AVATAR}
                     sx={{ width: 48, height: 48 }}
                     imgProps={{
                       referrerPolicy: 'no-referrer',

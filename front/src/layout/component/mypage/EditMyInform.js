@@ -1,6 +1,8 @@
 // EditMyInform.jsx
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import axios from 'axios';
+import { useDispatch } from 'react-redux';
+import { updateProfileImage } from '../../../slice/loginSlice';
 import {
   Avatar, Box, Button, Divider, Grid, IconButton, InputAdornment,
   TextField, Typography
@@ -42,6 +44,7 @@ api.interceptors.request.use((config) => {
 
 // =================== 컴포넌트 ===================
 const EditMyInform = () => {
+  const dispatch = useDispatch();
 
   const [showPassword, setShowPassword] = useState({
     current: false,
@@ -260,7 +263,11 @@ const EditMyInform = () => {
       setUploading(true);
       const { data } = await api.post('/g2i4/user/upload-image', fd);
       const url = normalizeProfileUrl(data?.webPath || data?.filename);
-     if (url) setAvatarUrl(`${url}?v=${Date.now()}`);
+      if (url) {
+        const cacheBustedUrl = `${url}?v=${Date.now()}`;
+        setAvatarUrl(cacheBustedUrl); // 로컬 UI 즉시 업데이트
+        dispatch(updateProfileImage(cacheBustedUrl)); // 전역 상태 업데이트
+      }
       alert('프로필 이미지가 업로드되었습니다.');
     } catch (err) {
       const msg = err?.response?.data ?? err.message ?? '업로드 실패';

@@ -1,5 +1,6 @@
 // Sidebar.js
 import React, { useEffect, useState } from 'react';
+import { useSelector } from 'react-redux';
 import {
   Drawer, List, ListItemIcon, ListItemText, ListItemButton,
   Typography, Avatar, Divider, Box
@@ -66,82 +67,12 @@ const pickCargoId = (raw) => {
 };
 
 const Sidebar = () => {
-  const [avatarUrl, setAvatarUrl] = useState(null);
-  const [cargoId, setCargoId] = useState(null);
-  const [isOwner, setIsOwner] = useState(false);
+  const loginState = useSelector(state => state.login);
+  const isOwner = loginState?.roles?.includes('CARGO_OWNER');
+  const cargoId = loginState?.memberId; // Assuming memberId is the cargoId for owners
+  const avatarUrl = loginState?.profileImage;
 
-const getToken = () =>
-  localStorage.getItem('accessToken') ||
-  sessionStorage.getItem('accessToken') ||
-  localStorage.getItem('ACCESS_TOKEN') ||
-  sessionStorage.getItem('ACCESS_TOKEN') || null;
-
-// 이미지 캐시 버스터
-const bust = (url) => (url ? `${url}${url.includes('?') ? '&' : '?'}v=${Date.now()}` : null);
-
-// useEffect 교체
-useEffect(() => {
-  let cancelled = false;
-
-  const token = getToken();
-  if (!token) {
-    // 나중에 토큰이 생기면 다시 시도 (storage 이벤트 활용)
-    const onStorage = (e) => {
-      if (e.key === 'accessToken' || e.key === 'ACCESS_TOKEN') {
-        const t = getToken();
-        if (t && !cancelled) {
-          // 다시 불러오기
-          (async () => {
-            try {
-              const { data: raw } = await axios.get(`${API_BASE}/g2i4/user/info`, {
-                headers: { Authorization: `Bearer ${t}` },
-              });
-              const data = raw?.data || raw?.user || raw?.payload || raw?.profile || raw?.account || raw?.result || {};
-              const nameOrWebPath =
-                data.webPath || data.profileImage || data.mem_profile_image || data.cargo_profile_image || data.profile || '';
-              const url = normalizeProfileUrl(nameOrWebPath);
-              setAvatarUrl(bust(url));
-              setIsOwner(parseUserType(raw) === 'CARGO_OWNER');
-              setCargoId(pickCargoId(raw));
-            } catch {
-              setAvatarUrl(null);
-              setIsOwner(false);
-              setCargoId(null);
-            }
-          })();
-        }
-      }
-    };
-    window.addEventListener('storage', onStorage);
-    return () => { cancelled = true; window.removeEventListener('storage', onStorage); };
-  }
-
-  // 토큰이 이미 있으면 즉시 호출
-  (async () => {
-    try {
-      const { data: raw } = await axios.get(`${API_BASE}/g2i4/user/info`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const data = raw?.data || raw?.user || raw?.payload || raw?.profile || raw?.account || raw?.result || {};
-      const nameOrWebPath =
-        data.webPath || data.profileImage || data.mem_profile_image || data.cargo_profile_image || data.profile || '';
-      const url = normalizeProfileUrl(nameOrWebPath);
-      if (!cancelled) {
-        setAvatarUrl(bust(url));
-        setIsOwner(parseUserType(raw) === 'CARGO_OWNER');
-        setCargoId(pickCargoId(raw));
-      }
-    } catch {
-      if (!cancelled) {
-        setAvatarUrl(null);
-        setIsOwner(false);
-        setCargoId(null);
-      }
-    }
-  })();
-
-  return () => { cancelled = true; };
-}, []); 
+ 
 
   const navStyle = { textDecoration: 'none', color: 'inherit' };
   const activeStyle = { backgroundColor: '#e0e0e0' };
@@ -171,12 +102,9 @@ useEffect(() => {
           src={avatarUrl || DEFAULT_AVATAR}
           imgProps={{
             referrerPolicy: 'no-referrer',
-            onError: () => setAvatarUrl(null),
           }}
           alt="프로필"
-        >
-          <PersonIcon />
-        </Avatar>
+        />
       </Box>
 
       <Divider />
