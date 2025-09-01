@@ -5,12 +5,15 @@ import lombok.*;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "social_account", uniqueConstraints = @UniqueConstraint(columnNames = {"provider","provider_user_id"}))
-@Getter
-@Setter 
-@NoArgsConstructor 
-@AllArgsConstructor 
-@Builder
+@Table(
+    name = "social_account",
+    uniqueConstraints = @UniqueConstraint(columnNames = {"provider", "provider_user_id"}),
+    indexes = {
+        @Index(name = "idx_social_login_id", columnList = "login_id"),
+        @Index(name = "idx_social_signup_ticket", columnList = "signup_ticket")
+    }
+)
+@Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
 public class SocialAccount {
 
     public enum Provider { KAKAO, NAVER, GOOGLE }
@@ -23,18 +26,18 @@ public class SocialAccount {
     private Provider provider;
 
     @Column(name = "provider_user_id", nullable = false, length = 128)
-    private String providerUserId;   // 카카오 id, 네이버 id, 구글 sub 등
+    private String providerUserId;
 
-    @Column(name = "email")          // 프로바이더가 준 이메일(있으면 보관)
-    private String email;
+    @Column(name = "email", length = 255)
+    private String email;           // 소셜 측 이메일(존재 시 보관)
 
-    @Column(name = "login_id")       // 우리 서비스의 로그인 ID(사용자 지정). 연결 전까지 null
-    private String loginId;
+    @Column(name = "login_id", length = 50) // 우리 서비스 로그인 ID
+    private String loginId;         // 연결 전엔 null
 
     @Column(name = "linked_at")
     private LocalDateTime linkedAt;
 
-    // 가입 완료 폼용 1회성 티켓 (간단 구현)
+    // 가입 완료 폼용 1회성 티켓
     @Column(name = "signup_ticket", length = 64)
     private String signupTicket;
 

@@ -6,6 +6,6 @@ import com.giproject.entity.oauth.SocialAccount;
 import com.giproject.entity.oauth.SocialAccount.Provider;
 
 public interface SocialAccountRepo extends JpaRepository<SocialAccount, Long> {
-    Optional<SocialAccount> findByProviderAndProviderUserId(Provider provider, String providerUserId);
-    Optional<SocialAccount> findBySignupTicket(String ticket);
+	Optional<SocialAccount> findByProviderAndProviderUserId(Provider provider, String providerUserId);
+    Optional<SocialAccount> findBySignupTicket(String signupTicket);
 }

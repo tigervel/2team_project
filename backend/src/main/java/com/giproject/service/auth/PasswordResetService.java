@@ -114,7 +114,7 @@ public class PasswordResetService {
                 m.setFrom(from);
             }
 
-            m.setSubject("[서비스명] 비밀번호 재설정 인증코드");
+            m.setSubject("[g2i4] 비밀번호 재설정 인증코드");
             m.setText("인증코드: " + code + "\n유효 시간: " + CHALLENGE_TTL_SEC + "초");
 
             mailSender.send(m);
@@ -141,7 +141,9 @@ public class PasswordResetService {
                 "purpose", "pwd_reset",
                 "loginId", ch.loginId()
         );
-        String resetToken = jwtService.createTempToken(claims, RESET_TOKEN_TTL_SEC);
+
+        // 🔧 FIX: subject(=loginId) 를 함께 전달
+        String resetToken = jwtService.createTempToken(ch.loginId(), claims, RESET_TOKEN_TTL_SEC);
         return Optional.of(resetToken);
     }
 
