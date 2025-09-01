@@ -1,8 +1,22 @@
 package com.giproject.service.report;
 
 import com.giproject.dto.report.UserReportDTO;
+import com.giproject.entity.cargo.CargoOwner;
+import com.giproject.entity.delivery.Delivery;
+import com.giproject.entity.estimate.Estimate;
+import com.giproject.entity.matching.Matching;
+import com.giproject.entity.member.Member;
+import com.giproject.entity.order.OrderSheet;
+import com.giproject.entity.payment.Payment;
 import com.giproject.entity.report.UserReport;
+import com.giproject.repository.delivery.DeliveryRepository;
+import com.giproject.repository.matching.MatchingRepository;
 import com.giproject.repository.report.UserReportRepository;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.data.domain.*;
@@ -16,9 +30,9 @@ import java.time.LocalDateTime;
 @Log4j2
 @Transactional(readOnly = true)
 public class UserReportServiceImpl implements UserReportService {
-
+	
     private final UserReportRepository repo;
-
+    private final MatchingRepository matchingRepository;
     @Override
     public long countUnread() {
         return repo.countByAdminReadFalse();
@@ -100,4 +114,20 @@ public class UserReportServiceImpl implements UserReportService {
         }
         return entityToDto(repo.save(entity));
     }
+
+	@Override
+	public UserReportDTO reportUser(Long maNo) {
+		Matching matching=matchingRepository.findById(maNo).orElseThrow(() -> new RuntimeException("매칭번호가 존재하지않습니다"));
+		CargoOwner cargoOwner = matching.getCargoOwner();
+		Estimate estimate = matching.getEstimate();
+		Member member = estimate.getMember();
+		String cargoId = cargoOwner.getCargoId();
+		String memberId = member.getMemId();
+		UserReportDTO dto = UserReportDTO.builder()
+							.reporterId(memberId)
+							.targetId(cargoId)
+							.build();
+		return dto;
+	}
 }
+

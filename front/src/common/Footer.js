@@ -30,7 +30,7 @@ function Footer() {
                         </Typography>
                         <Typography variant="body2" color="text.secondary"> 
 
-                            대표이사 . 윤순오 | 사업자등록번호 . 312-86-67742
+                            대표이사 . 문정현 | 사업자등록번호 . 312-86-67742
                         </Typography>
                         <Typography variant="body2" color="text.secondary" sx={{
                             paddingTop:1
@@ -48,12 +48,12 @@ function Footer() {
                             paddingTop:1
                         }}>
 
-                            통신사업자번호 . 2018-충남천안-0226호
+                            통신사업자번호 . 2018-전남벌교-0226호
                         </Typography>
                     </Grid>
 
                     {/* 고객 지원 */}
-                    <Grid item xs={12} sm={4} sx={{display:{xs:'none',sm:'block' }}}>
+                    {/* <Grid item xs={12} sm={4} sx={{display:{xs:'none',sm:'block' }}}>
                         <Typography variant="h6" gutterBottom>
                             고객 지원
                         </Typography>
@@ -66,10 +66,10 @@ function Footer() {
                         <Link href="#" underline="hover" color="inherit" display="block">
                             운송 약관
                         </Link>
-                    </Grid>
+                    </Grid> */}
 
                     {/* 소셜 미디어 */}
-                    <Grid item xs={12} sm={4} sx={{display:{xs:'none',sm:'block' }}}>
+                    {/* <Grid item xs={12} sm={4} sx={{display:{xs:'none',sm:'block' }}}>
                         <Typography variant="h6" gutterBottom>
                             소셜 미디어
                         </Typography>
@@ -82,7 +82,7 @@ function Footer() {
                         <Link href="#" underline="hover" color="inherit" display="block">
                             YouTube
                         </Link>
-                    </Grid>
+                    </Grid> */}
                 </Grid>
 
                 {/* 하단 저작권 */}

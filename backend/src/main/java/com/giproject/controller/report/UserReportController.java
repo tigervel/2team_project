@@ -62,8 +62,16 @@ public class UserReportController {
     }
     
     // 새로우 신고
-    @PostMapping
+    @PostMapping("/reportcreate")
     public ResponseEntity<UserReportDTO> create(@RequestBody UserReportDTO dto) {
+    	System.out.println(dto.getContent());
+    	System.out.println(dto.getReporterId());
+    	System.out.println(dto.getTargetId());
         return ResponseEntity.ok(service.create(dto));
+    }
+    
+    @PostMapping("/userreport")
+    public ResponseEntity<UserReportDTO> reportUser(@RequestBody Long deNo){
+    	return ResponseEntity.ok(service.reportUser(deNo));
     }
 }

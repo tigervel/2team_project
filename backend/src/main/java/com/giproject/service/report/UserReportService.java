@@ -42,5 +42,7 @@ public interface UserReportService {
     int markAllRead();
 
     UserReportDTO create(UserReportDTO dto);
+    
+    UserReportDTO reportUser(Long deNo);
 }
 
