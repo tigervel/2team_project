@@ -46,7 +46,9 @@ public class DeliveryServiceImpl implements DeliveryService{
 		delivery.setStatus(DeliveryStatus.COMPLETED);
 		delivery.setCompletTime(LocalDateTime.now());
 		mailService.deliveryCompleted(deliveryNo);
+		System.out.println("메일보냄");
 		return entityToDTO(delivery);
+		
 	}
 	
 	

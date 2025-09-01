@@ -1,3 +1,4 @@
+// src/layout/component/users/SignUpComponent.jsx
 import * as React from 'react';
 import ToggleButton from '@mui/material/ToggleButton';
 import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
@@ -8,13 +9,28 @@ import {
 import Visibility from '@mui/icons-material/Visibility';
 import VisibilityOff from '@mui/icons-material/VisibilityOff';
 import SearchIcon from '@mui/icons-material/Search';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import useIdForm from '../../../hooks/useIdForm';
 import usePasswordForm from '../../../hooks/usePasswordForm';
-import EmailVerifyDialog from "../auth/EmailVerifyDialog";
+import EmailVerifyDialog from '../auth/EmailVerifyDialog';
+
+// 백엔드 베이스 URL
+const API_BASE =
+    (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE) ||
+    process.env.REACT_APP_API_BASE ||
+    'http://localhost:8080';
+
+// 해시에 signup_ticket이 실려 온 경우를 대비한 파서
+function getTicketFromHash(hash) {
+    const h = (hash || '').replace(/^#/, '');
+    if (!h) return null;
+    const map = new URLSearchParams(h);
+    return map.get('signup_ticket') || map.get('signupTicket') || map.get('ticket');
+}
 
 const SignUpComponent = () => {
     const navigate = useNavigate();
+    const { hash } = useLocation();
 
     // 사용자 유형 (화주/차주)
     const [alignment, setAlignment] = React.useState('user'); // user=화주, car=차주
@@ -24,8 +40,8 @@ const SignUpComponent = () => {
     // ID 폼 상태
     const { id, handleChange, isIdValid } = useIdForm();
     const [idChecked, setIdChecked] = React.useState(false);
-    const [idAvailable, setIdAvailable] = React.useState(null);
-    const [idStatus, setIdStatus] = React.useState('idle'); // idle | checking | available | taken | error
+    const [idAvailable, setIdAvailable] = React.useState(null); // true | false | null
+    const [idStatus, setIdStatus] = React.useState('idle');     // idle | checking | available | taken | error
     const [idTouched, setIdTouched] = React.useState(false);
 
     // 비밀번호 폼 상태
@@ -44,6 +60,7 @@ const SignUpComponent = () => {
     const [emailDomain, setEmailDomain] = React.useState('');
     const [emailVerified, setEmailVerified] = React.useState(false);
     const [openEmailModal, setOpenEmailModal] = React.useState(false);
+    const [emailLocked, setEmailLocked] = React.useState(false); // ✅ 소셜 첫가입이면 true
 
     const [name, setName] = React.useState('');
     const [phone, setPhone] = React.useState('');
@@ -62,6 +79,7 @@ const SignUpComponent = () => {
     const canOpenVerify = !!fullEmail && emailRegex.test(fullEmail);
 
     const onClickVerifyEmail = () => {
+        if (emailLocked) return; // ✅ 소셜 이메일 잠금 시 인증 모달 금지
         if (!canOpenVerify) return;
         setOpenEmailModal(true);
     };
@@ -70,39 +88,135 @@ const SignUpComponent = () => {
         if (ok) setOpenEmailModal(false);
     };
 
-    const API_BASE =
-        import.meta?.env?.VITE_API_BASE
-        || process.env.REACT_APP_API_BASE
-        || 'http://localhost:8080';
-
-    // ID 중복 확인
-    const handleCheckId = async () => {
-        if (!id || !isIdValid) return;
-        setIdStatus('checking');
-        setIdChecked(false);
-        setIdAvailable(null);
-
-        const tryCheck = async (paramName) => {
-            const url = `${API_BASE}/api/signup/check-id?${paramName}=${encodeURIComponent(id)}`;
-            const r = await fetch(url, { headers: { Accept: 'application/json' } });
-            const txt = await r.text();
-            try { return JSON.parse(txt); } catch { return { available: false }; }
-        };
-
-        try {
-            let data = await tryCheck('loginId'); // 서버 구현에 맞게 조정
-            if (typeof data.available === 'undefined') data = await tryCheck('memId');
-            const available = Boolean(data.available);
-            setIdAvailable(available);
-            setIdChecked(true);
-            setIdStatus(available ? 'available' : 'taken');
-        } catch (e) {
-            console.error(e);
-            setIdChecked(true);
-            setIdAvailable(null);
-            setIdStatus('error');
+    // ===============================
+    // 소셜 첫가입 컨텍스트 로드 (이메일/이름 프리필 & 잠금)
+    // - 우선 해시에서 signup_ticket이 왔으면 세션에 저장
+    // - 세션의 signup_ticket로 컨텍스트 요청
+    // ===============================
+    React.useEffect(() => {
+        const fromHash = getTicketFromHash(hash);
+        if (fromHash) {
+            try {
+                sessionStorage.setItem('signup_ticket', fromHash);
+                // URL 해시 제거 (민감 데이터 흔적 제거)
+                window.history.replaceState({}, document.title, window.location.pathname + window.location.search);
+            } catch { }
         }
-    };
+
+        const ticket = sessionStorage.getItem('signup_ticket');
+        if (!ticket) return; // 일반 가입 플로우
+
+        (async () => {
+            try {
+                const r = await fetch(
+                    `${API_BASE}/api/auth/social/signup-context?ticket=${encodeURIComponent(ticket)}`,
+                    { headers: { Accept: 'application/json' } }
+                );
+                if (!r.ok) return; // 티켓 만료/없음 → 일반 가입으로
+                const data = await r.json(); // { email, provider, name }
+                if (data?.email) {
+                    const [local, ...rest] = String(data.email).split('@');
+                    setEmailLocal(local || '');
+                    setEmailDomain(rest.join('@') || '');
+                    setEmailVerified(true); // ✅ 서버 이메일이면 인증 완료 처리
+                    setEmailLocked(true);   // ✅ 읽기 전용
+                }
+                if (data?.name) {
+                    setName(data.name);
+                }
+            } catch {
+                // 무시: 소셜 컨텍스트 없으면 일반 가입으로
+            }
+        })();
+    }, [hash]);
+
+    // ===============================
+    // ID 중복 확인 (고정 경로: /api/auth/check-id)
+    // ===============================
+    const handleCheckId = (() => {
+        let reqToken = 0;
+        return async () => {
+            if (!id || !isIdValid) return;
+
+            const myToken = ++reqToken;
+
+            setIdStatus('checking');
+            setIdChecked(false);
+            setIdAvailable(null);
+
+            try {
+                const res = await fetch(
+                    `${API_BASE}/api/auth/check-id?loginId=${encodeURIComponent(id)}`,
+                    { method: 'GET', headers: { Accept: 'application/json' } }
+                );
+
+                if (myToken !== reqToken) return;
+
+                if (!res.ok) {
+                    let msg = '';
+                    try { msg = await res.text(); } catch { }
+                    console.warn('check-id failed', res.status, msg?.slice?.(0, 200));
+                    setIdStatus('error');
+                    setIdChecked(true);
+                    setIdAvailable(null);
+                    return;
+                }
+
+                const ct = res.headers.get('content-type') || '';
+                let data = null;
+                if (ct.includes('application/json')) {
+                    data = await res.json();
+                } else {
+                    const txt = await res.text();
+                    try { data = JSON.parse(txt); } catch {
+                        console.warn('Non-JSON response for check-id:', txt?.slice?.(0, 200));
+                        setIdStatus('error');
+                        setIdChecked(true);
+                        setIdAvailable(null);
+                        return;
+                    }
+                }
+
+                const toAvailable = (obj) => {
+                    if (!obj || typeof obj !== 'object') return null;
+                    if ('available' in obj) return !!obj.available;
+                    if ('isDuplicate' in obj) return !obj.isDuplicate;
+                    if ('duplicate' in obj) return !obj.duplicate;
+                    if ('exists' in obj) return !obj.exists;
+                    if ('inUse' in obj) return !obj.inUse;
+                    if ('count' in obj) return !(Number(obj.count) > 0);
+                    for (const v of Object.values(obj)) {
+                        if (v && typeof v === 'object') {
+                            const r = toAvailable(v);
+                            if (r !== null) return r;
+                        }
+                    }
+                    return null;
+                };
+
+                const available = toAvailable(data);
+                if (available === true) {
+                    setIdAvailable(true);
+                    setIdChecked(true);
+                    setIdStatus('available');
+                } else if (available === false) {
+                    setIdAvailable(false);
+                    setIdChecked(true);
+                    setIdStatus('taken');
+                } else {
+                    console.warn('Unrecognized check-id payload:', data);
+                    setIdAvailable(null);
+                    setIdChecked(true);
+                    setIdStatus('error');
+                }
+            } catch (e) {
+                console.error(e);
+                setIdStatus('error');
+                setIdChecked(true);
+                setIdAvailable(null);
+            }
+        };
+    })();
 
     // 주소 검색
     const handleAddressSearch = () => {
@@ -116,31 +230,71 @@ const SignUpComponent = () => {
         isIdValid &&
         idChecked && idAvailable === true &&
         isPwValid && isPwMatch &&
-        !!fullEmail && emailVerified &&
+        !!(emailLocked ? (emailLocal && emailDomain) : fullEmail) &&
+        (emailLocked || emailVerified) &&
         name.trim().length > 0 &&
         password1.length >= 8;
 
     // 가입 요청
     const onSubmit = async (e) => {
         e.preventDefault();
-        if (!canSubmit) return;
+        if (!canSubmit || submitting) return;
+
         setSubmitError('');
         setSubmitting(true);
+
         try {
-            const payload = {
-                role:roles,                               // "SHIPPER" or "DRIVER"
-                loginId: id,                        // DTO 키와 동일
+            // 공통 페이로드
+            const payloadBase = {
+                role: roles, // "SHIPPER" | "DRIVER"
+                loginId: id,
                 password: password1,
                 name,
-                email: fullEmail,
+                email: fullEmail, // (소셜의 경우 서버가 ticket의 email을 우선시)
                 phone,
                 address: `${selectedAddress} ${detailAddress}`.trim()
             };
 
+            if (emailLocked) {
+                // ✅ 소셜 첫가입: signup_ticket 포함해 complete-signup 호출
+                const signupTicket = sessionStorage.getItem('signup_ticket');
+                if (!signupTicket) {
+                    setSubmitError('가입 티켓이 없습니다. 소셜 로그인부터 다시 진행해주세요.');
+                    setSubmitting(false);
+                    return;
+                }
+
+                const res = await fetch(`${API_BASE}/api/auth/social/complete-signup`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ signupTicket, ...payloadBase })
+                });
+
+                const text = await res.text();
+                let data;
+                try { data = JSON.parse(text); } catch { data = text; }
+
+                if (!res.ok) {
+                    const msg = Array.isArray(data) ? data.join('\n') : (data || '가입 실패');
+                    setSubmitError(msg);
+                    setSubmitting(false);
+                    return;
+                }
+
+                // 성공 → 토큰 저장 후 홈
+                if (data?.accessToken) localStorage.setItem('accessToken', data.accessToken);
+                if (data?.refreshToken) localStorage.setItem('refreshToken', data.refreshToken);
+                sessionStorage.removeItem('signup_ticket');
+                navigate('/', { replace: true });
+                return;
+            }
+
+            // ✅ 일반 가입: 기존 signup API 사용
             const res = await fetch(`${API_BASE}/api/auth/signup`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload),
+                credentials: 'include',
+                body: JSON.stringify(payloadBase)
             });
 
             const text = await res.text();
@@ -150,11 +304,12 @@ const SignUpComponent = () => {
             if (!res.ok) {
                 const msg = Array.isArray(data) ? data.join('\n') : (data || '가입 실패');
                 setSubmitError(msg);
+                setSubmitting(false);
                 return;
             }
 
-            // 성공: 메인으로 이동
-            navigate('/', { replace: true });
+            // 일반 가입 성공 UX (필요시 로그인 페이지로 이동하거나 자동 로그인 로직 추가)
+            navigate('/login?joined=1', { replace: true });
         } catch (err) {
             console.error(err);
             setSubmitError('네트워크 오류가 발생했습니다.');
@@ -192,13 +347,15 @@ const SignUpComponent = () => {
                             (idTouched || idChecked) && id !== ''
                                 ? (!idChecked
                                     ? '8~15자, 영문 대소문자와 숫자만 허용됩니다.'
-                                    : idStatus === 'error'
-                                        ? '확인 중 오류가 발생했습니다. 잠시 후 다시 시도하세요.'
-                                        : !isIdValid
-                                            ? ''
-                                            : idAvailable === false
-                                                ? '이미 사용 중인 ID입니다.'
-                                                : '사용 가능한 ID입니다.')
+                                    : idStatus === 'checking'
+                                        ? '확인 중...'
+                                        : idStatus === 'error'
+                                            ? '확인 중 오류가 발생했습니다. 잠시 후 다시 시도하세요.'
+                                            : !isIdValid
+                                                ? ''
+                                                : idAvailable === false
+                                                    ? '이미 사용 중인 ID입니다.'
+                                                    : '사용 가능한 ID입니다.')
                                 : ''
                         }
                         sx={{ width: '99%' }}
@@ -264,8 +421,8 @@ const SignUpComponent = () => {
                         label="Password 재입력"
                     />
                     {pw2Touched && password2 !== '' && (
-                        <Typography color={isPwMatch ? "success.main" : "error"} variant="caption">
-                            {isPwMatch ? "비밀번호가 일치합니다." : "비밀번호가 일치하지 않습니다."}
+                        <Typography color={isPwMatch ? 'success.main' : 'error'} variant="caption">
+                            {isPwMatch ? '비밀번호가 일치합니다.' : '비밀번호가 일치하지 않습니다.'}
                         </Typography>
                     )}
                 </FormControl>
@@ -275,7 +432,8 @@ const SignUpComponent = () => {
                     <TextField
                         label="Email"
                         value={emailLocal}
-                        onChange={(e) => { setEmailLocal(e.target.value); setEmailVerified(false); }}
+                        onChange={(e) => { if (!emailLocked) { setEmailLocal(e.target.value); setEmailVerified(false); } }}
+                        InputProps={{ readOnly: emailLocked }}
                         sx={{ flex: '1 1 0', mr: 1.3 }}
                     />
                     <Typography sx={{ width: 32, height: 56, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>@</Typography>
@@ -283,19 +441,25 @@ const SignUpComponent = () => {
                         freeSolo
                         options={domainOptions}
                         value={emailDomain}
-                        onInputChange={(_, v) => { setEmailDomain(v); setEmailVerified(false); }}
-                        renderInput={(params) => <TextField {...params} label="선택" />}
+                        onInputChange={(_, v) => { if (!emailLocked) { setEmailDomain(v); setEmailVerified(false); } }}
+                        renderInput={(params) => (
+                            <TextField
+                                {...params}
+                                label="선택"
+                                InputProps={{ ...params.InputProps, readOnly: emailLocked }}
+                            />
+                        )}
                         sx={{ flex: '1 1 0' }}
                     />
                     <Button
-                        variant={emailVerified ? "contained" : "outlined"}
-                        color={emailVerified ? "success" : "primary"}
+                        variant={emailVerified ? 'contained' : 'outlined'}
+                        color={emailVerified ? 'success' : 'primary'}
                         size="large"
                         sx={{ height: 56, whiteSpace: 'nowrap' }}
                         onClick={onClickVerifyEmail}
-                        disabled={!canOpenVerify}
+                        disabled={emailLocked || !canOpenVerify}
                     >
-                        {emailVerified ? "인증완료" : "인증하기"}
+                        {emailLocked ? '인증완료' : (emailVerified ? '인증완료' : '인증하기')}
                     </Button>
                 </Box>
 

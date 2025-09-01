@@ -203,7 +203,7 @@ public class MemberServiceImpl implements MemberService {
         String name = (String) profile.get("name");
 
         // 2) 이메일로 회원 조회 또는 신규 회원 생성
-        Member member = memberRepository.findByMemEmail(email)
+        Member member = memberRepository.findFirstByMemEmail(email)
             .orElseGet(() -> {
                 Member newMember = Member.builder()
                     .memId(UUID.randomUUID().toString())

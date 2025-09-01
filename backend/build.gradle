@@ -54,6 +54,8 @@ dependencies {
 
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+    
+    implementation 'org.springframework.boot:spring-boot-starter-oauth2-client'
 }
 
 // 컴파일 시 파라미터 이름 정보 보존 (바인딩 400 방지)

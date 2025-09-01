@@ -1,4 +1,4 @@
-// src/slice/loginSlice.js
+
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import axios from "axios";
 
@@ -8,11 +8,25 @@ const API_BASE =
     process.env.REACT_APP_API_BASE ||
     "http://localhost:8080";
 
+// 토큰 픽업 유틸
+const pickToken = () =>
+    localStorage.getItem('accessToken') ||
+    sessionStorage.getItem('accessToken') ||
+    null;
+
+// 프로필 URL 정규화 유틸
+const normalizeProfileUrl = (v) => {
+    if (!v) return null;
+    if (v.startsWith('http')) return v;
+    if (v.startsWith('/g2i4/uploads/')) return `${API_BASE}${v}`;
+    return `${API_BASE}/g2i4/uploads/user_profile/${encodeURIComponent(v)}`;
+};
+
 // 초기 상태 (기존 필드 유지 + 상태/토큰 필드 추가)
 const initState = {
     email: "",
     roles: ["USER"],
-
+    profileImage: "",
     memberId: null,
 
     status: "idle",      // 'idle' | 'loading' | 'succeeded' | 'failed'
@@ -36,6 +50,18 @@ async function loginApi(param) {
     return data;
 }
 
+// ✅ 사용자 정보 API 호출
+async function getUserInfoApi() {
+    const token = pickToken();
+    if (!token) throw new Error("No token found");
+
+    const { data: raw } = await axios.get(`${API_BASE}/g2i4/user/info`, {
+        headers: { Authorization: `Bearer ${token}` },
+    });
+    return raw;
+}
+
+
 // 비동기 thunk (이름은 기존 유지)
 export const loginPostAsync = createAsyncThunk(
     "loginPostAsync",
@@ -53,6 +79,20 @@ export const loginPostAsync = createAsyncThunk(
         }
     }
 );
+
+// ✅ 사용자 정보 가져오기 thunk
+export const getUserInfoAsync = createAsyncThunk(
+    "getUserInfoAsync",
+    async (_, { rejectWithValue }) => {
+        try {
+            const data = await getUserInfoApi();
+            return data;
+        } catch (err) {
+            return rejectWithValue(err.message);
+        }
+    }
+);
+
 
 // slice
 const loginSlice = createSlice({
@@ -75,6 +115,9 @@ const loginSlice = createSlice({
             // 토큰은 훅(useCustomLogin)에서 지우고, 상태만 리셋
             return { ...initState };
         },
+        updateProfileImage: (state, action) => {
+            state.profileImage = action.payload;
+        },
     },
     extraReducers: (builder) => {
         builder
@@ -91,9 +134,22 @@ const loginSlice = createSlice({
             .addCase(loginPostAsync.rejected, (state, action) => {
                 state.status = "failed";
                 state.error = action.payload || action.error?.message || "로그인 실패";
+            })
+            // ✅ getUserInfoAsync 리듀서
+            .addCase(getUserInfoAsync.fulfilled, (state, action) => {
+                const raw = action.payload || {};
+                const data = raw.data || raw.user || raw.payload || raw.profile || raw.account || raw.result || {};
+                
+                const profilePath = data.webPath || data.profileImage || data.mem_profile_image || data.cargo_profile_image || data.profile || '';
+                state.profileImage = normalizeProfileUrl(profilePath);
+
+                // 필요 시 다른 정보도 업데이트
+                state.email = data.email || data.mem_email || state.email;
+                state.memberId = data.mem_id || data.cargo_id || state.memberId;
             });
     },
 });
 
-export const { login, logout } = loginSlice.actions;
+export const { login, logout, updateProfileImage } = loginSlice.actions;
 export default loginSlice.reducer;
+

@@ -42,4 +42,13 @@ public class Delivery {
 	private Payment payment;
 	
 	private LocalDateTime completTime;
+
+	  public void markInTransit() {
+	        this.status = DeliveryStatus.IN_TRANSIT;
+	    }
+
+	    public void markCompleted() {
+	        this.status = DeliveryStatus.COMPLETED;
+	        this.completTime = LocalDateTime.now();
+	    }
 }

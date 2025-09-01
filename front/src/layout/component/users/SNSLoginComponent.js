@@ -1,88 +1,63 @@
-import { Link } from "react-router-dom";
-import { getKakaoLogin } from "../../../api/getKakaoLoginLink";
 import { Button } from "@mui/material";
-import { getNaverLogin } from "../../../api/getNaverLoginLink";
-import { getGoogleLogin } from "../../../api/getGoogleLoginLink";
 
-const naverLoginData = getNaverLogin(); // { url, state }
-
-const kakaoLoginUrl = getKakaoLogin();  // 문자열 URL
-
-const googleLoginData = getGoogleLogin(); // { url, state }
-
-const socialSignIn = (providerId) => {
-    let url = "";
-    switch (providerId) {
-        case "google":
-            url = googleLoginData.url;
-            break;
-        case "kakao":
-            url = kakaoLoginUrl;
-            break;
-        case "naver":
-            url = naverLoginData.url;
-            break;
-        default:
-            break;
-    }
-    window.location.href = url;
-};
-
+/* eslint-disable no-undef */
+const API_BASE =
+    (typeof import.meta !== "undefined" && import.meta.env?.VITE_API_BASE) ||
+    process.env.REACT_APP_API_BASE ||
+    "http://localhost:8080";
 
 const ButtonStyle = {
     mb: 1,
-    display: 'flex',
-    alignItems: 'center',
+    display: "flex",
+    alignItems: "center",
     gap: 1.5,
-    fontFamily: 'SUIT, sans-serif',
-    fontSize: '13px',
-    textTransform: 'none',
+    fontFamily: "SUIT, sans-serif",
+    fontSize: "13px",
+    textTransform: "none",
 };
 
-const SNSLoginComponent = () => {
-    const kakaolink = getKakaoLogin();
-    const naverlink = getNaverLogin();
-    const googlelink = getGoogleLogin();
+/** @param {'naver'|'kakao'|'google'} provider */
+function startOAuth(provider) {
+    (window.top ?? window).location.href = `${API_BASE}/oauth2/authorization/${provider}`;
+}
 
-    return(
+const SNSLoginComponent = () => {
+    return (
         <>
             <Button
                 fullWidth
                 variant="outlined"
+                type="button"                 // 폼 안에서 submit 방지
                 sx={ButtonStyle}
-                onClick={() => socialSignIn('naver')}
+                onClick={() => startOAuth("naver")}
             >
-                <Link to={naverlink} style={{ display: 'flex', alignItems: 'center', gap: 8, textDecoration: 'none', color: 'inherit' }}>
-                    <img src="/assets/naver-icon.png" alt="Naver" style={{ width: 20, height: 20 }} />
-                        <span>Sign in with Naver</span>
-                </Link>
+                <img src="/assets/naver-icon.png" alt="Naver" style={{ width: 20, height: 20 }} />
+                <span>Sign in with Naver</span>
             </Button>
 
             <Button
                 fullWidth
                 variant="outlined"
+                type="button"
                 sx={ButtonStyle}
-                onClick={() => socialSignIn('kakao')}
+                onClick={() => startOAuth("kakao")}
             >
-                <Link to={kakaolink} style={{ display: 'flex', alignItems: 'center', gap: 8, textDecoration: 'none', color: 'inherit' }}>
-                    <img src="/assets/kakao-icon.png" alt="Kakao" style={{ width: 20, height: 20 }} />
-                    <span>Sign in with Kakao</span>
-                </Link>
+                <img src="/assets/kakao-icon.png" alt="Kakao" style={{ width: 20, height: 20 }} />
+                <span>Sign in with Kakao</span>
             </Button>
 
             <Button
                 fullWidth
                 variant="outlined"
+                type="button"
                 sx={ButtonStyle}
-                onClick={() => socialSignIn('google')}
+                onClick={() => startOAuth("google")}
             >
-                <Link to={googlelink} style={{ display: 'flex', alignItems: 'center', gap: 8, textDecoration: 'none', color: 'inherit' }}>
-                    <img src="/assets/google-icon.png" alt="Google" style={{ width: 20, height: 20 }} />
-                    <span>Sign in with Google</span>
-                </Link>
-            </Button>            
+                <img src="/assets/google-icon.png" alt="Google" style={{ width: 20, height: 20 }} />
+                <span>Sign in with Google</span>
+            </Button>
         </>
-    
-    )
-}
+    );
+};
+
 export default SNSLoginComponent;
