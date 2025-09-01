@@ -40,6 +40,7 @@ public interface MemberRepository extends JpaRepository<Member, String> {
     // 검색
     List<Member> findByMemIdContainingOrMemNameContaining(String memIdKeyword, String memNameKeyword);
 
+    List<Member> findByMemNameContainingIgnoreCaseOrMemEmailContainingIgnoreCaseOrMemPhoneContainingIgnoreCase(String memName, String memEmail, String memPhone);
     // 일반 로그인 (memId 기반) — 존재 가정 시 사용
     @EntityGraph(attributePaths = { "memberRoleList" })
     @Query("SELECT m FROM Member m WHERE m.memId = :memId")
