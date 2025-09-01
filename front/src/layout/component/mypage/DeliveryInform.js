@@ -1,4 +1,5 @@
 // DeliveryInfoPage.jsx (full)
+// 완료된 배송: 신고버튼 추가 (deliveryNo 전달)
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   Box, Typography, Table, TableBody, TableCell,
@@ -58,7 +59,6 @@ const getOwnerCompletedList = async ({ page, size }) => {
   return data ?? [];
 };
 const startDelivery = async (matchingNo) => {
-  // 우선 /in-transit 사용, 없으면 /start로 폴백
   try {
     const { data } = await api.post(`/g2i4/owner/deliveries/${matchingNo}/in_transit`);
     return data;
@@ -176,6 +176,20 @@ const DeliveryInfoPage = () => {
   // 배송 시작 모달
   const [openStartModal, setOpenStartModal] = useState(false);
   const [selectedStartMatchingNo, setSelectedStartMatchingNo] = useState(null);
+
+  // 신고 페이지 이동 (완료된 배송에서 사용)
+  const goReportPage = (matchingNo, item) => {
+    if (!matchingNo) {
+      alert('이 건은 matchingNo가 없어 신고 페이지로 이동할 수 없습니다.');
+      return;
+    }
+    navigate('/reportpage', {
+      state: {
+        matchingNo,
+        estimateNo: item?.eno ?? null,
+      },
+    });
+  };
 
   const handleConfirmClick = (matchingNo) => {
     navigate("/order", { state: { matchingNo } });
@@ -300,12 +314,6 @@ const DeliveryInfoPage = () => {
           const paid = asList(await getOwnerPaidList(paidPage));
           const completed = asList(await getOwnerCompletedList(completedPage));
 
-          const sortByEnoDesc = (arr) =>
-            [...arr].sort((a, b) => {
-              const A = typeof a.eno === "string" ? parseInt(a.eno, 10) : a.eno ?? 0;
-              const B = typeof b.eno === "string" ? parseInt(b.eno, 10) : b.eno ?? 0;
-              return B - A;
-            });
           setPaidData(paginate(paid, paidPage));
           setCompletedData(paginate(completed, completedPage));
         }
@@ -322,7 +330,7 @@ const DeliveryInfoPage = () => {
   const movePaidPage = (pageObj) => setPaidPage((prev) => ({ ...prev, ...pageObj }));
   const moveCompletedPage = (pageObj) => setCompletedPage((prev) => ({ ...prev, ...pageObj }));
 
-  // 테이블 colgroup
+  // 공용 colgroup (미결제/결제됨)
   const tableColgroup = useMemo(() => (
     <colgroup>
       <col style={{ width: '10%' }} />
@@ -334,6 +342,20 @@ const DeliveryInfoPage = () => {
       <col style={{ width: '8%' }} />
     </colgroup>
   ), []);
+
+  // 완료 전용 colgroup: 차주면 신고 컬럼 추가(8칸), 회원은 7칸
+  const completedColgroup = useMemo(() => (
+    <colgroup>
+      <col style={{ width: '10%' }} />
+      <col style={{ width: '10%' }} />
+      <col style={{ width: '24%' }} />
+      <col style={{ width: '24%' }} />
+      <col style={{ width: '12%' }} />
+      <col style={{ width: '10%' }} /> {/* 운전 기사 */}
+      {isOwner && <col style={{ width: '8%' }} />} {/* 신고 */}
+      <col style={{ width: '8%' }} />  {/* 상태 */}
+    </colgroup>
+  ), [isOwner]);
 
   // 렌더러: 미결제
   const renderUnpaidRows = (list) => {
@@ -394,7 +416,7 @@ const DeliveryInfoPage = () => {
     });
   };
 
-  // 렌더러: 결제됨
+  // 렌더러: 결제됨 (원래대로 운전 기사 / 처리|상태)
   const renderPaidRows = (list) => {
     if (!list || list.length === 0) {
       return (
@@ -460,26 +482,53 @@ const DeliveryInfoPage = () => {
     });
   };
 
-  // 렌더러: 완료
+  // 렌더러: 완료 (여기에 신고 버튼 추가)
   const renderCompletedRows = (list) => {
     if (!list || list.length === 0) {
       return (
         <TableRow>
-          <TableCell colSpan={7} align="center">항목이 없습니다.</TableCell>
+          <TableCell colSpan={isOwner ? 8 : 7} align="center">항목이 없습니다.</TableCell>
         </TableRow>
       );
     }
     return list.map((item) => {
       const doneAt = item.deliveryCompletedAt ?? item.endTime ?? null;
+
+      // 🔑 matchingNo만 안전 추출
+      const matchingNo = item?.matchingNo ?? item?.mno ?? item?.matching_no ?? null;
+
       return (
         <TableRow key={item.eno}>
           <TableCell align="center">{item.cargoType}</TableCell>
           <TableCell align="center">{item.cargoWeight}</TableCell>
           <TableCell align="center">{item.startAddress}</TableCell>
           <TableCell align="center">{item.endAddress}</TableCell>
-          <TableCell align="center" sx={{ whiteSpace: 'nowrap' }}>{formatDateHour(doneAt)}</TableCell>
+          <TableCell align="center" style={{ whiteSpace: 'nowrap' }}>{formatDateHour(doneAt)}</TableCell>
           <TableCell align="center">{item.driverName ?? '-'}</TableCell>
-          <TableCell align="center"><Typography variant="body2" sx={{ color: 'success.main' }}>배송 완료</Typography></TableCell>
+
+          {isOwner && (
+            <TableCell align="center">
+              {matchingNo ? (
+                <Button
+                  size="small"
+                  color="error"
+                  variant="outlined"
+                  onClick={() => {
+                    console.log("신고 버튼 클릭 - matchingNo:", matchingNo);
+                    goReportPage(matchingNo, item);
+                  }}
+                >
+                  신고
+                </Button>
+              ) : (
+                <Typography variant="body2" color="text.secondary">-</Typography>
+              )}
+            </TableCell>
+          )}
+
+          <TableCell align="center">
+            <Typography variant="body2" sx={{ color: 'success.main' }}>배송 완료</Typography>
+          </TableCell>
         </TableRow>
       );
     });
@@ -557,7 +606,7 @@ const DeliveryInfoPage = () => {
           </Typography>
           <TableContainer component={Paper} elevation={1}>
             <Table sx={{ '& .MuiTableCell-root': { height: 60, py: 0 } }}>
-              {tableColgroup}
+              {completedColgroup}
               <TableHead>
                 <TableRow>
                   <TableCell align="center">화물명</TableCell>
@@ -566,6 +615,7 @@ const DeliveryInfoPage = () => {
                   <TableCell align="center">도착지</TableCell>
                   <TableCell align="center">{isMember ? '배송 완료일' : '완료일'}</TableCell>
                   <TableCell align="center">운전 기사</TableCell>
+                  {isOwner && <TableCell align="center">신고</TableCell>}
                   <TableCell align="center">상태</TableCell>
                 </TableRow>
               </TableHead>
