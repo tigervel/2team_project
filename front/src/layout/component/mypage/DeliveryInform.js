@@ -4,13 +4,15 @@ import React, { useEffect, useMemo, useState } from 'react';
 import {
   Box, Typography, Table, TableBody, TableCell,
   TableContainer, TableHead, TableRow, Paper, Divider, Container, Button,
-  Dialog, DialogTitle, DialogContent, DialogActions, TextField
+  Dialog, DialogTitle, DialogContent, DialogActions, TextField,
+  Modal
 } from '@mui/material';
 import PageComponent from '../common/PageComponent';
 import { useNavigate } from "react-router-dom";
 import { getMyUnpaidEstimateList, getMyPaidEstimateList } from '../../../api/estimateApi/estimateApi';
 import { simplifyBatch } from "../../../api/addressApi/addressApi";
 import axios from 'axios';
+import ReportComponent from './ReportComponent';
 
 // ===== 공통 API 베이스/인스턴스 =====
 const API_BASE =
@@ -177,18 +179,13 @@ const DeliveryInfoPage = () => {
   const [openStartModal, setOpenStartModal] = useState(false);
   const [selectedStartMatchingNo, setSelectedStartMatchingNo] = useState(null);
 
-  // 신고 페이지 이동 (완료된 배송에서 사용)
-  const goReportPage = (matchingNo, item) => {
-    if (!matchingNo) {
-      alert('이 건은 matchingNo가 없어 신고 페이지로 이동할 수 없습니다.');
-      return;
-    }
-    navigate('/reportpage', {
-      state: {
-        matchingNo,
-        estimateNo: item?.eno ?? null,
-      },
-    });
+  // Report Modal State
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [selectedMatchingNoForReport, setSelectedMatchingNoForReport] = useState(null);
+
+  const handleOpenReportModal = (matchingNo) => {
+    setSelectedMatchingNoForReport(matchingNo);
+    setShowReportModal(true);
   };
 
   const handleConfirmClick = (matchingNo) => {
@@ -513,10 +510,7 @@ const DeliveryInfoPage = () => {
                   size="small"
                   color="error"
                   variant="outlined"
-                  onClick={() => {
-                    console.log("신고 버튼 클릭 - matchingNo:", matchingNo);
-                    goReportPage(matchingNo, item);
-                  }}
+                  onClick={() => handleOpenReportModal(matchingNo)}
                 >
                   신고
                 </Button>
@@ -673,6 +667,34 @@ const DeliveryInfoPage = () => {
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* Report Modal */}
+      <Modal
+        open={showReportModal}
+        onClose={() => setShowReportModal(false)}
+        aria-labelledby="report-modal-title"
+      >
+        <Box sx={{
+          position: 'absolute',
+          top: '50%',
+          left: '50%',
+          transform: 'translate(-50%, -50%)',
+          width: 600,
+          bgcolor: 'background.paper',
+          border: '2px solid #000',
+          boxShadow: 24,
+          p: 4,
+        }}>
+          <Typography id="report-modal-title" variant="h6" component="h2">
+            신고하기
+          </Typography>
+          <ReportComponent 
+            matchingNo={selectedMatchingNoForReport} 
+            onClose={() => setShowReportModal(false)} 
+          />
+        </Box>
+      </Modal>
+
     </Box>
   );
 };
