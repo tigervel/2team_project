@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import {
   Drawer, List, ListItemIcon, ListItemText, ListItemButton,
-  Typography, Avatar, Divider, Box
+  Typography, Avatar, Divider, Box, Toolbar
 } from '@mui/material';
 import { NavLink } from 'react-router-dom';
 import HomeIcon from '@mui/icons-material/Home';
@@ -12,6 +12,8 @@ import BuildIcon from '@mui/icons-material/Build';
 import axios from 'axios';
 
 const drawerWidth = 240;
+const APPBAR_HEIGHT_MOBILE = 56;
+const APPBAR_HEIGHT_DESKTOP = 100;
 
 // === DEBUG 스위치 ===
 const DEBUG_SIDEBAR = true;
@@ -144,9 +146,12 @@ const Sidebar = () => {
         [`& .MuiDrawer-paper`]: {
           width: drawerWidth,
           boxSizing: 'border-box',
-          top: '79px',
-          height: 'calc(100% - 79px)',
-          position: 'fixed'
+           position: 'fixed',
+         top: { xs: APPBAR_HEIGHT_MOBILE, md: APPBAR_HEIGHT_DESKTOP },
+         height: {
+           xs: `calc(100% - ${APPBAR_HEIGHT_MOBILE}px)`,
+           md: `calc(100% - ${APPBAR_HEIGHT_DESKTOP}px)`
+         },
         }
       }}
     >
