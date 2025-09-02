@@ -8,6 +8,8 @@ import { basicList } from "../api/adminApi/adminApi";
 import { useSelector } from "react-redux";
 import MainFeesUtil from "../layout/component/common/MainFeesUtil";
 import { API_SERVER_HOST } from "../api/serverConfig";
+import { getNoticeList } from "../api/noticeApi";
+import { useNavigate } from "react-router-dom";
 
 const initState = {
   startAddress: '',
@@ -31,8 +33,24 @@ const HomePage = () => {
   const [openPrice, setOpenPrice] = useState(false);
   const { roles } = useSelector(state => state.login);
   const isAdmin = roles.includes("ROLE_ADMIN");
+  const [notices, setNotices] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
 
   const DEFAULT_TRUCK_IMG = "/image/placeholders/truck.svg";
+
+  const loadNotices = async (page = 0) => {
+    try {
+      setLoading(true);
+      const response = await getNoticeList({ page, size: 10 });
+      setNotices(response.content || []);
+    } catch (err) {
+      console.error('공지사항 로드 실패:', err);
+    } finally {
+      setLoading(false);
+    }
+  };//공지사항 업데이트
+
   const fetchFees = async () => {
     try {
       const data = await postSearchFeesBasic();
@@ -57,6 +75,7 @@ const HomePage = () => {
 
 
   useEffect(() => {
+    loadNotices();
     fetchFees();
   }, []);
 
@@ -79,15 +98,10 @@ const HomePage = () => {
     }))
 
     setExprice(total);
-    
+
   }, [estimate.cargoWeight, estimate.distanceKm, fees]);
 
 
-  const notices = [
-    { id: 1, title: "공지사항 1" },
-    { id: 2, title: "긴급 점검 안내" },
-    { id: 3, title: "서비스 이용 가이드 업데이트" }
-  ];
   const handleAddressSearch = (setter) => {
     new window.daum.Postcode({
       oncomplete: function (data) {
@@ -97,7 +111,7 @@ const HomePage = () => {
 
 
   }
-  const handleClickCancel =() => setOpenPrice(false);
+  const handleClickCancel = () => setOpenPrice(false);
 
   const calculateDistance = async () => {
     try {
@@ -113,6 +127,10 @@ const HomePage = () => {
     }
   };
 
+  const handleRowClick = (noticeId) => {
+    navigate(`/noboard/post/${noticeId}`);
+  };
+
   //const price = baseCost+distanceCost;
   return (
     <Box>
@@ -124,7 +142,7 @@ const HomePage = () => {
           justifyContent: "center",
           alignItems: "center",
           backgroundImage: 'url(/image/logo/CargoPhoto.jpg)',
-          backgroundSize: 'cover',
+          backgroundSize: '100% 100%',
           backgroundPosition: 'center',
           backgroundRepeat: 'no-repeat',
         }}>
@@ -137,17 +155,31 @@ const HomePage = () => {
           justifyContent: "center",
           alignItems: "center",
           backgroundImage: 'url(/image/logo/CargoPhoto2.jpg)',
-          backgroundSize: 'cover',
+          backgroundSize: '100% 100%',
           backgroundPosition: 'center',
           backgroundRepeat: 'no-repeat',
         }}>
           <Typography variant="h3" color="white">SUMMER 2025</Typography>
         </Box>
+             <Box sx={{
+          height: 400,
+          backgroundColor: "#b8a8ff",
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          backgroundImage: 'url(/image/logo/CargoPhoto.png)',
+          backgroundSize: '100% 100%',
+          backgroundPosition: 'center',
+          backgroundRepeat: 'no-repeat',
+        }}>
+          <Typography variant="h3" color="white">SUMMER 2025</Typography>
+        </Box>
+        
       </Carousel>
 
       {/* 🚚 차량 종류 */}
       <Box>
-    
+
 
         {/* 🚚 차량 종류: 이미지만 표시 */}
         <Box sx={{ py: 5, textAlign: "center" }}>
@@ -157,7 +189,7 @@ const HomePage = () => {
             {visibleFees.map((basic) => {
               const img = normalizeUrl(basic?.cargoImage) || DEFAULT_TRUCK_IMG;
               return (
-                <Grid item key={basic?.tno }>
+                <Grid item key={basic?.tno}>
                   <Card sx={{ width: { xs: 160, sm: 220, md: 300 }, height: { xs: 110, sm: 150, md: 200 }, overflow: "hidden" }}>
                     <CardMedia
                       component="img"
@@ -166,7 +198,7 @@ const HomePage = () => {
                       sx={{
                         width: '100%',
                         height: '100%',
-                        objectFit: 'contain',    
+                        objectFit: 'contain',
                         objectPosition: 'center',
                         display: 'block',
                       }}
@@ -176,7 +208,7 @@ const HomePage = () => {
                   <Typography>{basic.weight}</Typography>
                 </Grid>
 
-            
+
 
               );
             })}
@@ -189,7 +221,7 @@ const HomePage = () => {
                 {showAll ? "접기" : "더보기"}
               </Button>
             )}
-            {isAdmin &&( <Button variant="contained" onClick={() => setOpenFees(true)}>
+            {isAdmin && (<Button variant="contained" onClick={() => setOpenFees(true)}>
               등록하기
             </Button>)}
           </Box>
@@ -292,65 +324,73 @@ const HomePage = () => {
             </Grid>
 
             {/* 공지사항 */}
-            <Grid item xs={12} >
-              <Typography variant="h6" fontWeight="bold" gutterBottom>공지사항</Typography>
-
-              <Grid container spacing={0.5}>
-                {notices.map((notice, index) => (
-                  <Grid item xs={12} key={notice.id} sx={{ width: '100%' }}>
-                    <Box
-                      sx={{
-                        border: '1px solid #eee',
-                        borderRadius: 1,
-                        px: 2,
-                        py: 1,
-                        '&:hover': { backgroundColor: '#f9f9f9' }
-                      }}
-                    >
-                      <a
-                        href={notice.url}
-                        style={{
-                          textDecoration: 'none',
-                          color: '#333'
+            <Grid item xs={12} md={6}>
+              <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+                <Typography variant="h6" fontWeight="bold" gutterBottom>공지사항</Typography>
+                <Grid container spacing={0.5}>
+                  {notices.slice(0, 4).map((notice) => (
+                    <Grid item xs={12} key={notice.noticeId} sx={{ width: '100%' }}>
+                      <Box
+                        sx={{
+                          border: '1px solid #eee',
+                          borderRadius: 1,
+                          px: 1.5,
+                          py: 0.75,
+                          height: 44,
+                          display: 'flex',
+                          alignItems: 'center',
+                          cursor: 'pointer',
+                          '&:hover': { backgroundColor: '#f9f9f9' }
                         }}
+                        onClick={() => handleRowClick(notice.noticeId)}
                       >
-                        {notice.title}
-                      </a>
-                    </Box>
-                  </Grid>
-                ))}
-              </Grid>
+                        <Typography
+                          sx={{
+                            width: '100%',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                            color: 'inherit'
+                          }}
+                        >
+                          {notice.title}
+                        </Typography>
+                      </Box>
+                    </Grid>
+                  ))}
+                </Grid>
+              </Box>
             </Grid>
 
           </Grid>
 
         </Box >
       </Box >
-          <Dialog
-                open={openPrice}
-                onClose={handleClickCancel}
-                 PaperProps={{
-                   sx: {
-                     width: 400,
-                     height: 150,
-                     borderRadius: 2,
-                     p: 2,
-                   },
-                 }}
-               >
-         
-                 <DialogContent >
-                   <Typography fontSize={20} fontWeight='bold' >예상금액은 {Number(exPrice)}원 입니다.</Typography>
-                  <Typography fontSize={15} fontWeight='bold'>본 금액은 예상 견적이며 물품에 따라 상세금액과 차이가 있을 수 있습니다.</Typography>
-                 </DialogContent>
-                 <DialogActions>
-                   <Button color="error" onClick={()=>handleClickCancel()} >
-                     확인
-                   </Button>
-            
-         
-                 </DialogActions>
-               </Dialog>       
+      <Dialog
+        open={openPrice}
+        onClose={handleClickCancel}
+        PaperProps={{
+          sx: {
+            width: 400,
+            height: 150,
+            borderRadius: 2,
+            p: 2,
+          },
+        }}
+      >
+
+        <DialogContent >
+          <Typography fontSize={20} fontWeight='bold' >예상금액은 {Number(exPrice)}원 입니다.</Typography>
+          <Typography fontSize={15} fontWeight='bold'>본 금액은 예상 견적이며 물품에 따라 상세금액과 차이가 있을 수 있습니다.</Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button color="error" onClick={() => handleClickCancel()} >
+            확인
+          </Button>
+
+
+        </DialogActions>
+      </Dialog>
 
     </Box >
   );

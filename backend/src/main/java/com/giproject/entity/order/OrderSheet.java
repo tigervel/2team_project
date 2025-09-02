@@ -28,19 +28,19 @@ import lombok.ToString;
 @AllArgsConstructor
 @NoArgsConstructor
 public class OrderSheet {
-	
+
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Long orderNo;
-	
-	 @OneToOne(fetch = FetchType.LAZY)
-	    @JoinColumn(name = "matching_no", nullable = false) // 스키마와 일치
-	    private Matching matching;
 
-	    @OneToOne(mappedBy = "orderSheet", fetch = FetchType.LAZY)
-	    private Payment payment; // 역참조 추가
-	
-	@Column(nullable = false , unique = true)
+	@OneToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "matching_no", nullable = false) // 스키마와 일치
+	private Matching matching;
+
+	@OneToOne(mappedBy = "orderSheet", fetch = FetchType.LAZY)
+	private Payment payment; // 역참조 추가
+
+	@Column(nullable = false, unique = true)
 	private String orderUuid;
 	private String startRestAddress;
 	private String endRestAddress;
