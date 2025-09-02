@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { getNoticeList, getNoticeDetail } from '../../../api/noticeApi';
+import {  getNoticeDetail, getNotices } from '../../../api/noticeApi';
 import {
   Table,
   TableBody,
@@ -37,7 +37,7 @@ const Notice = () => {
   const [loading, setLoading] = useState(false);
 
   const fetchNotices = () => {
-    getNoticeList({ page: page, size: 10, keyword: searchKeyword }).then(data => {
+    getNotices({ page: page, size: 10, keyword: searchKeyword }).then(data => {
       setNotices(data.content);
       setTotalPages(data.totalPages);
     }).catch(error => {

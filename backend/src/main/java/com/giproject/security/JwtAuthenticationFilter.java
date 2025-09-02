@@ -44,7 +44,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         "/api/auth/signup",
         "/api/auth/check-id",     // ✅ SecurityConfig와 일치
         "/api/email/**",
-        "/api/qaboard/**",
 
         // === OAuth2 ===
         "/oauth2/authorization/**",
@@ -54,7 +53,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         "/favicon.ico", "/error", "/",
         "/h2-console/**", "/uploads/**",
         "/api/auth/login", "/api/auth/refresh", "/api/auth/signup",
-        "/api/signup/check-id", "/api/email/**", "/api/qaboard/**",
+        "/api/signup/check-id", "/api/email/**",
         "/oauth2/authorization/**", "/login/oauth2/**",
         "/css/**", "/js/**", "/images/**", "/webjars/**",
         "/**/*.css", "/**/*.js", "/**/*.png", "/**/*.jpg", "/**/*.jpeg",
@@ -70,6 +69,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         // context-path 유무에 안전: servletPath 기준
         String p = request.getServletPath();
+        String method = request.getMethod();
+        
         return p.startsWith("/oauth2/")
         	|| p.startsWith("/api/email/")
             || p.startsWith("/login/")          // 콜백/실패 포함 ("/login/oauth2/**"만으로는 부족)
@@ -77,7 +78,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             || p.startsWith("/uploads/")
             || p.startsWith("/api/auth/")       // 공개 인증 관련 API 묶음
             || p.startsWith("/assets/") || p.startsWith("/static/")
-            || p.startsWith("/css/") || p.startsWith("/js/") || p.startsWith("/images/");
+            || p.startsWith("/css/") || p.startsWith("/js/") || p.startsWith("/images/")
+            // QABoard 조회 API는 인증 없이 접근 가능, 작성/수정/삭제는 JWT 필요
+            || (p.startsWith("/api/qaboard/") && "GET".equals(method) && !p.contains("/my"))
+            // 공지사항 조회는 인증 없이 접근 가능
+            || (p.startsWith("/api/notices") && "GET".equals(method));
     }
 
     @Override

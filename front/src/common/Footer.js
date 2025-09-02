@@ -26,7 +26,7 @@ function Footer() {
                     {/* 회사 정보 */}
                     <Grid item xs={12} sm={4} >
                         <Typography variant="h6" gutterBottom>
-                            주식회사 강산물류
+                            주식회사 문정현로지스
                         </Typography>
                         <Typography variant="body2" color="text.secondary"> 
 

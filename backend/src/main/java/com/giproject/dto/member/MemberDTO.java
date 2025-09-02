@@ -1,10 +1,8 @@
+// src/main/java/com/giproject/dto/member/MemberDTO.java
 package com.giproject.dto.member;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -50,13 +48,17 @@ public class MemberDTO extends User {
                      LocalDateTime memCreateIdDateTime,
                      List<String> rolenames) {
 
-        // User(username, password, authorities)
         super(
+            // User(username, password, authorities)
             memId,
             memPw,
-            rolenames.stream()
-                     .map(role -> new SimpleGrantedAuthority("ROLE_" + role))
-                     .collect(Collectors.toList())
+            (rolenames == null ? List.<String>of() : rolenames).stream()
+                    .filter(Objects::nonNull)
+                    .map(String::trim)
+                    .filter(s -> !s.isEmpty())
+                    .map(role -> role.startsWith("ROLE_") ? role : "ROLE_" + role)
+                    .map(SimpleGrantedAuthority::new)
+                    .collect(Collectors.toList())
         );
 
         this.memId = memId;
@@ -66,7 +68,7 @@ public class MemberDTO extends User {
         this.memPhone = memPhone;
         this.memAddress = memAddress;
         this.memCreateIdDateTime = memCreateIdDateTime;
-        this.roleNames = rolenames != null ? rolenames : new ArrayList<>();
+        this.roleNames = rolenames != null ? new ArrayList<>(rolenames) : new ArrayList<>();
     }
 
     /** 안전한 클레임(비밀번호 제외) */
@@ -79,7 +81,9 @@ public class MemberDTO extends User {
         dataMap.put("memAddress", memAddress);
         dataMap.put("memCreateIdDateTime", memCreateIdDateTime);
         dataMap.put("rolenames", roleNames); // 기존 호환 유지
-        // 필요 시 다음도 포함 가능: dataMap.put("provider", provider); dataMap.put("socialId", socialId);
+        // 필요 시 다음도 포함 가능
+        if (provider != null) dataMap.put("provider", provider);
+        if (socialId != null) dataMap.put("socialId", socialId);
         return dataMap;
     }
 
@@ -90,9 +94,11 @@ public class MemberDTO extends User {
                 : new ArrayList<>(roles);
 
         // 도메인 역할(예: 화주/차주) 자동 포함해 인가 편의 제공
-        if (m.getUserIndex() != null && m.getUserIndex().getRole() != null) {
-            r.add(m.getUserIndex().getRole().name());
-        }
+        try {
+            if (m.getUserIndex() != null && m.getUserIndex().getRole() != null) {
+                r.add(m.getUserIndex().getRole().name());
+            }
+        } catch (Exception ignore) { /* 안전 차원 */ }
 
         return new MemberDTO(
             m.getMemId(),
@@ -108,7 +114,7 @@ public class MemberDTO extends User {
 
     /** 엔티티 → DTO 변환 (roles 생략 시 엔티티의 memberRoleList 사용) */
     public static MemberDTO fromMember(com.giproject.entity.member.Member m) {
-        // 프로젝트 구현에 따라 m.getMemberRoleList() 가 List<String> 이라고 가정
+        // 프로젝트 구현에 따라 m.getMemberRoleList() 가 List<String>이라고 가정
         return fromMember(m, m.getMemberRoleList());
     }
 

@@ -18,4 +18,5 @@ public interface OrderRepository extends JpaRepository<OrderSheet, Long>{
 		    """)
 		    Optional<OrderSheet> findByMatchingNoAndCargoId(@Param("matchingNo") Long matchingNo,
 		                                                    @Param("cargoId") String cargoId);
+	  Optional<OrderSheet> findTopByMatching_MatchingNoOrderByOrderNoDesc(Long matchingNo);
 }

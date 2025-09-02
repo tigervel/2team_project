@@ -157,7 +157,18 @@ const statusKo = (s) => s === 'IN_TRANSIT' ? '배송 중' : s === 'COMPLETED' ? 
 
 // ===== 메인 컴포넌트 =====
 const DeliveryInfoPage = () => {
+  const getRequesterId = (item) =>
+    item?.requesterId ??
+    item?.memberId ??
+    item?.memId ??
+    item?.member_id ??
+    item?.member ??
+    null;
   const navigate = useNavigate();
+  const handleViewOrderSummary = (matchingNo) => {
+    if (!matchingNo) return;
+    navigate('/mypage/order-summary', { state: { matchingNo } });
+  };
   const [userType, setUserType] = useState(null); // 'MEMBER' | 'CARGO_OWNER'
   const isMember = userType === 'MEMBER';
   const isOwner = userType === 'CARGO_OWNER';
@@ -331,12 +342,25 @@ const DeliveryInfoPage = () => {
   const tableColgroup = useMemo(() => (
     <colgroup>
       <col style={{ width: '10%' }} />
-      <col style={{ width: '10%' }} />
-      <col style={{ width: '26%' }} />
-      <col style={{ width: '26%' }} />
+      <col style={{ width: '5%' }} />
+      <col style={{ width: '15%' }} />
+      <col style={{ width: '15%' }} />
       <col style={{ width: '12%' }} />
       <col style={{ width: '8%' }} />
       <col style={{ width: '8%' }} />
+    </colgroup>
+  ), []);
+
+  const paidColgroup = useMemo(() => (
+    <colgroup>
+      <col style={{ width: '10%' }} />
+      <col style={{ width: '5%' }} />
+      <col style={{ width: '15%' }} />
+      <col style={{ width: '15%' }} />
+      <col style={{ width: '12%' }} />
+      <col style={{ width: '8%' }} />
+      <col style={{ width: '9%' }} />
+      <col style={{ width: '9%' }} />
     </colgroup>
   ), []);
 
@@ -344,15 +368,15 @@ const DeliveryInfoPage = () => {
   const completedColgroup = useMemo(() => (
     <colgroup>
       <col style={{ width: '10%' }} />
-      <col style={{ width: '10%' }} />
-      <col style={{ width: '24%' }} />
-      <col style={{ width: '24%' }} />
+      <col style={{ width: '5%' }} />
+      <col style={{ width: '15%' }} />
+      <col style={{ width: '15%' }} />
       <col style={{ width: '12%' }} />
       <col style={{ width: '10%' }} /> {/* 운전 기사 */}
-      {isMember  && <col style={{ width: '8%' }} />} {/* 신고 */}
-      <col style={{ width: '8%' }} />  {/* 상태 */}
+      {isMember && <col style={{ width: '10%' }} />} {/* 신고 */}
+      <col style={{ width: '10%' }} />  {/* 상태 */}
     </colgroup>
-  ), [isMember ]);
+  ), [isMember]);
 
   // 렌더러: 미결제
   const renderUnpaidRows = (list) => {
@@ -406,7 +430,7 @@ const DeliveryInfoPage = () => {
           <TableCell align="center">
             <span style={{ whiteSpace: 'nowrap' }}>{formatDateHour(item.startTime)}</span>
           </TableCell>
-          <TableCell align="center">{item.driverName ?? '-'}</TableCell>
+          <TableCell align="center"> {isOwner ? (item.memId || '-') : (item.driverName ?? '-')}</TableCell>
           <TableCell align="center">{rightCell}</TableCell>
         </TableRow>
       );
@@ -418,13 +442,13 @@ const DeliveryInfoPage = () => {
     if (!list || list.length === 0) {
       return (
         <TableRow>
-          <TableCell colSpan={7} align="center">항목이 없습니다.</TableCell>
+          <TableCell colSpan={8} align="center">항목이 없습니다.</TableCell>
         </TableRow>
       );
     }
     return list.map((item) => {
       const s = item.deliveryStatus ?? null;
-
+      const mNo = item.matchingNo ?? item.mno ?? item.matching_no ?? null;
       let ownerAction = (
         <Typography variant="body2" sx={{ color: s === 'IN_TRANSIT' ? 'info.main' : 'text.secondary' }}>
           {statusKo(s)}
@@ -466,9 +490,19 @@ const DeliveryInfoPage = () => {
           <TableCell align="center">
             <span style={{ whiteSpace: 'nowrap' }}>{formatDateHour(item.startTime)}</span>
           </TableCell>
-          <TableCell align="center">{item.driverName ?? '-'}</TableCell>
+          <TableCell align="center"> {isOwner ? (item.memId || '-') : (item.driverName ?? '-')}</TableCell>
           <TableCell align="center">
-            {isOwner ? ownerAction : (
+            {mNo ? (
+              <Button variant="outlined" size="small" onClick={() => handleViewOrderSummary(mNo)}>
+                주문서 보기
+              </Button>
+            ) : (
+              <Typography variant="body2" color="text.secondary">-</Typography>
+            )}
+          </TableCell>
+          <TableCell align="center">
+             {isOwner ? ownerAction : (
+             
               <Typography variant="body2" sx={{ color: s === 'IN_TRANSIT' ? 'info.main' : 'text.secondary' }}>
                 {statusKo(s)}
               </Typography>
@@ -484,7 +518,7 @@ const DeliveryInfoPage = () => {
     if (!list || list.length === 0) {
       return (
         <TableRow>
-          <TableCell colSpan={isMember  ? 8 : 7} align="center">항목이 없습니다.</TableCell>
+          <TableCell colSpan={isMember ? 8 : 7} align="center">항목이 없습니다.</TableCell>
         </TableRow>
       );
     }
@@ -501,9 +535,9 @@ const DeliveryInfoPage = () => {
           <TableCell align="center">{item.startAddress}</TableCell>
           <TableCell align="center">{item.endAddress}</TableCell>
           <TableCell align="center" style={{ whiteSpace: 'nowrap' }}>{formatDateHour(doneAt)}</TableCell>
-          <TableCell align="center">{item.driverName ?? '-'}</TableCell>
+          <TableCell align="center"> {isOwner ? (item.memId || '-') : (item.driverName ?? '-')}</TableCell>
 
-          {isMember  && (
+          {isMember && (
             <TableCell align="center">
               {matchingNo ? (
                 <Button
@@ -552,7 +586,8 @@ const DeliveryInfoPage = () => {
                   <TableCell align="center">출발지</TableCell>
                   <TableCell align="center">도착지</TableCell>
                   <TableCell align="center">배송 시작일</TableCell>
-                  <TableCell align="center">운전 기사</TableCell>
+                  <TableCell align="center">{isOwner ? '의뢰자 ID' : '운전 기사'}</TableCell>
+
                   <TableCell align="center">{isOwner ? '상태' : '승인 여부'}</TableCell>
                 </TableRow>
               </TableHead>
@@ -572,7 +607,7 @@ const DeliveryInfoPage = () => {
           </Typography>
           <TableContainer component={Paper} elevation={1} sx={{ height: 470, position: 'relative', pb: 0 }}>
             <Table sx={{ '& .MuiTableCell-root': { height: 60, py: 0 } }}>
-              {tableColgroup}
+              {paidColgroup}
               <TableHead>
                 <TableRow>
                   <TableCell align="center">화물명</TableCell>
@@ -580,8 +615,9 @@ const DeliveryInfoPage = () => {
                   <TableCell align="center">출발지</TableCell>
                   <TableCell align="center">도착지</TableCell>
                   <TableCell align="center">배송 시작일</TableCell>
-                  <TableCell align="center">운전 기사</TableCell>
+                  <TableCell align="center">{isOwner ? '의뢰자 ID' : '운전 기사'}</TableCell>
                   <TableCell align="center">{isOwner ? '처리' : '상태'}</TableCell>
+                  <TableCell align="center">{isOwner ? '상태' : '승인 여부'}</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>{renderPaidRows(paidData.dtoList)}</TableBody>
@@ -608,8 +644,8 @@ const DeliveryInfoPage = () => {
                   <TableCell align="center">출발지</TableCell>
                   <TableCell align="center">도착지</TableCell>
                   <TableCell align="center">{isMember ? '배송 완료일' : '완료일'}</TableCell>
-                  <TableCell align="center">운전 기사</TableCell>
-                  {isMember  && <TableCell align="center">신고</TableCell>}
+                  <TableCell align="center">{isOwner ? '의뢰자 ID' : '운전 기사'}</TableCell>
+                  {isMember && <TableCell align="center">신고</TableCell>}
                   <TableCell align="center">상태</TableCell>
                 </TableRow>
               </TableHead>
@@ -688,9 +724,9 @@ const DeliveryInfoPage = () => {
           <Typography id="report-modal-title" variant="h6" component="h2">
             신고하기
           </Typography>
-          <ReportComponent 
-            matchingNo={selectedMatchingNoForReport} 
-            onClose={() => setShowReportModal(false)} 
+          <ReportComponent
+            matchingNo={selectedMatchingNoForReport}
+            onClose={() => setShowReportModal(false)}
           />
         </Box>
       </Modal>

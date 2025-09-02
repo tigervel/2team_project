@@ -25,20 +25,36 @@ public class OrderServiceImpl implements OrderService{
 		Matching matching =matchingRepository.findById(matchingNo).orElseThrow();
 		Estimate estimate = matching.getEstimate();
 		Member member = estimate.getMember();
-		
+		  var orderOpt = orderRepository.findTopByMatching_MatchingNoOrderByOrderNoDesc(matchingNo);
+
 		
 		return OrderFormDTO.builder()
-				.ordererName(member.getMemName())
-				.ordererPhone(member.getMemPhone())
-				.ordererEmail(member.getMemEmail())
-				.startAddress(estimate.getStartAddress())
-				.endAddress(estimate.getEndAddress())
-				.baseCost(estimate.getBaseCost())
-				.distanceCost(estimate.getDistanceCost())
-				.specialOptionCost(estimate.getSpecialOption())
-				.totalCost(estimate.getTotalCost())
-				.matchingNo(matchingNo)
-				.build();
+				// 출발지(주문자)
+			      .ordererName(member.getMemName())
+			      .ordererPhone(member.getMemPhone())
+			      .ordererEmail(member.getMemEmail())
+			      .startAddress(estimate.getStartAddress())
+
+			      // 도착지(받는분) — 주문서가 있으면 채움
+			      .addressee(orderOpt.map(OrderSheet::getAddressee).orElse(null))
+			      .receiverPhone(orderOpt.map(OrderSheet::getPhone).orElse(null))
+			      .addresseeEmail(orderOpt.map(OrderSheet::getAddresseeEmail).orElse(null))
+			      .endAddress(estimate.getEndAddress())
+			      .startRestAddress(orderOpt.map(OrderSheet::getStartRestAddress).orElse(null))
+			      .endRestAddress(orderOpt.map(OrderSheet::getEndRestAddress).orElse(null))
+
+			      // 요금
+			      .baseCost(estimate.getBaseCost())
+			      .distanceCost(estimate.getDistanceCost())
+			      .specialOptionCost(estimate.getSpecialOption())
+			      .totalCost(estimate.getTotalCost())
+
+			      // 주문 메타
+			      .orderUuid(orderOpt.map(OrderSheet::getOrderUuid).orElse(null))
+			      .orderTime(orderOpt.map(os -> String.valueOf(os.getOrderTime())).orElse(null))
+
+			      .matchingNo(matchingNo)
+			      .build();
 				
 	}
 

@@ -41,7 +41,6 @@ import {
   Lock,
   Visibility,
   Forum,
-  Campaign as CampaignIcon // Import Campaign icon for notices
 } from '@mui/icons-material';
 import { CircularProgress } from '@mui/material';
 
@@ -52,7 +51,6 @@ import QAActionButtons from './QAActionButtons';
 import QAEditForm from './QAEditForm';
 import useCustomLogin from '../../../hooks/useCustomLogin';
 import { getPostVisibility, getActionPermissions } from './qaPermissionUtils';
-import NoboardComponent from '../noboard/NoBoard'; // ✅ Import NoBoard Component
 
 const QABoardMUI = () => {
   // Redux dispatch
@@ -82,7 +80,7 @@ const QABoardMUI = () => {
   const [replyingToId, setReplyingToId] = useState(null);
   const [editingResponseId, setEditingResponseId] = useState(null);
   const [qaData, setQaData] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true); // 초기 로딩 상태를 true로 설정
   const [error, setError] = useState(null);
   const [totalPages, setTotalPages] = useState(0);
   const [totalElements, setTotalElements] = useState(0);
@@ -127,7 +125,7 @@ const QABoardMUI = () => {
         id: item.postId,
         title: item.title,
         content: item.content || '',
-        author: item.authorName ? decodeURIComponent(item.authorName) : item.authorName, // Decode username
+        author: item.authorId || item.authorName || '익명', // authorId를 우선 사용, 없으면 authorName, 둘 다 없으면 익명
         authorId: item.authorId || '',
         authorType: item.authorType,
         category: item.category,
@@ -137,7 +135,7 @@ const QABoardMUI = () => {
         isPrivate: item.isPrivate,
         adminResponse: item.adminResponse ? {
           content: item.adminResponse.content,
-          author: item.adminResponse.adminName ? decodeURIComponent(item.adminResponse.adminName) : item.adminResponse.adminName, // Decode admin name
+          author: item.adminResponse.adminId || item.adminResponse.adminName || '관리자', // adminId를 우선 사용
           date: item.adminResponse.createdAt ? item.adminResponse.createdAt.split('T')[0] : ''
         } : null
       }));
@@ -173,7 +171,7 @@ const QABoardMUI = () => {
 
   // Load data on component mount
   useEffect(() => {
-    if (activeMainTab === 1) { // Only fetch QA posts if '문의하기' tab is active
+    if (activeMainTab === 0) { // Only fetch QA posts if '문의하기' tab is active (인덱스 0으로 변경)
       fetchPostList();
     }
   }, [activeCategory, searchTerm, currentPage, activeMainTab]);
@@ -253,8 +251,17 @@ const QABoardMUI = () => {
       // When a post is first opened, call the detail API to increment view count
       try {
         const userInfo = createUserInfo();
-        await qaboardApi.getPostDetail(postId, userInfo);
+        const postDetail = await qaboardApi.getPostDetail(postId, userInfo);
         console.log(`View count incremented for post ID: ${postId}`);
+        
+        // Update the view count in the current qaData state
+        setQaData(prevData => 
+          prevData.map(post => 
+            post.id === postId 
+              ? { ...post, views: postDetail.viewCount || (post.views + 1) }
+              : post
+          )
+        );
       } catch (error) {
         console.error('Failed to fetch post detail for view count:', error);
       }
@@ -376,8 +383,15 @@ const QABoardMUI = () => {
       console.log('Admin response updated successfully:', response);
       
       // Refresh post list
-      fetchPostList();
+      await fetchPostList();
+      
+      // 해당 게시글을 펼친 상태로 유지
+      const newExpanded = new Set(expandedPosts);
+      newExpanded.add(itemId);
+      setExpandedPosts(newExpanded);
+      
       setEditingResponseId(null);
+      alert('답변이 성공적으로 수정되었습니다.');
       
     } catch (error) {
       console.error('Failed to update admin response:', error);
@@ -431,8 +445,15 @@ const QABoardMUI = () => {
       console.log('Admin response created successfully:', response);
       
       // Refresh post list
-      fetchPostList();
+      await fetchPostList();
+      
+      // 해당 게시글을 펼친 상태로 유지
+      const newExpanded = new Set(expandedPosts);
+      newExpanded.add(responseData.questionId);
+      setExpandedPosts(newExpanded);
+      
       setReplyingToId(null);
+      alert('답변이 성공적으로 등록되었습니다.');
       
     } catch (error) {
       console.error('Failed to create admin response:', error);
@@ -450,19 +471,6 @@ const QABoardMUI = () => {
     setSearchTerm(''); // Clear search term when changing tabs
   };
 
-  // Test login functions
-  const handleTestLogin = (role, userId) => {
-    const testLoginData = {
-      email: role === 'ADMIN' ? 'admin@test.com' : `user${userId}@test.com`,
-      nickname: role === 'ADMIN' ? 'Admin' : `User${userId}`, // Changed to English to avoid HTTP header encoding issues
-      role: role,
-      memberId: role === 'ADMIN' ? 'admin' : userId,
-      pw: 'test123'
-    };
-    
-    // Directly update Redux state
-    dispatch(login(testLoginData));
-  };
 
   return (
     <Container maxWidth="lg" sx={{ py: 4 }}>
@@ -474,56 +482,11 @@ const QABoardMUI = () => {
         <Typography variant="h6" color="text.secondary">
           궁금한 사항이 있으시면 언제든 문의해주세요
         </Typography>
-        
-        {/* Test Login Status and Buttons */}
-        <Box mt={3} p={2} sx={{ backgroundColor: '#f5f5f5', borderRadius: 2 }}>
-          <Typography variant="subtitle1" gutterBottom>
-            테스트 모드 - 현재 로그인: {loginState.email || '로그인 안됨'} 
-            {loginState.role && ` (${loginState.role === 'ADMIN' ? '관리자' : '일반사용자'})`}
-          </Typography>
-          <Stack direction="row" spacing={1} justifyContent="center" flexWrap="wrap">
-            <Button 
-              size="small" 
-              variant="contained" 
-              color="error"
-              onClick={() => handleTestLogin('ADMIN', 'admin')}
-            >
-              관리자 로그인
-            </Button>
-            <Button 
-              size="small" 
-              variant="contained" 
-              onClick={() => handleTestLogin('USER', 'user1')}
-            >
-              사용자1 로그인
-            </Button>
-            <Button 
-              size="small" 
-              variant="contained" 
-              onClick={() => handleTestLogin('USER', 'user2')}
-            >
-              사용자2 로그인
-            </Button>
-            <Button 
-              size="small" 
-              variant="contained" 
-              onClick={() => handleTestLogin('USER', 'user3')}
-            >
-              사용자3 로그인
-            </Button>
-          </Stack>
-        </Box>
       </Box>
 
       {/* Main Tabs */}
       <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
         <Tabs value={activeMainTab} onChange={handleTabChange} centered>
-          <Tab // ✅ New "공지사항" tab
-            icon={<CampaignIcon />} 
-            label="공지사항" 
-            iconPosition="start"
-            sx={{ minHeight: 64, fontSize: '1.1rem' }}
-          />
           <Tab 
             icon={<Forum />} 
             label="문의하기" 
@@ -537,11 +500,7 @@ const QABoardMUI = () => {
         </Tabs>
       </Box>
 
-      {activeMainTab === 0 && ( // ✅ Render NoboardComponent when "공지사항" tab is active
-        <NoboardComponent />
-      )}
-
-      {activeMainTab === 1 && ( // "문의하기" tab content
+      {activeMainTab === 0 && ( // "문의하기" tab content
         <Box>
           {/* Category Tabs */}
           <Box sx={{ mb: 3 }}>
@@ -649,7 +608,7 @@ const QABoardMUI = () => {
                           </Box>
                         }
                         action={
-                          <IconButton>
+                          <IconButton onClick={() => togglePostExpansion(item.id)}>
                             <ExpandMore sx={{ 
                               transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
                               transition: 'transform 0.3s'
@@ -659,19 +618,13 @@ const QABoardMUI = () => {
                       />
                       
                       {/* Content Display (based on permissions) */}
-                      {visibility.showContent && (
+                      {isExpanded && (
                         <CardContent sx={{ pt: 0 }}>
                           <Typography 
                             variant="body2" 
                             color="text.secondary"
-                            sx={{
-                              display: '-webkit-box',
-                              WebkitLineClamp: isExpanded ? 'none' : 2,
-                              WebkitBoxOrient: 'vertical',
-                              overflow: 'hidden'
-                            }}
                           >
-                            {item.content}
+                            {visibility.showContent ? item.content : '비공개 글입니다.'}
                           </Typography>
                         </CardContent>
                       )}
@@ -699,44 +652,46 @@ const QABoardMUI = () => {
                       )}
 
                       {/* Author Info and View Count */}
-                      {visibility.showContent && (
+                      {isExpanded && (
                         <CardContent sx={{ pt: 0 }}>
                           <Box display="flex" justifyContent="space-between" alignItems="center">
                             <Box display="flex" gap={2}>
-                              <Box display="flex" alignItems="center" gap={0.5}>
-                                <Person fontSize="small" />
-                                <Typography variant="body2" color="text.secondary">
-                                  {item.author}
-                                </Typography>
+                                <Box display="flex" alignItems="center" gap={0.5}>
+                                  <Person fontSize="small" />
+                                  <Typography variant="body2" color="text.secondary">
+                                    {item.author}
+                                  </Typography>
+                                </Box>
+                                <Box display="flex" alignItems="center" gap={0.5}>
+                                  <CalendarToday fontSize="small" />
+                                  <Typography variant="body2" color="text.secondary">
+                                    {item.date}
+                                  </Typography>
+                                </Box>
                               </Box>
-                              <Box display="flex" alignItems="center" gap={0.5}>
-                                <CalendarToday fontSize="small" />
-                                <Typography variant="body2" color="text.secondary">
-                                  {item.date}
-                                </Typography>
-                              </Box>
+                              <Typography variant="body2" color="text.secondary">
+                                조회 {item.views}
+                              </Typography>
                             </Box>
-                            <Typography variant="body2" color="text.secondary">
-                              조회 {item.views}
-                            </Typography>
-                          </Box>
-                        </CardContent>
+                          </CardContent>
                       )}
 
                       {/* Action Buttons */}
-                      <QAActionButtons
-                        item={item}
-                        isAdmin={isAdmin}
-                        isAuthor={permissions.canEdit}
-                        currentUserId={currentUserId}
-                        onEdit={handleEdit}
-                        onDelete={handleDelete}
-                        onReply={handleReply}
-                        onAdminEdit={handleAdminEdit}
-                        onAdminDelete={handleAdminDelete}
-                        onEditResponse={handleEditResponse}
-                        isExpanded={isExpanded}
-                      />
+                      {isExpanded && (
+                        <QAActionButtons
+                          item={item}
+                          isAdmin={isAdmin}
+                          isAuthor={permissions.canEdit}
+                          currentUserId={currentUserId}
+                          onEdit={handleEdit}
+                          onDelete={handleDelete}
+                          onReply={handleReply}
+                          onAdminEdit={handleAdminEdit}
+                          onAdminDelete={handleAdminDelete}
+                          onEditResponse={handleEditResponse}
+                          isExpanded={isExpanded}
+                        />
+                      )}
                     </Card>
                   )}
 
@@ -806,7 +761,10 @@ const QABoardMUI = () => {
               <Pagination
                 count={totalPages}
                 page={currentPage}
-                onChange={(event, value) => setCurrentPage(value)}
+                onChange={(event, value) => {
+                  setCurrentPage(value);
+                  setExpandedPosts(new Set()); // 페이지 변경 시 확장된 게시글 상태 초기화
+                }}
                 color="primary"
               />
             </Box>
@@ -875,7 +833,7 @@ const QABoardMUI = () => {
         </Box>
       )}
 
-      {activeMainTab === 2 && ( // "FAQ" tab content
+      {activeMainTab === 1 && ( // "FAQ" tab content
         <Box>
           {/* FAQ Category Buttons */}
           <Box sx={{ mb: 3 }}>

@@ -16,11 +16,15 @@ export const getPostList = async (params = {}, userInfo = {}, isAdmin = false) =
     queryParams.append('size', size.toString());
     if (isAdmin) queryParams.append('isAdmin', 'true');
     
-    // 사용자 정보를 헤더에 추가 (필수 헤더로 통일)
+    // JWT 토큰 기반 인증으로 통일
+    const token = localStorage.getItem('accessToken');
     const headers = {
-        'X-User-Id': userInfo.userId || 'anonymous',
-        'X-User-Name': encodeURIComponent(userInfo.userName || '익명') // URL 인코딩으로 한국어 문자 처리
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
     };
+    
+    console.log('QABoard getPostList - JWT Token:', token ? 'Present' : 'Missing');
+    console.log('QABoard getPostList - Params:', params);
     
     const url = `${qaHost}/posts?${queryParams.toString()}`;
     const res = await axios.get(url, { headers });
@@ -29,11 +33,15 @@ export const getPostList = async (params = {}, userInfo = {}, isAdmin = false) =
 
 // 게시글 상세 조회
 export const getPostDetail = async (postId, userInfo = {}) => {
-    // 사용자 정보를 헤더에 추가 (필수 헤더로 통일)
+    // JWT 토큰 기반 인증으로 통일
+    const token = localStorage.getItem('accessToken');
     const headers = {
-        'X-User-Id': userInfo.userId || 'anonymous',
-        'X-User-Name': encodeURIComponent(userInfo.userName || '익명') // URL 인코딩으로 한국어 문자 처리
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
     };
+    
+    console.log('QABoard getPostDetail - JWT Token:', token ? 'Present' : 'Missing');
+    console.log('QABoard getPostDetail - PostId:', postId);
     
     const res = await axios.get(`${qaHost}/posts/${postId}`, { headers });
     return res.data;
@@ -41,11 +49,14 @@ export const getPostDetail = async (postId, userInfo = {}) => {
 
 // 게시글 생성
 export const createPost = async (postData, userInfo) => {
+    const token = localStorage.getItem('accessToken');
     const headers = {
         'Content-Type': 'application/json',
-        'X-User-Id': userInfo.userId,
-        'X-User-Name': encodeURIComponent(userInfo.userName || '') // URL 인코딩으로 한국어 문자 처리
+        'Authorization': `Bearer ${token}`
     };
+    
+    console.log('QABoard createPost - JWT Token:', token ? 'Present' : 'Missing');
+    console.log('QABoard createPost - Post data:', postData);
     
     const res = await axios.post(`${qaHost}/posts`, postData, { headers });
     return res.data;
@@ -53,10 +64,10 @@ export const createPost = async (postData, userInfo) => {
 
 // 게시글 수정
 export const updatePost = async (postId, postData, userInfo) => {
+    const token = localStorage.getItem('accessToken');
     const headers = {
         'Content-Type': 'application/json',
-        'X-User-Id': userInfo.userId,
-        'X-User-Name': encodeURIComponent(userInfo.userName || '') // URL 인코딩으로 한국어 문자 처리
+        'Authorization': `Bearer ${token}`
     };
     
     const res = await axios.put(`${qaHost}/posts/${postId}`, postData, { headers });
@@ -65,9 +76,9 @@ export const updatePost = async (postId, postData, userInfo) => {
 
 // 게시글 삭제
 export const deletePost = async (postId, userInfo) => {
+    const token = localStorage.getItem('accessToken');
     const headers = {
-        'X-User-Id': userInfo.userId,
-        'X-User-Name': encodeURIComponent(userInfo.userName || '') // URL 인코딩으로 한국어 문자 처리
+        'Authorization': `Bearer ${token}`
     };
     
     const res = await axios.delete(`${qaHost}/posts/${postId}`, { headers });
@@ -76,10 +87,10 @@ export const deletePost = async (postId, userInfo) => {
 
 // 관리자 답변 생성
 export const createAdminResponse = async (postId, responseData, userInfo) => {
+    const token = localStorage.getItem('accessToken');
     const headers = {
         'Content-Type': 'application/json',
-        'X-User-Id': userInfo.userId,
-        'X-User-Name': encodeURIComponent(userInfo.userName || '') // URL 인코딩으로 한국어 문자 처리
+        'Authorization': `Bearer ${token}`
     };
     
     const res = await axios.post(`${qaHost}/posts/${postId}/response`, responseData, { headers });
@@ -88,10 +99,10 @@ export const createAdminResponse = async (postId, responseData, userInfo) => {
 
 // 관리자 답변 수정
 export const updateAdminResponse = async (postId, responseData, userInfo) => {
+    const token = localStorage.getItem('accessToken');
     const headers = {
         'Content-Type': 'application/json',
-        'X-User-Id': userInfo.userId,
-        'X-User-Name': encodeURIComponent(userInfo.userName || '') // URL 인코딩으로 한국어 문자 처리
+        'Authorization': `Bearer ${token}`
     };
     
     const res = await axios.put(`${qaHost}/posts/${postId}/response`, responseData, { headers });
@@ -100,9 +111,9 @@ export const updateAdminResponse = async (postId, responseData, userInfo) => {
 
 // 관리자 답변 삭제
 export const deleteAdminResponse = async (postId, userInfo) => {
+    const token = localStorage.getItem('accessToken');
     const headers = {
-        'X-User-Id': userInfo.userId,
-        'X-User-Name': encodeURIComponent(userInfo.userName || '') // URL 인코딩으로 한국어 문자 처리
+        'Authorization': `Bearer ${token}`
     };
     
     const res = await axios.delete(`${qaHost}/posts/${postId}/response`, { headers });
@@ -113,9 +124,9 @@ export const deleteAdminResponse = async (postId, userInfo) => {
 export const getMyPosts = async (userInfo, params = {}) => {
     const { page = 0, size = 10 } = params;
     
+    const token = localStorage.getItem('accessToken');
     const headers = {
-        'X-User-Id': userInfo.userId,
-        'X-User-Name': encodeURIComponent(userInfo.userName || '') // URL 인코딩으로 한국어 문자 처리
+        'Authorization': `Bearer ${token}`
     };
     
     const queryParams = new URLSearchParams();

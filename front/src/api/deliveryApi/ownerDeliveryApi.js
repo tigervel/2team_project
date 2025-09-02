@@ -39,3 +39,4 @@ export const getOwnerCompleted = async ({ page, size }) => {
 export const completeDelivery = async (matchingNo) => {
   await api.post(`/g2i4/owner/deliveries/${matchingNo}/complete`);
 };
+

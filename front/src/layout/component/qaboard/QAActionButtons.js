@@ -33,6 +33,14 @@ const QAActionButtons = ({
 
   // 권한 확인
   const permissions = getActionPermissions(item, isAdmin, currentUserId);
+  
+  // 디버그 로그 추가
+  console.log('QAActionButtons Debug:', {
+    itemId: item.id,
+    isAdmin,
+    currentUserId,
+    permissions
+  });
 
   return (
     <Box sx={{ p: 2, borderTop: '1px solid #e0e0e0', backgroundColor: '#fafafa' }}>

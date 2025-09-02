@@ -2,6 +2,8 @@ package com.giproject.dto.noboard;
 
 import java.time.LocalDateTime;
 
+import com.giproject.enums.NoticeCategory;
+
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
@@ -36,6 +38,7 @@ public class NoticeDTO {
     private LocalDateTime createdAt; // 작성일시 (응답 시에만 포함)
     private LocalDateTime updatedAt; // 수정일시 (응답 시에만 포함)
     private Integer viewCount; // 조회수 (응답 시에만 포함)
+    private NoticeCategory category; // 카테고리 (응답 시에만 포함)
     
     /**
      * 공지사항 작성 요청용 DTO
@@ -52,6 +55,12 @@ public class NoticeDTO {
         
         @NotBlank(message = "내용을 입력해주세요")
         private String content;
+        
+        // 프론트엔드에서 사용자가 입력한 작성자명
+        private String author;
+        
+        // 공지사항 카테고리
+        private NoticeCategory category;
     }
     
     /**
@@ -69,6 +78,12 @@ public class NoticeDTO {
         
         @NotBlank(message = "내용을 입력해주세요")
         private String content;
+        
+        // 프론트엔드에서 사용자가 입력한 작성자명
+        private String author;
+        
+        // 공지사항 카테고리
+        private NoticeCategory category;
         
         // 제목과 내용 trim 처리
         public void setTitle(String title) {
@@ -96,5 +111,7 @@ public class NoticeDTO {
         private String authorName;
         private LocalDateTime createdAt;
         private Integer viewCount;
+        private NoticeCategory category;
+        private Integer displayNumber; // 연속적인 표시 번호
     }
 }

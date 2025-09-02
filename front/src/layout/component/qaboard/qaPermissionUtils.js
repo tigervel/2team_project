@@ -60,12 +60,13 @@ export const getActionPermissions = (item, isAdmin, currentUserId) => {
                    (item.author && currentUserId && item.author.includes(currentUserId));
 
   return {
-    canEdit: isAuthor, // 작성자만 수정 가능
-    canDelete: isAuthor, // 작성자만 삭제 가능
+    // 일반 사용자(작성자)만 일반 버튼 사용, 관리자는 관리자 버튼만 사용
+    canEdit: isAuthor && !isAdmin, // 일반 사용자 작성자만 일반 수정 버튼 표시
+    canDelete: isAuthor && !isAdmin, // 일반 사용자 작성자만 일반 삭제 버튼 표시
     canReply: isAdmin && !item.adminResponse, // 관리자만 답변 가능, 이미 답변이 있으면 불가
-    // 새로 추가된 관리자 전용 권한
-    canEditAsAdmin: isAdmin && !isAuthor, // 관리자가 타인의 글을 수정
-    canDeleteAsAdmin: isAdmin && !isAuthor, // 관리자가 타인의 글을 삭제
+    // 관리자 전용 권한 - 관리자는 모든 글에 대해 관리자 버튼으로 수정/삭제
+    canEditAsAdmin: isAdmin, // 관리자는 모든 글을 관리자 권한으로 수정 가능
+    canDeleteAsAdmin: isAdmin, // 관리자는 모든 글을 관리자 권한으로 삭제 가능
     canEditResponse: isAdmin && item.adminResponse // 관리자가 답변을 수정
   };
 };

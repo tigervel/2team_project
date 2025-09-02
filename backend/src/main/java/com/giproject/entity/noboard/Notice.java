@@ -5,8 +5,12 @@ import java.time.LocalDateTime;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
+import com.giproject.enums.NoticeCategory;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -60,6 +64,11 @@ public class Notice {
     @Column(name = "view_count", nullable = false)
     private Integer viewCount = 0; // 조회수
     
+    @Builder.Default
+    @Enumerated(EnumType.STRING)
+    @Column(name = "category", nullable = false)
+    private NoticeCategory category = NoticeCategory.GENERAL; // 공지사항 카테고리
+    
     /**
      * 공지사항 정보 수정
      */
@@ -75,6 +84,16 @@ public class Notice {
         this.title = title;
         this.content = content;
         this.authorName = authorName;
+    }
+    
+    /**
+     * 공지사항 정보 수정 (카테고리 포함)
+     */
+    public void updateNotice(String title, String content, String authorName, NoticeCategory category) {
+        this.title = title;
+        this.content = content;
+        this.authorName = authorName;
+        this.category = category;
     }
     
     /**
