@@ -74,7 +74,7 @@ public class SimpleSignupService {
             throw new IllegalArgumentException("EMAIL_TAKEN");
         }
 
-        // 3) user_index 저장 (★ email/ provider / providerId 반드시 세팅)
+        // 3) user_index 저장
         final LocalDateTime now = LocalDateTime.now();
         UserIndex ui = UserIndex.builder()
                 .loginId(loginId)
@@ -85,7 +85,6 @@ public class SimpleSignupService {
                 .createdAt(now)
                 .updatedAt(now)
                 .build();
-
         userIndexRepo.save(ui);
 
         // 4) 본 테이블 저장 (비밀번호 암호화)
@@ -103,6 +102,7 @@ public class SimpleSignupService {
                 m.setMemName(name);
                 m.setMemPhone(phone);
                 m.setMemAddress(address);
+                m.setMemCreateIdDateTime(LocalDateTime.now());
                 memberRepository.save(m);
             }
             case DRIVER -> {
@@ -113,6 +113,7 @@ public class SimpleSignupService {
                 c.setCargoName(name);
                 c.setCargoPhone(phone);
                 c.setCargoAddress(address);
+                c.setCargoCreatedDateTime(LocalDateTime.now());
                 cargoOwnerRepository.save(c);
             }
             case ADMIN -> {
@@ -123,6 +124,7 @@ public class SimpleSignupService {
                 m.setMemName(name);
                 m.setMemPhone(phone);
                 m.setMemAddress(address);
+                m.setMemCreateIdDateTime(LocalDateTime.now());
                 memberRepository.save(m);
             }
         }
@@ -143,17 +145,18 @@ public class SimpleSignupService {
         String access  = jwtService.createAccessToken(claims, loginId);
         String refresh = jwtService.createRefreshToken(Map.of(UID, loginId), loginId);
 
-        // 6) 반환 DTO
-        return MemberDTO.builder()
-                .loginId(loginId)
-                .email(email)
-                .role(domainRole.name())
-                .name(name)
-                .phone(phone)
-                .address(address)
-                .accessToken(access)
-                .refreshToken(refresh)
-                .build();
+        // 6) 반환 DTO — 정적 팩토리로 생성 (User.builder 충돌 없음)
+        return MemberDTO.of(
+                loginId,
+                email,
+                name,
+                phone,
+                address,
+                LocalDateTime.now(), // 또는 엔티티의 생성시각 사용 가능
+                roles,
+                access,
+                refresh
+        );
     }
 
     private static String safeTrim(String s) {
