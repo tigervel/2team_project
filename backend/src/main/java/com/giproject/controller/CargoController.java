@@ -14,6 +14,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @CrossOrigin(origins = "http://localhost:3000", allowCredentials = "true")
@@ -38,7 +39,10 @@ public class CargoController {
      * 차량 등록
      */
     @PostMapping("/add/{cargoId}")
-    public ResponseEntity<?> registerCargo(@PathVariable("cargoId") String cargoId, @RequestBody CargoDTO dto) {
+    public ResponseEntity<?> registerCargo(
+            @PathVariable("cargoId") String cargoId,
+            @RequestBody CargoDTO dto
+    ) {
         try {
             CargoOwner owner = cargoOwnerRepository.findById(cargoId)
                     .orElseThrow(() -> new RuntimeException("소유자 없음"));
@@ -61,7 +65,10 @@ public class CargoController {
      * 차량 수정
      */
     @PutMapping("/update/{cargoNo}")
-    public ResponseEntity<?> updateCargo(@PathVariable("cargoNo") Integer cargoNo, @RequestBody CargoDTO dto) {
+    public ResponseEntity<?> updateCargo(
+            @PathVariable("cargoNo") Integer cargoNo,
+            @RequestBody CargoDTO dto
+    ) {
         try {
             Cargo cargo = cargoRepository.findById(cargoNo)
                     .orElseThrow(() -> new IllegalArgumentException("차량 없음: " + cargoNo));
@@ -96,33 +103,45 @@ public class CargoController {
     @PostMapping("/upload/{cargoNo}")
     public ResponseEntity<?> uploadImage(
             @PathVariable("cargoNo") Integer cargoNo,
-            @RequestParam("image") MultipartFile file) {
+            @RequestParam("image") MultipartFile file
+    ) {
         try {
-            // DB에서 해당 cargo 조회
             Cargo cargo = cargoRepository.findById(cargoNo)
                     .orElseThrow(() -> new RuntimeException("차량 없음: " + cargoNo));
 
-            // 기존 이미지 파일 삭제
-            if (cargo.getCargoImage() != null) {
-                String existingImagePath = "src/main/resources/static" + cargo.getCargoImage();
-                Path existingPath = Paths.get(existingImagePath);
-                if (Files.exists(existingPath)) {
-                    Files.delete(existingPath); // 파일 존재하면 삭제
-                }
+            Path dir = Paths.get("..", "uploads", "cargo")
+                    .toAbsolutePath()
+                    .normalize();
+
+            Files.createDirectories(dir);
+
+            // 기존 파일 삭제
+            if (cargo.getCargoImage() != null && !cargo.getCargoImage().isBlank()) {
+                String prevFileName = Paths.get(cargo.getCargoImage()).getFileName().toString();
+                Files.deleteIfExists(dir.resolve(prevFileName));
             }
 
             // 새 파일 저장
-            String fileName = UUID.randomUUID() + "_" + file.getOriginalFilename();
-            Path uploadPath = Paths.get("src/main/resources/static/uploads/" + fileName);
+            String original = file.getOriginalFilename();
+            String ext = (original != null && original.lastIndexOf('.') != -1)
+                    ? original.substring(original.lastIndexOf('.')).toLowerCase()
+                    : "";
 
-            Files.createDirectories(uploadPath.getParent());
-            Files.write(uploadPath, file.getBytes());
+            String savedFileName = UUID.randomUUID() + ext;
+            Path savePath = dir.resolve(savedFileName);
+            file.transferTo(savePath.toFile());
 
-            // DB에 새 경로 저장
-            cargo.setCargoImage("/uploads/" + fileName);
+            // DB에는 "파일명만" 저장
+            cargo.setCargoImage(savedFileName);
             cargoRepository.save(cargo);
 
-            return ResponseEntity.ok("업로드 성공");
+            // 프론트로 내려줄 webPath
+            String webPath = "/g2i4/uploads/cargo/" + savedFileName;
+
+            return ResponseEntity.ok(Map.of(
+                    "filename", savedFileName,
+                    "webPath", webPath
+            ));
         } catch (Exception e) {
             e.printStackTrace();
             return ResponseEntity.status(500).body("이미지 업로드 실패: " + e.getMessage());
