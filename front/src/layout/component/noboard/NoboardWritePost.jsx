@@ -10,30 +10,41 @@ import {
   TextField,
   Alert,
   Stack,
-  Snackbar
+  Snackbar,
+  MenuItem,
+  FormControl,
+  InputLabel,
+  Select
 } from '@mui/material';
 import {
   ArrowBack as ArrowLeftIcon,
   Save as SaveIcon
 } from '@mui/icons-material';
-import { getNoticeDetail, createNotice, updateNotice } from '../../../api/noticeApi';
-import useCustomLogin from '../../../hooks/useCustomLogin';
+
+import { getNoticeDetail, createNotice, updateNotice, getNoticeCategories } from '../../../api/noticeApi';
+import { getCurrentUserId } from '../../../utils/jwtUtils';
+
 
 const WritePost = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const isEditing = Boolean(id);
 
-  const { currentUserId, loginState } = useCustomLogin();
+
+  // JWT에서 현재 사용자 ID를 가져와 디폴트로 설정
+  const currentUserId = getCurrentUserId() || 'admin';
+
 
   const [formData, setFormData] = useState({
     title: '',
-    author: '관리자',
-    content: ''
+    author: currentUserId, // 디폴트로 authorID 설정
+    content: '',
+    category: 'GENERAL' // 기본 카테고리
   });
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
+  const [categories, setCategories] = useState([]);
 
 
   // 수정 모드일 때 기존 데이터 로드
@@ -44,7 +55,8 @@ const WritePost = () => {
       setFormData({
         title: response.title,
         author: response.authorName,
-        content: response.content
+        content: response.content,
+        category: response.category || 'GENERAL'
       });
     } catch (err) {
       console.error('공지사항 로드 실패:', err);
@@ -55,7 +67,26 @@ const WritePost = () => {
     }
   };
 
+  // 카테고리 목록 로드
+  const loadCategories = async () => {
+    try {
+      const categoryData = await getNoticeCategories();
+      setCategories(categoryData); // GENERAL 포함하여 모든 카테고리 표시
+    } catch (err) {
+      console.error('카테고리 로드 실패:', err);
+      // 기본 카테고리 설정
+      setCategories([
+        { value: 'GENERAL', displayName: '전체' },
+        { value: 'SYSTEM', displayName: '시스템' },
+        { value: 'SERVICE', displayName: '서비스' },
+        { value: 'UPDATE', displayName: '업데이트' },
+        { value: 'MAINTENANCE', displayName: '점검' }
+      ]);
+    }
+  };
+
   useEffect(() => {
+    loadCategories();
     if (isEditing && id) {
       loadNoticeForEdit();
     }
@@ -89,25 +120,22 @@ const WritePost = () => {
 
     setLoading(true);
     try {
-      // 사용자가 입력한 작성자명을 userInfo에 설정
-      const userInfo = {
-        userId: currentUserId || loginState.memberId || 'anonymous',
-        userName: loginState.nickname || '익명' // Use actual nickname, fallback to '익명'
-      };
-      
+
+      // JWT 토큰 기반 인증 사용 (API에서 자동으로 JWT 토큰 처리)
+      // formData.author 값은 백엔드에서 authorName으로 저장됨
+
       console.log('=== 제출 데이터 확인 ===');
       console.log('isEditing:', isEditing);
       console.log('formData:', formData);
-      console.log('userInfo:', userInfo);
       console.log('게시글 ID:', id);
       
       if (isEditing) {
         console.log('수정 API 호출 중...');
-        await updateNotice(id, formData, userInfo);
+        await updateNotice(id, formData);
         setSnackbar({ open: true, message: '게시글이 성공적으로 수정되었습니다.', severity: 'success' });
       } else {
         console.log('생성 API 호출 중...');
-        await createNotice(formData, userInfo);
+        await createNotice(formData);
         setSnackbar({ open: true, message: '새 게시글이 성공적으로 작성되었습니다.', severity: 'success' });
       }
       
@@ -208,7 +236,37 @@ const WritePost = () => {
                   disabled={loading}
                 />
 
-                
+
+                {/* Category */}
+                <FormControl fullWidth required disabled={loading}>
+                  <InputLabel id="category-label">카테고리</InputLabel>
+                  <Select
+                    labelId="category-label"
+                    value={formData.category}
+                    label="카테고리"
+                    onChange={(e) => handleInputChange('category', e.target.value)}
+                  >
+                    {categories.map((category) => (
+                      <MenuItem key={category.value} value={category.value}>
+                        {category.displayName}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+
+                {/* Author */}
+                <TextField
+                  label="작성자"
+                  fullWidth
+                  value={formData.author}
+                  onChange={(e) => handleInputChange('author', e.target.value)}
+                  error={!!errors.author}
+                  helperText={errors.author}
+                  placeholder="작성자명을 입력하세요"
+                  required
+                  disabled={loading}
+                />
+
 
                 {/* Content */}
                 <TextField

@@ -22,7 +22,10 @@ import {
   Stack
 } from '@mui/material';
 import { Add as AddIcon } from '@mui/icons-material';
-import { getNoticeList } from '../../../api/noticeApi';
+
+import { getNotices, getCategoryDisplayName } from '../../../api/noticeApi';
+import { isCurrentUserAdmin } from '../../../utils/jwtUtils';
+
 
 const BulletinBoard = () => {
   const navigate = useNavigate();
@@ -32,22 +35,30 @@ const BulletinBoard = () => {
   const [totalPages, setTotalPages] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [activeCategory, setActiveCategory] = useState('all');
+  const [activeCategory, setActiveCategory] = useState('ALL');
+  const [isAdmin, setIsAdmin] = useState(false);
 
   // 공지사항 카테고리 정의
   const categories = [
-    { id: 'all', name: '전체' },
-    { id: 'system', name: '시스템' },
-    { id: 'service', name: '서비스' },
-    { id: 'update', name: '업데이트' },
-    { id: 'maintenance', name: '점검' }
+    { id: 'ALL', name: '전체' },
+    { id: 'GENERAL', name: '전체' },
+    { id: 'SYSTEM', name: '시스템' },
+    { id: 'SERVICE', name: '서비스' },
+    { id: 'UPDATE', name: '업데이트' },
+    { id: 'MAINTENANCE', name: '점검' }
   ];
 
   // 공지사항 목록 로드
   const loadNotices = async (page = 0) => {
     try {
       setLoading(true);
-      const response = await getNoticeList({ page, size: 10 });
+
+      const params = { page, size: 10 };
+      if (activeCategory && activeCategory !== 'ALL') {
+        params.category = activeCategory;
+      }
+      const response = await getNotices(params);
+
       setNotices(response.content || []);
       setTotalElements(response.totalElements || 0);
       setTotalPages(response.totalPages || 0);
@@ -59,6 +70,11 @@ const BulletinBoard = () => {
       setLoading(false);
     }
   };
+
+  // 관리자 권한 확인
+  useEffect(() => {
+    setIsAdmin(isCurrentUserAdmin());
+  }, []);
 
   useEffect(() => {
     loadNotices(currentPage);
@@ -79,34 +95,11 @@ const BulletinBoard = () => {
   return (
     <Container maxWidth="lg" sx={{ py: 4 }}>
       {/* Header */}
-      <Box 
-        sx={{ 
-          bgcolor: 'primary.main',
-          py: 6,
-          px: 3,
-          borderRadius: 2,
-          mb: 4,
-          textAlign: 'center'
-        }}
-      >
-        <Typography 
-          variant="h3" 
-          component="h1" 
-          sx={{ 
-            color: 'primary.contrastText',
-            fontWeight: 'bold',
-            mb: 1
-          }}
-        >
+      <Box textAlign="center" mb={4}>
+        <Typography variant="h3" component="h1" gutterBottom fontWeight="bold">
           공지사항
         </Typography>
-        <Typography 
-          variant="h6" 
-          sx={{ 
-            color: 'primary.contrastText',
-            opacity: 0.8
-          }}
-        >
+        <Typography variant="h6" color="text.secondary">
           최신 업데이트와 중요한 안내사항을 확인하세요
         </Typography>
       </Box>
@@ -118,7 +111,7 @@ const BulletinBoard = () => {
           justifyContent: 'space-between', 
           alignItems: 'center', 
           mb: 3,
-          flexWrap: 'wrap',
+          flexWrap: { xs: 'wrap', sm: 'nowrap' },
           gap: 2
         }}
       >
@@ -127,14 +120,18 @@ const BulletinBoard = () => {
           sx={{ 
             display: 'flex', 
             flexWrap: 'wrap', 
-            gap: 1
+            gap: 1,
+            flex: '1 1 auto'
           }}
         >
           {categories.map((category) => (
             <Button
               key={category.id}
               variant={activeCategory === category.id ? 'contained' : 'outlined'}
-              onClick={() => setActiveCategory(category.id)}
+              onClick={() => {
+                setActiveCategory(category.id);
+                setCurrentPage(0); // 카테고리 변경 시 페이지 리셋
+              }}
               sx={{ 
                 minWidth: 100, 
                 borderRadius: 2
@@ -145,19 +142,23 @@ const BulletinBoard = () => {
           ))}
         </Box>
 
-        {/* New Post Button */}
-        <Button 
-          variant="contained" 
-          onClick={handleNewPost}
-          startIcon={<AddIcon />}
-          sx={{ 
-            minWidth: 140,
-            height: 48,
-            borderRadius: 2
-          }}
-        >
-          새 게시글
-        </Button>
+        {/* New Post Button - 관리자만 표시 */}
+        {isAdmin && (
+          <Box sx={{ flex: '0 0 auto' }}>
+            <Button 
+              variant="contained" 
+              onClick={handleNewPost}
+              startIcon={<AddIcon />}
+              sx={{ 
+                minWidth: 140,
+                height: 48,
+                borderRadius: 2
+              }}
+            >
+              새 게시글
+            </Button>
+          </Box>
+        )}
       </Box>
 
       {/* Notice Table */}
@@ -211,13 +212,13 @@ const BulletinBoard = () => {
                   >
                     <TableCell>
                       <Typography variant="body2" color="text.secondary">
-                        {notice.noticeId}
+                        {notice.displayNumber || notice.noticeId}
                       </Typography>
                     </TableCell>
                     <TableCell>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                         <Chip 
-                          label="공지" 
+                          label={getCategoryDisplayName(notice.category)} 
                           size="small" 
                           color="primary" 
                           variant="outlined"

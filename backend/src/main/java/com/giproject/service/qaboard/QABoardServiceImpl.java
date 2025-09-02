@@ -95,19 +95,19 @@ public class QABoardServiceImpl implements QABoardService {
             if (qaCategory != null) {
                 // 카테고리 + 검색
                 if (isAdmin) {
+                    // 관리자는 모든 글을 검색할 수 있음 (비공개 글 포함)
                     postPage = qaPostRepository.searchAllPostsByCategory(qaCategory, keyword.trim(), pageable);
-                } else if (currentUserId != null && !currentUserId.trim().isEmpty()) {
-                    postPage = qaPostRepository.searchAccessiblePostsByCategory(qaCategory, keyword.trim(), currentUserId, pageable);
                 } else {
+                    // 일반 사용자: 공개 글만 검색 (보안상 비공개 글 내용은 검색 대상에서 제외)
                     postPage = qaPostRepository.searchPublicPostsByCategory(qaCategory, keyword.trim(), pageable);
                 }
             } else {
                 // 전체 검색
                 if (isAdmin) {
+                    // 관리자는 모든 글을 검색할 수 있음 (비공개 글 포함)
                     postPage = qaPostRepository.searchAllPosts(keyword.trim(), pageable);
-                } else if (currentUserId != null && !currentUserId.trim().isEmpty()) {
-                    postPage = qaPostRepository.searchAccessiblePosts(keyword.trim(), currentUserId, pageable);
                 } else {
+                    // 일반 사용자: 공개 글만 검색 (보안상 비공개 글 내용은 검색 대상에서 제외)
                     postPage = qaPostRepository.searchPublicPosts(keyword.trim(), pageable);
                 }
             }
@@ -116,20 +116,20 @@ public class QABoardServiceImpl implements QABoardService {
             if (qaCategory != null) {
                 // 카테고리별 조회
                 if (isAdmin) {
+                    // 관리자는 모든 글을 볼 수 있음
                     postPage = qaPostRepository.findByCategoryOrderByCreatedAtDesc(qaCategory, pageable);
-                } else if (currentUserId != null && !currentUserId.trim().isEmpty()) {
-                    postPage = qaPostRepository.findAccessiblePostsByCategory(qaCategory, currentUserId, pageable);
                 } else {
-                    postPage = qaPostRepository.findByCategoryAndIsPrivateFalseOrderByCreatedAtDesc(qaCategory, pageable);
+                    // 일반 사용자: 모든 글을 반환하되, 프론트엔드에서 권한에 따라 마스킹 처리
+                    postPage = qaPostRepository.findByCategoryOrderByCreatedAtDesc(qaCategory, pageable);
                 }
             } else {
                 // 전체 조회
                 if (isAdmin) {
+                    // 관리자는 모든 글을 볼 수 있음
                     postPage = qaPostRepository.findAllByOrderByCreatedAtDesc(pageable);
-                } else if (currentUserId != null && !currentUserId.trim().isEmpty()) {
-                    postPage = qaPostRepository.findAccessiblePosts(currentUserId, pageable);
                 } else {
-                    postPage = qaPostRepository.findByIsPrivateFalseOrderByCreatedAtDesc(pageable);
+                    // 일반 사용자: 모든 글을 반환하되, 프론트엔드에서 권한에 따라 마스킹 처리
+                    postPage = qaPostRepository.findAllByOrderByCreatedAtDesc(pageable);
                 }
             }
         }

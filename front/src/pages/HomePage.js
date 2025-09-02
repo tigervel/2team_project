@@ -8,7 +8,7 @@ import { basicList } from "../api/adminApi/adminApi";
 import { useSelector } from "react-redux";
 import MainFeesUtil from "../layout/component/common/MainFeesUtil";
 import { API_SERVER_HOST } from "../api/serverConfig";
-import { getNoticeList } from "../api/noticeApi";
+import { getNoticeList, getNotices } from "../api/noticeApi";
 import { useNavigate } from "react-router-dom";
 
 const initState = {
@@ -42,7 +42,7 @@ const HomePage = () => {
   const loadNotices = async (page = 0) => {
     try {
       setLoading(true);
-      const response = await getNoticeList({ page, size: 10 });
+      const response = await getNotices();
       setNotices(response.content || []);
     } catch (err) {
       console.error('공지사항 로드 실패:', err);
