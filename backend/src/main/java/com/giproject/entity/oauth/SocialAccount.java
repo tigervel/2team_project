@@ -1,3 +1,4 @@
+// com.giproject.entity.oauth.SocialAccount
 package com.giproject.entity.oauth;
 
 import jakarta.persistence.*;
