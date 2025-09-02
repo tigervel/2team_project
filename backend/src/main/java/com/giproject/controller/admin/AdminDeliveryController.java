@@ -1,6 +1,7 @@
 package com.giproject.controller.admin;
 
 import com.giproject.dto.admin.AdminMemberSearchDTO;
+import com.giproject.dto.admin.DeliveryDetailDTO; // Added import
 import com.giproject.service.admin.AdminDeliveryService;
 import lombok.RequiredArgsConstructor;
 
@@ -23,6 +24,13 @@ public class AdminDeliveryController {
     public ResponseEntity<List<AdminMemberSearchDTO>> searchUser(@RequestParam("query") String query) {
         List<AdminMemberSearchDTO> users = adminDeliveryService.searchUserForDeliveryPage(query);
         return ResponseEntity.ok(users);
+    }
+
+    @GetMapping("/all") // New endpoint
+    public ResponseEntity<List<DeliveryDetailDTO>> getAllDeliveries(@RequestParam(value = "status", defaultValue = "ALL") String status,
+                                                                    @RequestParam(value = "keyword", defaultValue = "") String keyword) {
+        List<DeliveryDetailDTO> allDeliveries = adminDeliveryService.getAllDeliveries(status, keyword);
+        return ResponseEntity.ok(allDeliveries);
     }
 }
 

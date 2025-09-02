@@ -17,7 +17,7 @@ export async function fetchUnreadCount() {
 }
 
 export async function markReportRead(id, read) {
-    await axios.post(`${PREFIX}/${id}/read`, { read: read }, {
+    await axios.put(`${PREFIX}/${id}/read?read=${read}`, null, {
         withCredentials: true,
     });
 }

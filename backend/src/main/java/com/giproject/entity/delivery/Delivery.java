@@ -3,6 +3,7 @@ package com.giproject.entity.delivery;
 import java.time.LocalDateTime;
 
 import com.giproject.entity.payment.Payment;
+import com.giproject.entity.cargo.CargoOwner; // Added import
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -13,6 +14,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToOne;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -40,6 +42,10 @@ public class Delivery {
 	@OneToOne(fetch = FetchType.LAZY)
 	@JoinColumn(name = "payment_no")
 	private Payment payment;
+	
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "cargo_owner_id", referencedColumnName = "cargo_id")
+	private CargoOwner cargoOwner;
 	
 	private LocalDateTime completTime;
 

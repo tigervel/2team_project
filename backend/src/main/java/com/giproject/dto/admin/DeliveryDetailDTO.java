@@ -15,4 +15,6 @@ public class DeliveryDetailDTO {
     private String type;
     private String amount;
     private String owner;
+    private String carrierName; // Added field
+    private String deliveryStatus; // Added field
 }

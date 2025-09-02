@@ -53,6 +53,8 @@ public class AdminDeliveryServiceImpl implements AdminDeliveryService {
                             .type(d.getPayment().getOrderSheet().getMatching().getEstimate().getCargoType())
                             .amount(String.format("%,d원", d.getPayment().getOrderSheet().getMatching().getEstimate().getTotalCost()))
                             .owner(d.getPayment().getOrderSheet().getMatching().getEstimate().getMember().getMemName())
+                            .carrierName(d.getCargoOwner() != null ? d.getCargoOwner().getCargoName() : null) // Added carrierName
+                            .deliveryStatus(d.getStatus() != null ? d.getStatus().name() : null) // Added deliveryStatus
                             .build())
                     .collect(Collectors.toList());
 
@@ -66,7 +68,11 @@ public class AdminDeliveryServiceImpl implements AdminDeliveryService {
                     .email(member.getMemEmail())
                     .phone(member.getMemPhone())
                     .userId(member.getMemId()) // Set userId for Member
-                    .userType("OWNER").build()); // Set user type
+                    .userType("OWNER")
+                    .orders(deliveries.size()) // Set orders count
+                    .details(details) // Assign details
+                    .history(history) // Assign history
+                    .build()); // Set user type
         }
 
         // 2. Search for CargoOwner (Cowner)
@@ -87,6 +93,8 @@ public class AdminDeliveryServiceImpl implements AdminDeliveryService {
                             .type(d.getPayment().getOrderSheet().getMatching().getEstimate().getCargoType())
                             .amount(String.format("%,d원", d.getPayment().getOrderSheet().getMatching().getEstimate().getTotalCost()))
                             .owner(d.getPayment().getOrderSheet().getMatching().getEstimate().getMember().getMemName())
+                            .carrierName(d.getCargoOwner() != null ? d.getCargoOwner().getCargoName() : null) // Added carrierName
+                            .deliveryStatus(d.getStatus() != null ? d.getStatus().name() : null) // Added deliveryStatus
                             .build())
                     .collect(Collectors.toList());
 
@@ -100,10 +108,55 @@ public class AdminDeliveryServiceImpl implements AdminDeliveryService {
                     .email(cargoOwner.getCargoEmail())
                     .phone(cargoOwner.getCargoPhone())
                     .userId(cargoOwner.getCargoId()) // Set userId for CargoOwner
-                    .userType("COWNER").build()); // Set user type
+                    .userType("COWNER")
+                    .orders(deliveries.size()) // Set orders count
+                    .details(details) // Assign details
+                    .history(history) // Assign history
+                    .build()); // Set user type
         }
 
         return results;
     }
+
+    @Override
+    public List<DeliveryDetailDTO> getAllDeliveries(String status, String keyword) {
+        List<Delivery> allDeliveries = deliveryRepository.findAllWithDetails();
+        
+        // Filter by status if not "ALL"
+        if (!"ALL".equalsIgnoreCase(status)) {
+            allDeliveries = allDeliveries.stream()
+                .filter(d -> d.getStatus() != null && d.getStatus().name().equalsIgnoreCase(status))
+                .collect(Collectors.toList());
+        }
+
+        // Filter by keyword if not empty
+        if (keyword != null && !keyword.trim().isEmpty()) {
+            String lowerCaseKeyword = keyword.trim().toLowerCase();
+            allDeliveries = allDeliveries.stream()
+                .filter(d -> (d.getPayment() != null && d.getPayment().getOrderSheet() != null && d.getPayment().getOrderSheet().getMatching() != null && d.getPayment().getOrderSheet().getMatching().getEstimate() != null && d.getPayment().getOrderSheet().getMatching().getEstimate().getMember() != null && d.getPayment().getOrderSheet().getMatching().getEstimate().getMember().getMemName() != null && d.getPayment().getOrderSheet().getMatching().getEstimate().getMember().getMemName().toLowerCase().contains(lowerCaseKeyword)) ||
+                             (d.getCargoOwner() != null && d.getCargoOwner().getCargoName() != null && d.getCargoOwner().getCargoName().toLowerCase().contains(lowerCaseKeyword)))
+                .collect(Collectors.toList());;
+        }
+
+        return allDeliveries.stream()
+                .map(d -> DeliveryDetailDTO.builder()
+                        .date(d.getPayment().getOrderSheet().getOrderTime().format(DateTimeFormatter.ofPattern("yyyy.MM.dd")))
+                        .start(d.getPayment().getOrderSheet().getStartRestAddress())
+                        .end(d.getPayment().getOrderSheet().getEndRestAddress())
+                        .distance(String.format("%.1fKM", d.getPayment().getOrderSheet().getMatching().getEstimate().getDistanceKm()))
+                        .type(d.getPayment().getOrderSheet().getMatching().getEstimate().getCargoType())
+                        .amount(String.format("%,d원", d.getPayment().getOrderSheet().getMatching().getEstimate().getTotalCost()))
+                        .owner(d.getPayment().getOrderSheet().getMatching().getEstimate().getMember().getMemName())
+                        .carrierName(d.getPayment().getOrderSheet().getMatching().getCargoOwner().getCargoName() )
+                        .deliveryStatus(d.getStatus() != null ? d.getStatus().name() : null)
+                        .build())
+                .collect(Collectors.toList());
+    }
+
+	@Override
+	public AdminMemberSearchDTO getDeliveryDetailsForUser(String userId, String userType) {
+		// TODO Auto-generated method stub
+		return null;
+	}
 }
 

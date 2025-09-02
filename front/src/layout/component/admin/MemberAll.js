@@ -13,11 +13,13 @@ import {
   Pagination,
   CircularProgress,
   TableContainer,
-  Paper
+  Paper,
+  Chip // Added Chip import
 } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
 import { useNavigate, useLocation, NavLink } from "react-router-dom";
 import { fetchMembers } from "../../../api/adminApi/adminMembersApi";
+import DeliveryDetailsModal from "./DeliveryDetailsModal"; // Added DeliveryDetailsModal import
 
 const MemberAll = () => {
   const [activeTab, setActiveTab] = useState(0);
@@ -28,9 +30,21 @@ const MemberAll = () => {
   const [loading, setLoading] = useState(false);
   const [keyword, setKeyword] = useState("");
   const [error, setError] = useState("");
+  const [openModal, setOpenModal] = useState(false); // Added modal state
+  const [selectedUserForModal, setSelectedUserForModal] = useState(null); // Added selected user for modal
 
   const navigate = useNavigate();
   const location = useLocation();
+
+  const handleOpenModal = (user) => {
+    setSelectedUserForModal(user);
+    setOpenModal(true);
+  };
+
+  const handleCloseModal = () => {
+    setOpenModal(false);
+    setSelectedUserForModal(null);
+  };
 
   useEffect(() => {
     const path = location.pathname;
@@ -121,19 +135,15 @@ const MemberAll = () => {
                 <TableCell>이메일</TableCell>
                 <TableCell>전화번호</TableCell>
                 <TableCell>등록일</TableCell>
-                <TableCell>거래수</TableCell>
-                <TableCell>신고내역</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {rows.map((r, i) => (
-                <TableRow key={r.memId ?? i}>
+                <TableRow key={r.memId ?? i} onClick={() => handleOpenModal(r)} style={{ cursor: 'pointer' }}>
                   <TableCell>{r.memName}</TableCell>
                   <TableCell>{r.memEmail}</TableCell>
                   <TableCell>{r.memPhone}</TableCell>
                   <TableCell>{fmtDate(r.memCreateidDateTime)}</TableCell>
-                  <TableCell>-</TableCell>
-                  <TableCell>-</TableCell>
                 </TableRow>
               ))}
               {rows.length === 0 && (
@@ -154,6 +164,11 @@ const MemberAll = () => {
           color="primary"
         />
       </Box>
+      <DeliveryDetailsModal
+        open={openModal}
+        onClose={handleCloseModal}
+        selectedUser={selectedUserForModal}
+      />
     </Box>
   );
 };

@@ -93,9 +93,22 @@ const AdminSidebar = () => {
       } catch (e) {
       }
     };
-    load();
+
+    load(); // Initial load
+
+    // Listen for custom event to refresh unread count
+    const handleReportRead = () => {
+      load();
+    };
+    window.addEventListener('reportRead', handleReportRead);
+
     const t = setInterval(load, 60000); // 60초마다 갱신
-    return () => { mounted = false; clearInterval(t); };
+
+    return () => {
+      mounted = false;
+      clearInterval(t);
+      window.removeEventListener('reportRead', handleReportRead); // Clean up event listener
+    };
   }, []);
 
   return (
@@ -145,7 +158,7 @@ const AdminSidebar = () => {
                       const active = location.pathname === item.path;
                       const isReports = item.id === "reports";
                       const primaryNode = isReports ? (
-                        <Box display="flex" alignItems="center" gap={1}>
+                        <Box display="flex" alignItems="center" gap={18}>
                           <span>신고내역</span>
                           <Badge
                             color="error"

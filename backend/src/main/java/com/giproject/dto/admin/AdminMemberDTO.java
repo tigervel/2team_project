@@ -1,6 +1,8 @@
 package com.giproject.dto.admin;
 
 import java.time.LocalDateTime;
+import java.util.List; // Added
+import com.giproject.dto.admin.DeliveryDetailDTO; // Added
 import lombok.*;
 
 @Getter
@@ -19,4 +21,8 @@ public class AdminMemberDTO {
     private String memPhone;
     private String memAdress;
     private LocalDateTime memCreateidDateTime;
+    private int orders; // Added
+    private String status; // Added
+    private List<DeliveryDetailDTO> details; // Added
+    private List<String> history; // Added
 }
