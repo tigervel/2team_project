@@ -28,7 +28,7 @@ public class UserInfoController {
     private final CargoOwnerRepository cargoOwnerRepository;
 
     // 업로드 루트 (윈도우)
-    private static final Path UPLOAD_ROOT = Paths.get("D:", "2team_Project_Git", "uploads");
+    private static final Path UPLOAD_ROOT = Paths.get("..", "uploads");
     private static final String USER_PROFILE_SUBDIR = "user_profile";
 
     @GetMapping("/info")

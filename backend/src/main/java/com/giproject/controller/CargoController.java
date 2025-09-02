@@ -104,7 +104,7 @@ public class CargoController {
 
             // 기존 이미지 파일 삭제
             if (cargo.getCargoImage() != null) {
-                String existingImagePath = "src/main/resources/static" + cargo.getCargoImage();
+                String existingImagePath = "../uploads/cargo/" + cargo.getCargoImage();
                 Path existingPath = Paths.get(existingImagePath);
                 if (Files.exists(existingPath)) {
                     Files.delete(existingPath); // 파일 존재하면 삭제
@@ -113,13 +113,13 @@ public class CargoController {
 
             // 새 파일 저장
             String fileName = UUID.randomUUID() + "_" + file.getOriginalFilename();
-            Path uploadPath = Paths.get("src/main/resources/static/uploads/" + fileName);
+            Path uploadPath = Paths.get("../uploads/cargo/" + fileName);
 
             Files.createDirectories(uploadPath.getParent());
             Files.write(uploadPath, file.getBytes());
 
             // DB에 새 경로 저장
-            cargo.setCargoImage("/uploads/" + fileName);
+            cargo.setCargoImage("/uploads/cargo/" + fileName);
             cargoRepository.save(cargo);
 
             return ResponseEntity.ok("업로드 성공");
