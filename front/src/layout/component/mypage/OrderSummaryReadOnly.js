@@ -13,6 +13,11 @@ const serverInitState = {
   ordererEmail: "",
   startAddress: "",
   endAddress: "",
+  startRestAddress: "",
+  endRestAddress: "",
+  addressee: "",
+  addresseeEmail: "",
+  receiverPhone: "",
   baseCost: "",
   distanceCost: "",
   specialOptionCost: "",
@@ -39,11 +44,7 @@ const joinPhone = (raw) => {
   return [a, b, c].filter(Boolean).join("-") || "";
 };
 
-const splitEmail = (raw) => {
-  if (!raw || !raw.includes("@")) return ["", ""];
-  const [local, domain] = raw.split("@");
-  return [local ?? "", domain ?? ""];
-};
+
 
 const toCurrency = (v) => {
   if (v === null || v === undefined || v === "") return "";
@@ -53,8 +54,9 @@ const toCurrency = (v) => {
 };
 
 // ===== 한 줄 표시 컴포넌트 (라벨/값) =====
-const FieldRow = ({ label, children, dense = false }) => (
+const FieldRow = ({ label, children, dense = false, className }) => (
   <Grid
+    className={className}
     container
     alignItems="center"
     wrap="nowrap"
@@ -64,7 +66,7 @@ const FieldRow = ({ label, children, dense = false }) => (
     }}
   >
     <Grid item sx={{ width: LABEL_WIDTH, pr: 2 }}>
-      <Typography sx={{ fontWeight: 600, textAlign: "right" }}>{label} :</Typography>
+      <Typography sx={{ fontWeight: 600, textAlign: "right" }}>{label}</Typography>
     </Grid>
     <Grid item sx={{ flex: 1, minWidth: 0 }}>
       <Box
@@ -87,7 +89,7 @@ const FieldRow = ({ label, children, dense = false }) => (
 
 const SectionTitle = ({ children }) => (
   <Box sx={{ borderRadius: 3, maxWidth: 800, mx: "auto" }}>
-    <Typography variant="h6" sx={{ fontWeight: 700, mb: 1.5 }}>
+    <Typography variant="h6" sx={{ fontWeight: 700, mb: 1.25 }}>
       {children}
     </Typography>
   </Box>
@@ -113,24 +115,26 @@ const OrderSummaryReadOnly = () => {
     () => joinPhone(serverData.ordererPhone),
     [serverData.ordererPhone]
   );
-  const [ordererEmailLocal, ordererEmailDomain] = useMemo(
-    () => splitEmail(serverData.ordererEmail),
-    [serverData.ordererEmail]
-  );
 
   // ===== 받는분(도착지) 데이터 가공 =====
-  const receiverPhone = useMemo(
-    () => joinPhone(passedOrderSheet?.phone),
-    [passedOrderSheet?.phone]
-  );
-  const [receiverEmailLocal, receiverEmailDomain] = useMemo(
-    () => splitEmail(passedOrderSheet?.addresseeEmail),
-    [passedOrderSheet?.addresseeEmail]
-  );
+  const receiverPhone = useMemo(() => {
+    const src = serverData.receiverPhone ?? passedOrderSheet?.phone;
+    return joinPhone(src);
+  }, [serverData.receiverPhone, passedOrderSheet?.phone]);
+
+
 
   return (
-    <Box sx={{ p: 4, bgcolor: "#fafafa", minHeight: "100vh", pb: 10 }}>
-      <Typography variant="h5" align="center" sx={{ fontWeight: 800, mb: 3 }}>
+    <Box
+      sx={{
+        px: 4,
+        pt: 10,        
+        pb: 10,
+        bgcolor: "#fafafa",
+        minHeight: "100vh",
+      }}
+    >
+      <Typography variant="h5" align="center" sx={{ fontWeight: 800, mt: 0, mb: 2 , pb:5}}>
         주문서 요약 (읽기 전용)
       </Typography>
 
@@ -146,27 +150,21 @@ const OrderSummaryReadOnly = () => {
           mx: "auto",
           overflow: "hidden",
         }}
-      >
-        <Box sx={{ p: 2, bgcolor: "#f9fafb", borderBottom: "1px solid #eee" }}>
-          <Typography sx={{ fontWeight: 700 }}>주문자</Typography>
-        </Box>
-        <Box sx={{ p: 2.5 }}>
-          <FieldRow label="주문자">
+      ><Box sx={{ p: 2.5, "& .field-row:last-of-type": { borderBottom: "none", pb: 0 } }}>
+          <FieldRow className="field-row" label="주문자">
             <Typography sx={{ width: NAME_WIDTH }}>{serverData.ordererName || ""}</Typography>
           </FieldRow>
-          <FieldRow label="물품 출발 주소">
+          <FieldRow className="field-row" label="물품 출발 주소">
             <Typography>{serverData.startAddress || ""}</Typography>
           </FieldRow>
-          <FieldRow label="상세 주소">
-            <Typography>{passedOrderSheet?.startRestAddress || ""}</Typography>
+          <FieldRow className="field-row" label="상세 주소">
+            <Typography>{serverData.startRestAddress ?? passedOrderSheet?.startRestAddress ?? ""}</Typography>
           </FieldRow>
-          <FieldRow label="휴대전화" dense>
+          <FieldRow className="field-row" label="휴대전화" dense>
             <Typography>{ordererPhone}</Typography>
           </FieldRow>
-          <FieldRow label="이메일" dense>
-            <Typography sx={{ mr: 1 }}>{ordererEmailLocal}</Typography>
-            <Typography sx={{ mx: 0.5 }}>@</Typography>
-            <Typography>{ordererEmailDomain}</Typography>
+          <FieldRow className="field-row" label="이메일" dense>
+            <Typography>{serverData.ordererEmail ?? ""}</Typography>
           </FieldRow>
         </Box>
       </Paper>
@@ -184,28 +182,24 @@ const OrderSummaryReadOnly = () => {
           overflow: "hidden",
         }}
       >
-        <Box sx={{ p: 2, bgcolor: "#f9fafb", borderBottom: "1px solid #eee" }}>
-          <Typography sx={{ fontWeight: 700 }}>받는분</Typography>
-        </Box>
-        <Box sx={{ p: 2.5 }}>
-          <FieldRow label="받는분">
+
+        <Box sx={{ p: 2.5, "& .field-row:last-of-type": { borderBottom: "none", pb: 0 } }}>
+          <FieldRow className="field-row" label="받는분">
             <Typography sx={{ width: NAME_WIDTH }}>
-              {passedOrderSheet?.addressee || ""}
+              {serverData.addressee ?? passedOrderSheet?.addressee ?? ""}
             </Typography>
           </FieldRow>
-          <FieldRow label="물품 도착 주소">
+          <FieldRow className="field-row" label="물품 도착 주소">
             <Typography>{serverData.endAddress || ""}</Typography>
           </FieldRow>
-          <FieldRow label="상세 주소">
-            <Typography>{passedOrderSheet?.endRestAddress || ""}</Typography>
+          <FieldRow className="field-row" label="상세 주소">
+            <Typography>{serverData.endRestAddress ?? passedOrderSheet?.endRestAddress ?? ""}</Typography>
           </FieldRow>
-          <FieldRow label="휴대전화" dense>
+          <FieldRow className="field-row" label="휴대전화" dense>
             <Typography>{receiverPhone}</Typography>
           </FieldRow>
-          <FieldRow label="이메일" dense>
-            <Typography sx={{ mr: 1 }}>{receiverEmailLocal}</Typography>
-            <Typography sx={{ mx: 0.5 }}>@</Typography>
-            <Typography>{receiverEmailDomain}</Typography>
+          <FieldRow className="field-row" label="이메일" dense>
+            <Typography>{serverData.addresseeEmail ?? passedOrderSheet?.addresseeEmail ?? ""}</Typography>
           </FieldRow>
         </Box>
       </Paper>
@@ -223,9 +217,7 @@ const OrderSummaryReadOnly = () => {
           overflow: "hidden",
         }}
       >
-        <Box sx={{ p: 2, bgcolor: "#f9fafb", borderBottom: "1px solid #eee" }}>
-          <Typography sx={{ fontWeight: 700 }}>요금 내역</Typography>
-        </Box>
+
 
         <Box sx={{ p: 2.5 }}>
           <FieldRow label="기본요금">
