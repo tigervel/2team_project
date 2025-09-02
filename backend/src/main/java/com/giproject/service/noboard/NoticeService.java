@@ -9,6 +9,7 @@ import org.springframework.data.domain.Pageable;
 import com.giproject.dto.noboard.NoticeDTO;
 import com.giproject.dto.noboard.NoticePageResponseDTO;
 import com.giproject.entity.noboard.Notice;
+import com.giproject.enums.NoticeCategory;
 
 import jakarta.transaction.Transactional;
 
@@ -36,10 +37,11 @@ public interface NoticeService {
     /**
      * 공지사항 목록 조회
      * @param keyword 검색어 (null이면 검색 안함)
+     * @param category 카테고리 (null이면 전체)
      * @param pageable 페이지네이션 정보
      * @return 페이지네이션된 공지사항 목록
      */
-    NoticePageResponseDTO<NoticeDTO.ListResponse> getNoticeList(String keyword, Pageable pageable);
+    NoticePageResponseDTO<NoticeDTO.ListResponse> getNoticeList(String keyword, NoticeCategory category, Pageable pageable);
 
     /**
      * 공지사항 상세 조회
@@ -72,35 +74,4 @@ public interface NoticeService {
      * @param noticeId 공지사항 ID
      */
     void incrementViewCount(Long noticeId);
-
-    /**
-     * Notice 엔티티를 NoticeDTO로 변환
-     */
-    default NoticeDTO convertToDTO(Notice notice) {
-        return NoticeDTO.builder()
-                .noticeId(notice.getNoticeId())
-                .title(notice.getTitle())
-                .content(notice.getContent())
-                .authorId(notice.getAuthorId())
-                .authorName(notice.getAuthorName())
-                .createdAt(notice.getCreatedAt())
-                .updatedAt(notice.getUpdatedAt())
-                .viewCount(notice.getViewCount())
-                .build();
-    }
-
-    /**
-     * Notice 엔티티를 목록용 ListResponse로 변환
-     */
-    default NoticeDTO.ListResponse convertToListResponse(Notice notice) {
-        return NoticeDTO.ListResponse.builder()
-                .noticeId(notice.getNoticeId())
-                .title(notice.getTitle())
-                .content(notice.getContent())
-                .authorId(notice.getAuthorId())
-                .authorName(notice.getAuthorName())
-                .createdAt(notice.getCreatedAt())
-                .viewCount(notice.getViewCount())
-                .build();
-    }
 }

@@ -11,6 +11,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.giproject.dto.noboard.NoticeDTO;
 import com.giproject.dto.noboard.NoticePageResponseDTO;
 import com.giproject.entity.noboard.Notice;
+import com.giproject.enums.NoticeCategory;
 import com.giproject.repository.noboard.NoticeRepository;
 
 import lombok.RequiredArgsConstructor;
@@ -48,6 +49,7 @@ public class NoticeServiceImpl implements NoticeService {
                 .content(createRequest.getContent())
                 .authorId(authorId)
                 .authorName(authorName)
+                .category(createRequest.getCategory() != null ? createRequest.getCategory() : NoticeCategory.GENERAL)
                 .build();
         
         // 저장
@@ -59,20 +61,39 @@ public class NoticeServiceImpl implements NoticeService {
 
     @Transactional(readOnly = true)
     @Override
-    public NoticePageResponseDTO<NoticeDTO.ListResponse> getNoticeList(String keyword, Pageable pageable) {
-        log.info("Getting notice list - keyword: {}, pageable: {}", keyword, pageable);
+    public NoticePageResponseDTO<NoticeDTO.ListResponse> getNoticeList(String keyword, NoticeCategory category, Pageable pageable) {
+        log.info("Getting notice list - keyword: {}, category: {}, pageable: {}", keyword, category, pageable);
         
         Page<Notice> noticePage;
         
-        if (keyword != null && !keyword.trim().isEmpty()) {
+        // 카테고리와 키워드 조건에 따른 조회
+        if (category != null && keyword != null && !keyword.trim().isEmpty()) {
+            // 카테고리 + 키워드 검색
+            noticePage = noticeRepository.findByCategoryAndTitleContainingOrContentContainingOrderByCreatedAtDesc(
+                    category, keyword.trim(), pageable);
+        } else if (category != null) {
+            // 카테고리별 조회
+            noticePage = noticeRepository.findByCategoryOrderByCreatedAtDesc(category, pageable);
+        } else if (keyword != null && !keyword.trim().isEmpty()) {
+            // 키워드 검색
             noticePage = noticeRepository.findByTitleContainingOrContentContainingOrderByCreatedAtDesc(keyword.trim(), pageable);
         } else {
+            // 전체 조회
             noticePage = noticeRepository.findAllByOrderByCreatedAtDesc(pageable);
         }
         
-        // DTO 변환
+        // 전체 공지사항 수 (연속 번호 계산용)
+        long totalNotices = noticeRepository.count();
+        
+        // DTO 변환 및 연속 번호 설정
         List<NoticeDTO.ListResponse> responseList = noticePage.getContent().stream()
-                .map(this::convertToListResponse)
+                .map(notice -> {
+                    NoticeDTO.ListResponse response = convertToListResponse(notice);
+                    // 연속 번호 계산: 전체 공지사항 수 - (현재 페이지 * 페이지 크기 + 현재 인덱스)
+                    int displayNumber = (int) (totalNotices - (noticePage.getNumber() * noticePage.getSize() + noticePage.getContent().indexOf(notice)));
+                    response.setDisplayNumber(displayNumber);
+                    return response;
+                })
                 .collect(Collectors.toList());
         
         return NoticePageResponseDTO.of(noticePage, responseList);
@@ -98,7 +119,7 @@ public class NoticeServiceImpl implements NoticeService {
     public NoticeDTO updateNotice(Long noticeId, NoticeDTO.UpdateRequest updateRequest, String currentUserId, String authorName, boolean isAdmin) {
         log.info("=== NoticeService.updateNotice 시작 ===");
         log.info("파라미터 확인 - noticeId: {}, currentUserId: {}, authorName: '{}', isAdmin: {}", noticeId, currentUserId, authorName, isAdmin);
-        log.info("updateRequest 내용 - title: '{}', content: '{}'", updateRequest.getTitle(), updateRequest.getContent());
+        log.info("updateRequest 내용 - title: '{}', content: '{}', category: {}", updateRequest.getTitle(), updateRequest.getContent(), updateRequest.getCategory());
         
         Notice notice = noticeRepository.findById(noticeId)
                 .orElseThrow(() -> new IllegalArgumentException("공지사항을 찾을 수 없습니다: " + noticeId));
@@ -108,14 +129,15 @@ public class NoticeServiceImpl implements NoticeService {
             throw new SecurityException("공지사항 수정 권한이 없습니다. 관리자이거나 작성자 본인이어야 합니다.");
         }
         
-        log.info("수정 전 기존 데이터 - authorId: {}, authorName: '{}'", notice.getAuthorId(), notice.getAuthorName());
+        log.info("수정 전 기존 데이터 - authorId: {}, authorName: '{}', category: {}", notice.getAuthorId(), notice.getAuthorName(), notice.getCategory());
         
-        // 공지사항 업데이트 (제목, 내용, 작성자명 포함)
-        log.info("updateNotice 메서드 호출 - title: '{}', content: '{}', authorName: '{}'", 
-                updateRequest.getTitle(), updateRequest.getContent(), authorName);
-        notice.updateNotice(updateRequest.getTitle(), updateRequest.getContent(), authorName);
+        // 공지사항 업데이트 (제목, 내용, 작성자명, 카테고리 포함)
+        log.info("updateNotice 메서드 호출 - title: '{}', content: '{}', authorName: '{}', category: {}", 
+                updateRequest.getTitle(), updateRequest.getContent(), authorName, updateRequest.getCategory());
+        notice.updateNotice(updateRequest.getTitle(), updateRequest.getContent(), authorName, 
+                updateRequest.getCategory() != null ? updateRequest.getCategory() : notice.getCategory());
         
-        log.info("수정 후 데이터 - authorId: {}, authorName: '{}'", notice.getAuthorId(), notice.getAuthorName());
+        log.info("수정 후 데이터 - authorId: {}, authorName: '{}', category: {}", notice.getAuthorId(), notice.getAuthorName(), notice.getCategory());
         
         Notice updatedNotice = noticeRepository.save(notice);
         log.info("Notice updated successfully: {}", noticeId);
@@ -153,5 +175,38 @@ public class NoticeServiceImpl implements NoticeService {
             notice.incrementViewCount();
             noticeRepository.save(notice);
         });
+    }
+    
+    /**
+     * Entity → DTO 변환 (상세 정보)
+     */
+    private NoticeDTO convertToDTO(Notice notice) {
+        return NoticeDTO.builder()
+                .noticeId(notice.getNoticeId())
+                .title(notice.getTitle())
+                .content(notice.getContent())
+                .authorId(notice.getAuthorId())
+                .authorName(notice.getAuthorName())
+                .createdAt(notice.getCreatedAt())
+                .updatedAt(notice.getUpdatedAt())
+                .viewCount(notice.getViewCount())
+                .category(notice.getCategory())
+                .build();
+    }
+    
+    /**
+     * Entity → ListResponse DTO 변환
+     */
+    private NoticeDTO.ListResponse convertToListResponse(Notice notice) {
+        return NoticeDTO.ListResponse.builder()
+                .noticeId(notice.getNoticeId())
+                .title(notice.getTitle())
+                .content(notice.getContent())
+                .authorId(notice.getAuthorId())
+                .authorName(notice.getAuthorName())
+                .createdAt(notice.getCreatedAt())
+                .viewCount(notice.getViewCount())
+                .category(notice.getCategory())
+                .build();
     }
 }

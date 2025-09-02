@@ -5,6 +5,7 @@ import io.jsonwebtoken.security.Keys;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
@@ -17,14 +18,15 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class JwtTokenUtils {
 
-    private static final String Key = "123456789012345678901234567890817682825";
+    @Value("${jwt.secret}")
+    private String secretKey;
 
-    // 토큰 생성 메서드 (static)
-    public static String generateToken(Map<String, Object> valueMap, int min) {
+    // 토큰 생성 메서드 (인스턴스)
+    public String generateToken(Map<String, Object> valueMap, int min) {
         SecretKey key = null;
         
         try {
-            key = Keys.hmacShaKeyFor(JwtTokenUtils.Key.getBytes("UTF-8"));
+            key = Keys.hmacShaKeyFor(secretKey.getBytes("UTF-8"));
         } catch (Exception e) {
             throw new RuntimeException(e.getMessage());
         }
@@ -40,12 +42,12 @@ public class JwtTokenUtils {
         return jwtStr;
     }
 
-    // 토큰 검증 메서드 (static)
-    public static Map<String, Object> validateToken(String token) {
+    // 토큰 검증 메서드 (인스턴스)
+    public Map<String, Object> validateToken(String token) {
         Map<String, Object> claim = null;
 
         try {
-            SecretKey key = Keys.hmacShaKeyFor(JwtTokenUtils.Key.getBytes("UTF-8"));
+            SecretKey key = Keys.hmacShaKeyFor(secretKey.getBytes("UTF-8"));
 
             claim = Jwts.parser()
                     .setSigningKey(key)
@@ -70,7 +72,7 @@ public class JwtTokenUtils {
         String token = authHeader.substring(7);
         
         try {
-            Map<String, Object> claims = validateToken(token);
+            Map<String, Object> claims = this.validateToken(token);
             return new UserInfo(claims);
         } catch (Exception e) {
             log.warn("토큰 검증 실패: {}", e.getMessage());

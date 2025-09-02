@@ -19,6 +19,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.giproject.dto.noboard.NoticeDTO;
 import com.giproject.dto.noboard.NoticePageResponseDTO;
+import com.giproject.enums.NoticeCategory;
 import com.giproject.service.noboard.NoticeService;
 import com.giproject.utils.JwtTokenUtils;
 
@@ -52,6 +53,7 @@ public class NoticeController {
      * 공지사항 목록 조회
      * 
      * @param keyword 검색어 (선택)
+     * @param category 카테고리 (선택)
      * @param page 페이지 번호 (0부터 시작, 기본값: 0)
      * @param size 페이지 크기 (기본값: 10)
      * @return 페이지네이션된 공지사항 목록
@@ -59,16 +61,37 @@ public class NoticeController {
     @GetMapping
     public ResponseEntity<NoticePageResponseDTO<NoticeDTO.ListResponse>> getNoticeList(
             @RequestParam(value = "keyword", required = false) String keyword,
+            @RequestParam(value = "category", required = false) NoticeCategory category,
             @RequestParam(value = "page", defaultValue = "0") int page,
             @RequestParam(value = "size", defaultValue = "10") int size) {
         
-        log.info("GET /api/notices - keyword: {}, page: {}, size: {}", keyword, page, size);
+        log.info("GET /api/notices - keyword: {}, category: {}, page: {}, size: {}", keyword, category, page, size);
         
         Pageable pageable = PageRequest.of(page, size);
         NoticePageResponseDTO<NoticeDTO.ListResponse> response = 
-                noticeService.getNoticeList(keyword, pageable);
+                noticeService.getNoticeList(keyword, category, pageable);
         
         return ResponseEntity.ok(response);
+    }
+
+    /**
+     * 공지사항 카테고리 목록 조회
+     * 
+     * @return 모든 공지사항 카테고리 목록
+     */
+    @GetMapping("/categories")
+    public ResponseEntity<List<Map<String, String>>> getNoticeCategories() {
+        log.info("GET /api/notices/categories");
+        
+        List<Map<String, String>> categories = java.util.Arrays.stream(NoticeCategory.values())
+                .map(category -> Map.of(
+                    "value", category.name(),
+                    "displayName", category.getDisplayName(),
+                    "description", category.getDescription()
+                ))
+                .collect(java.util.stream.Collectors.toList());
+        
+        return ResponseEntity.ok(categories);
     }
 
     /**

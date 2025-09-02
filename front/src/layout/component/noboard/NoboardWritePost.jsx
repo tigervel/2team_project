@@ -10,13 +10,17 @@ import {
   TextField,
   Alert,
   Stack,
-  Snackbar
+  Snackbar,
+  MenuItem,
+  FormControl,
+  InputLabel,
+  Select
 } from '@mui/material';
 import {
   ArrowBack as ArrowLeftIcon,
   Save as SaveIcon
 } from '@mui/icons-material';
-import { getNoticeDetail, createNotice, updateNotice } from '../../../api/noticeApi';
+import { getNoticeDetail, createNotice, updateNotice, getNoticeCategories } from '../../../api/noticeApi';
 import { getCurrentUserId } from '../../../utils/jwtUtils';
 
 const WritePost = () => {
@@ -30,11 +34,13 @@ const WritePost = () => {
   const [formData, setFormData] = useState({
     title: '',
     author: currentUserId, // 디폴트로 authorID 설정
-    content: ''
+    content: '',
+    category: 'GENERAL' // 기본 카테고리
   });
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
+  const [categories, setCategories] = useState([]);
 
 
   // 수정 모드일 때 기존 데이터 로드
@@ -45,7 +51,8 @@ const WritePost = () => {
       setFormData({
         title: response.title,
         author: response.authorName,
-        content: response.content
+        content: response.content,
+        category: response.category || 'GENERAL'
       });
     } catch (err) {
       console.error('공지사항 로드 실패:', err);
@@ -56,7 +63,26 @@ const WritePost = () => {
     }
   };
 
+  // 카테고리 목록 로드
+  const loadCategories = async () => {
+    try {
+      const categoryData = await getNoticeCategories();
+      setCategories(categoryData); // GENERAL 포함하여 모든 카테고리 표시
+    } catch (err) {
+      console.error('카테고리 로드 실패:', err);
+      // 기본 카테고리 설정
+      setCategories([
+        { value: 'GENERAL', displayName: '전체' },
+        { value: 'SYSTEM', displayName: '시스템' },
+        { value: 'SERVICE', displayName: '서비스' },
+        { value: 'UPDATE', displayName: '업데이트' },
+        { value: 'MAINTENANCE', displayName: '점검' }
+      ]);
+    }
+  };
+
   useEffect(() => {
+    loadCategories();
     if (isEditing && id) {
       loadNoticeForEdit();
     }
@@ -204,6 +230,23 @@ const WritePost = () => {
                   required
                   disabled={loading}
                 />
+
+                {/* Category */}
+                <FormControl fullWidth required disabled={loading}>
+                  <InputLabel id="category-label">카테고리</InputLabel>
+                  <Select
+                    labelId="category-label"
+                    value={formData.category}
+                    label="카테고리"
+                    onChange={(e) => handleInputChange('category', e.target.value)}
+                  >
+                    {categories.map((category) => (
+                      <MenuItem key={category.value} value={category.value}>
+                        {category.displayName}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
 
                 {/* Author */}
                 <TextField
