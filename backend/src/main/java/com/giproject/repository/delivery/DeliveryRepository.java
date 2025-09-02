@@ -23,11 +23,21 @@ public interface DeliveryRepository extends JpaRepository<Delivery, Long> {
    @Query("select p from Payment p where p.orderSheet.orderNo = :orderNo")
    Optional<Payment> findByOrderSheet_OrderNo(@Param("orderNo") Long orderNo);
    
-   @Query("SELECT d FROM Delivery d JOIN d.payment p JOIN p.orderSheet os JOIN os.matching mt JOIN mt.estimate e JOIN e.member m WHERE m.memId = :memId")
+   @Query("SELECT d FROM Delivery d LEFT JOIN FETCH d.payment p LEFT JOIN FETCH p.orderSheet os LEFT JOIN FETCH os.matching mt LEFT JOIN FETCH mt.estimate e LEFT JOIN FETCH e.member m WHERE m.memId = :memId")
    List<Delivery> findDeliveriesByOwnerMemId(@Param("memId") String memId);
    
-   @Query("SELECT d FROM Delivery d JOIN d.payment p JOIN p.orderSheet os JOIN os.matching mt JOIN mt.cargoOwner co WHERE co.cargoId = :cargoId")
+   @Query("SELECT d FROM Delivery d LEFT JOIN FETCH d.payment p LEFT JOIN FETCH p.orderSheet os LEFT JOIN FETCH os.matching mt LEFT JOIN FETCH mt.cargoOwner co WHERE co.cargoId = :cargoId")
    List<Delivery> findDeliveriesByCargoOwnerCargoId(@Param("cargoId") String cargoId);
+   
+   // New method to fetch all deliveries with all necessary details
+   @Query("SELECT d FROM Delivery d " +
+          "LEFT JOIN FETCH d.payment p " +
+          "LEFT JOIN FETCH p.orderSheet os " +
+          "LEFT JOIN FETCH os.matching mt " +
+          "LEFT JOIN FETCH mt.estimate e " +
+          "LEFT JOIN FETCH e.member m " +
+          "LEFT JOIN FETCH mt.cargoOwner co")
+   List<Delivery> findAllWithDetails();
    
    
    

@@ -17,10 +17,14 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.giproject.dto.admin.AdminMemberDTO;
+import com.giproject.dto.admin.AdminMemberSearchDTO;
 import com.giproject.entity.cargo.CargoOwner;
 import com.giproject.entity.member.Member;
 import com.giproject.repository.cargo.CargoOwnerRepository;
 import com.giproject.repository.member.MemberRepository;
+import com.giproject.repository.account.UserIndexRepository;
+import com.giproject.entity.account.UserIndex;
+import com.giproject.entity.account.UserIndex.Role;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
@@ -33,6 +37,8 @@ public class AdminMemberServiceImpl implements AdminMemberService {
 
 	private final MemberRepository memberRepository;
 	private final CargoOwnerRepository cargoOwnerRepository;
+	private final AdminDeliveryService adminDeliveryService; // Added
+	private final UserIndexRepository userIndexRepository; // Added
 
 	public Page<AdminMemberDTO> list(String type, String keyword, Pageable pageable) {
 		String t = (type == null ? "all" : type.trim()).toUpperCase(Locale.ROOT);
@@ -47,10 +53,32 @@ public class AdminMemberServiceImpl implements AdminMemberService {
 			case "COWNER" -> rows = toCowners(hasKeyword ? keyword : null);
 			case "ADMIN" -> rows = toAdmins(hasKeyword ? keyword : null);
 			default -> {
-				List<AdminMemberDTO> merged = new ArrayList<>();
-				merged.addAll(toOwners(hasKeyword ? keyword : null));
-				merged.addAll(toCowners(hasKeyword ? keyword : null));
-				merged.addAll(toAdmins(hasKeyword ? keyword : null));
+				List<UserIndex.Role> roles = List.of(UserIndex.Role.SHIPPER, UserIndex.Role.DRIVER, UserIndex.Role.ADMIN);
+				List<UserIndex> userIndices;
+				if (hasKeyword) {
+					userIndices = userIndexRepository.findByRolesAndKeyword(roles, keyword);
+				} else {
+					userIndices = userIndexRepository.findByRoles(roles);
+				}
+				List<AdminMemberDTO> merged = userIndices.stream()
+						.map(ui -> {
+							if (ui.getRole() == UserIndex.Role.SHIPPER) {
+								return memberRepository.findByMemId(ui.getLoginId())
+										.map(this::ownerToDto)
+										.orElse(null);
+							} else if (ui.getRole() == UserIndex.Role.DRIVER) {
+								return cargoOwnerRepository.findByCargoId(ui.getLoginId())
+										.map(this::cownerToDto)
+										.orElse(null);
+							} else if (ui.getRole() == UserIndex.Role.ADMIN) {
+								return memberRepository.findByMemId(ui.getLoginId())
+										.map(this::adminToDto)
+										.orElse(null);
+							}
+							return null;
+						})
+						.filter(java.util.Objects::nonNull)
+						.collect(Collectors.toList());
 				rows = merged;
 			}
 			}
@@ -121,51 +149,67 @@ public class AdminMemberServiceImpl implements AdminMemberService {
 	}
 
 	private List<AdminMemberDTO> toOwners(String keyword) {
-		List<Member> list = memberRepository.findAll();
+		List<UserIndex> userIndices;
 		if (keyword != null && !keyword.isBlank()) {
-			String k = keyword.trim();
-			list = list.stream()
-					.filter(m -> containsIgnoreCase(m.getMemId(), k) || containsIgnoreCase(m.getMemName(), k)
-							|| containsIgnoreCase(m.getMemEmail(), k) || containsIgnoreCase(m.getMemPhone(), k))
-					.collect(Collectors.toList());
+			userIndices = userIndexRepository.findByRoleAndKeyword(Role.SHIPPER, keyword);
+		} else {
+			userIndices = userIndexRepository.findByRole(Role.SHIPPER);
 		}
-		list = list.stream().filter(m -> !containsRole(m, "ADMIN")).collect(Collectors.toList());
-
-		return list.stream().map(this::ownerToDto).collect(Collectors.toList());
+		return userIndices.stream()
+				.map(ui -> memberRepository.findByMemId(ui.getLoginId()))
+				.filter(Optional::isPresent)
+				.map(Optional::get)
+				.map(this::ownerToDto)
+				.collect(Collectors.toList());
 	}
 
 	private List<AdminMemberDTO> toAdmins(String keyword) {
-		List<Member> list = memberRepository.findAll();
-		// 관리자만
-		list = list.stream().filter(m -> containsRole(m, "ADMIN")).collect(Collectors.toList());
-
+		List<UserIndex> userIndices;
 		if (keyword != null && !keyword.isBlank()) {
-			String k = keyword.trim();
-			list = list.stream()
-					.filter(m -> containsIgnoreCase(m.getMemId(), k) || containsIgnoreCase(m.getMemName(), k)
-							|| containsIgnoreCase(m.getMemEmail(), k) || containsIgnoreCase(m.getMemPhone(), k))
-					.collect(Collectors.toList());
+			userIndices = userIndexRepository.findByRoleAndKeyword(Role.ADMIN, keyword);
+		} else {
+			userIndices = userIndexRepository.findByRole(Role.ADMIN);
 		}
-		return list.stream().map(this::adminToDto).collect(Collectors.toList());
+		return userIndices.stream()
+				.map(ui -> memberRepository.findByMemId(ui.getLoginId()))
+				.filter(Optional::isPresent)
+				.map(Optional::get)
+				.map(this::adminToDto)
+				.collect(Collectors.toList());
 	}
 
 	private List<AdminMemberDTO> toCowners(String keyword) {
-		List<CargoOwner> list = cargoOwnerRepository.findAll();
+		List<UserIndex> userIndices;
 		if (keyword != null && !keyword.isBlank()) {
-			String k = keyword.trim();
-			list = list.stream()
-					.filter(c -> containsIgnoreCase(c.getCargoId(), k) || containsIgnoreCase(c.getCargoName(), k)
-							|| containsIgnoreCase(c.getCargoEmail(), k) || containsIgnoreCase(c.getCargoPhone(), k))
-					.collect(Collectors.toList());
+			userIndices = userIndexRepository.findByRoleAndKeyword(Role.DRIVER, keyword);
+		} else {
+			userIndices = userIndexRepository.findByRole(Role.DRIVER);
 		}
-		return list.stream().map(this::cownerToDto).collect(Collectors.toList());
+		return userIndices.stream()
+				.map(ui -> cargoOwnerRepository.findByCargoId(ui.getLoginId()))
+				.filter(Optional::isPresent)
+				.map(Optional::get)
+				.map(this::cownerToDto)
+				.collect(Collectors.toList());
 	}
 
 	private AdminMemberDTO ownerToDto(Member m) {
+		// Fetch delivery details using AdminDeliveryService
+		AdminMemberSearchDTO deliveryDetails = adminDeliveryService.searchUserForDeliveryPage(m.getMemId()).stream()
+				.filter(dto -> "OWNER".equals(dto.getUserType())) // Ensure we get the OWNER's details
+				.findFirst()
+				.orElse(null);
+
 		return AdminMemberDTO.builder().type("OWNER").memId(nullToEmpty(m.getMemId()))
 				.memName(nullToEmpty(m.getMemName())).memEmail(nullToEmpty(m.getMemEmail()))
 				.memPhone(nullToEmpty(m.getMemPhone())).memAdress(nullToEmpty(m.getMemAddress()))
-				.memCreateidDateTime(m.getMemCreateIdDateTime()).build();
+				.memCreateidDateTime(m.getMemCreateIdDateTime())
+				// Add delivery-related fields
+				.orders(deliveryDetails != null ? deliveryDetails.getOrders() : 0)
+				.status(deliveryDetails != null ? deliveryDetails.getStatus() : null)
+				.details(deliveryDetails != null ? deliveryDetails.getDetails() : null)
+				.history(deliveryDetails != null ? deliveryDetails.getHistory() : null)
+				.build();
 	}
 
 	private AdminMemberDTO adminToDto(Member m) {
@@ -176,10 +220,22 @@ public class AdminMemberServiceImpl implements AdminMemberService {
 	}
 
 	private AdminMemberDTO cownerToDto(CargoOwner c) {
+		// Fetch delivery details using AdminDeliveryService
+		AdminMemberSearchDTO deliveryDetails = adminDeliveryService.searchUserForDeliveryPage(c.getCargoId()).stream()
+				.filter(dto -> "COWNER".equals(dto.getUserType())) // Ensure we get the COWNER's details
+				.findFirst()
+				.orElse(null);
+
 		return AdminMemberDTO.builder().type("COWNER").memId(nullToEmpty(c.getCargoId()))
 				.memName(nullToEmpty(c.getCargoName())).memEmail(nullToEmpty(c.getCargoEmail()))
 				.memPhone(nullToEmpty(c.getCargoPhone())).memAdress(nullToEmpty(c.getCargoAddress()))
-				.memCreateidDateTime(c.getCargoCreatedDateTime()).build();
+				.memCreateidDateTime(c.getCargoCreatedDateTime())
+				// Add delivery-related fields
+				.orders(deliveryDetails != null ? deliveryDetails.getOrders() : 0)
+				.status(deliveryDetails != null ? deliveryDetails.getStatus() : null)
+				.details(deliveryDetails != null ? deliveryDetails.getDetails() : null)
+				.history(deliveryDetails != null ? deliveryDetails.getHistory() : null)
+				.build();
 	}
 
 	private static String nullToEmpty(String s) {
@@ -190,24 +246,5 @@ public class AdminMemberServiceImpl implements AdminMemberService {
 		return s != null && s.toLowerCase(Locale.ROOT).contains(needleLower);
 	}
 
-	private boolean containsRole(Member m, String role) {
-		if (m.getMemberRoleList() == null)
-			return false;
-		String want = role.toUpperCase(Locale.ROOT);
-		String wantWithPrefix = ("ROLE_" + role).toUpperCase(Locale.ROOT);
-		for (String r : m.getMemberRoleList()) {
-			if (r == null)
-				continue;
-			String rr = r.toUpperCase(Locale.ROOT);
-			if (rr.equals(want) || rr.equals(wantWithPrefix))
-				return true;
-		}
-		return false;
-	}
-
-	private static boolean containsIgnoreCase(String src, String kw) {
-		if (src == null || kw == null)
-			return false;
-		return src.toLowerCase().contains(kw.toLowerCase());
-	}
+	
 }

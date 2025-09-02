@@ -7,6 +7,7 @@ import {
 import SearchIcon from "@mui/icons-material/Search";
 import { useNavigate, useLocation, NavLink } from "react-router-dom";
 import { fetchMembers } from "../../../api/adminApi/adminMembersApi";
+import DeliveryDetailsModal from "./DeliveryDetailsModal"; // Added DeliveryDetailsModal import
 
 const MemberCowner = () => {
   const navigate = useNavigate();
@@ -23,6 +24,18 @@ const MemberCowner = () => {
   const [loading, setLoading] = useState(false);
   const [keyword, setKeyword] = useState("");
   const [error, setError] = useState("");
+  const [openModal, setOpenModal] = useState(false); // Added modal state
+  const [selectedUserForModal, setSelectedUserForModal] = useState(null); // Added selected user for modal
+
+  const handleOpenModal = (user) => {
+    setSelectedUserForModal(user);
+    setOpenModal(true);
+  };
+
+  const handleCloseModal = () => {
+    setOpenModal(false);
+    setSelectedUserForModal(null);
+  };
 
   const sort = useMemo(() => "memCreateidDateTime,desc", []);
 
@@ -54,7 +67,7 @@ const MemberCowner = () => {
     setLoading(true); setError("");
     try {
       const data = await fetchMembers({
-        type: "COWNER",
+        type: "DRIVER",
         page: page - 1,
         size,
         sort,
@@ -111,25 +124,21 @@ const MemberCowner = () => {
                 <TableCell>email</TableCell>
                 <TableCell>전화번호</TableCell>
                 <TableCell>등록일</TableCell>
-                <TableCell>거래수</TableCell>
-                <TableCell>신고내역</TableCell>
-                <TableCell>⋯</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
-              {rows.map((u, i) => (
-                <TableRow key={i}>
-                  <TableCell>{u.memName}</TableCell>
-                  <TableCell>{u.memEmail}</TableCell>
-                  <TableCell>{u.memPhone}</TableCell>
-                  <TableCell>{fmt(u.memCreateidDateTime)}</TableCell>
-                  <TableCell>-</TableCell>
-                  <TableCell><Chip label="0" size="small" /></TableCell>
-                  <TableCell>⋯</TableCell>
+              {rows.map((r, i) => (
+                <TableRow key={r.memId ?? i} onClick={() => handleOpenModal(r)} style={{ cursor: 'pointer' }}>
+                  <TableCell>{r.memName}</TableCell>
+                  <TableCell>{r.memEmail}</TableCell>
+                  <TableCell>{r.memPhone}</TableCell>
+                  <TableCell>{fmt(r.memCreateidDateTime)}</TableCell>
                 </TableRow>
               ))}
               {rows.length === 0 && (
-                <TableRow><TableCell colSpan={7} align="center">데이터가 없습니다</TableCell></TableRow>
+                <TableRow>
+                  <TableCell colSpan={6} align="center">데이터가 없습니다.</TableCell>
+                </TableRow>
               )}
             </TableBody>
           </Table>
@@ -139,6 +148,13 @@ const MemberCowner = () => {
       <Box display="flex" justifyContent="center" mt={3}>
         <Pagination count={totalPages} page={page} onChange={(_, v) => setPage(v)} color="primary" />
       </Box>
+
+      {/* Delivery Details Modal */}
+      <DeliveryDetailsModal
+        open={openModal}
+        onClose={handleCloseModal}
+        selectedUser={selectedUserForModal}
+      />
     </Box>
   );
 };

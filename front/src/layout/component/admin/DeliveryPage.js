@@ -1,130 +1,116 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
-    Box, Typography, Tabs, Tab, TextField,
-    Table, TableHead, TableRow, TableCell, TableBody,
-    Chip, Paper
+    Box, Typography, Table, TableHead, TableRow, TableCell, TableBody,
+    Chip, Paper, CircularProgress
 } from "@mui/material";
+import { fetchAllDeliveries } from "../../../api/adminApi/adminDeliveryApi";
+import { Tabs, Tab, TextField } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
-import { searchUserForDeliveryPage } from "../../../api/adminApi/adminDeliveryApi";
 
 const DeliveryPage = () => {
-    const [tab, setTab] = useState(0);
-    const [search, setSearch] = useState("");
-    const [userList, setUserList] = useState([]);
-    const [selectedUser, setSelectedUser] = useState(null);
-    const [noResults, setNoResults] = useState(false);
+    const [allDeliveries, setAllDeliveries] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
+    const [activeTab, setActiveTab] = useState("ALL");
+    const [keyword, setKeyword] = useState("");
 
-    const handleSearch = async (e) => {
-        const query = e.target.value;
-        setSearch(query);
-        setNoResults(false);
-        setSelectedUser(null);
+    const handleTabChange = (event, newValue) => {
+        setActiveTab(newValue);
+    };
 
-        if (!query) {
-            setUserList([]);
-            return;
+    const getStatusChip = (status) => {
+        let label = "";
+        let color = "default";
+        switch (status) {
+            case "COMPLETED":
+                label = "배송 완료";
+                color = "success";
+                break;
+            case "IN_TRANSIT":
+                label = "배송 중";
+                color = "info";
+                break;
+            case "PENDING":
+                label = "대기";
+                color = "warning";
+                break;
+            default:
+                label = status;
+                color = "default";
         }
+        return <Chip label={label} color={color} size="small" />;
+    };
 
-        try {
-            const users = await searchUserForDeliveryPage(query);
-            setUserList(users);
-            if (users.length === 0) {
-                setNoResults(true);
+    useEffect(() => {
+        const loadAllDeliveries = async () => {
+            try {
+                const data = await fetchAllDeliveries(activeTab, keyword);
+                const sortedData = data.sort((a, b) => {
+                    // Assuming date is in "yyyy.MM.dd" format, string comparison works for descending order
+                    return b.date.localeCompare(a.date);
+                });
+                setAllDeliveries(sortedData);
+            } catch (err) {
+                setError(err);
+            } finally {
+                setLoading(false);
             }
-        } catch (error) {
-            console.error("Error searching user:", error);
-            setUserList([]);
-            setNoResults(true);
-        }
-    };
-
-    const handleUserSelect = (user) => {
-        setSelectedUser(user);
-        window.selectedUser = user;//테스트~~~
-    };
+        };
+        loadAllDeliveries();
+    }, [activeTab, keyword]);
 
     return (
         <Box flexGrow={1} p={4}>
             <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
-                <Typography variant="h5" fontWeight="bold">
-                    배송조회
-                </Typography>
+                <Box> {/* Inner Box for title and tabs */}
+                    <Typography variant="h5" fontWeight="bold" mb={1}> {/* mb={1} for spacing */}
+                        전체 배송 내역
+                    </Typography>
+                    <Tabs value={activeTab} onChange={handleTabChange} textColor="primary" indicatorColor="primary">
+                        <Tab label="전체" value="ALL" />
+                        <Tab label="대기" value="PENDING" />
+                        <Tab label="배송 중" value="IN_TRANSIT" />
+                        <Tab label="배송 완료" value="COMPLETED" />
+                    </Tabs>
+                </Box>
                 <TextField
                     variant="outlined"
-                    placeholder="검색"
+                    placeholder="주문자/배송자 검색"
                     size="small"
-                    value={search}
-                    onChange={handleSearch}
+                    value={keyword}
+                    onChange={(e) => setKeyword(e.target.value)}
                     InputProps={{
-                        startAdornment: (
-                            <SearchIcon fontSize="small" sx={{ mr: 1, color: "grey.500" }} />
-                        ),
+                        startAdornment: <SearchIcon fontSize="small" sx={{ mr: 1, color: "grey.500" }} />,
                     }}
                 />
             </Box>
 
-            <Paper variant="outlined" sx={{ mb: 2 }}>
-                <Table size="small">
-                    <TableHead>
-                        <TableRow>
-                            <TableCell>이름</TableCell>
-                            <TableCell>email</TableCell>
-                            <TableCell>전화번호</TableCell>
-                            <TableCell>주문수</TableCell>
-                            <TableCell>주문현황</TableCell>
-                            <TableCell></TableCell>
-                        </TableRow>
-                    </TableHead>
-                    <TableBody>
-                        {userList.length > 0 ? (
-                            userList.map((user) => (
-                                <TableRow key={user.userId} onClick={() => handleUserSelect(user)} style={{ cursor: 'pointer' }}>
-                                    <TableCell>{user.name}</TableCell>
-                                    <TableCell>{user.email}</TableCell>
-                                    <TableCell>{user.phone}</TableCell>
-                                    <TableCell>{user.orders}</TableCell>
-                                    <TableCell>
-                                        <Chip label={user.status} color="warning" size="small" />
-                                    </TableCell>
-                                    <TableCell>⋯</TableCell>
-                                </TableRow>
-                            ))
-                        ) : (
+            {loading ? (
+                <Box display="flex" justifyContent="center" alignItems="center" height={300}>
+                    <CircularProgress />
+                </Box>
+            ) : error ? (
+                <Typography color="error">배송 내역을 불러오지 못했습니다: {error.message}</Typography>
+            ) : (
+                <Paper variant="outlined" sx={{ mb: 2 }}>
+                    <Table size="small">
+                        <TableHead>
                             <TableRow>
-                                <TableCell colSpan={6} align="center">
-                                    {noResults ? "검색 결과가 없습니다." : "검색어를 입력하세요."}
-                                </TableCell>
+                                <TableCell>출발 날짜</TableCell>
+                                <TableCell>출발지</TableCell>
+                                <TableCell>도착지</TableCell>
+                                <TableCell>거리</TableCell>
+                                <TableCell>종류</TableCell>
+                                <TableCell>금액</TableCell>
+                                <TableCell>주문자</TableCell>
+                                <TableCell>배송자</TableCell>
+                                <TableCell>배송 현황</TableCell>
                             </TableRow>
-                        )}
-                    </TableBody>
-                </Table>
-            </Paper>
-
-            {selectedUser && (selectedUser.details || []).length > 0 ? (
-                <Paper variant="outlined" sx={{ mb: 2, p: 2 }}>
-                    <Typography variant="subtitle1" fontWeight="bold" mb={1}>
-                        배송 내역
-                    </Typography>
-                    {selectedUser.details.length === 0 ? (
-                        <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 2 }}>
-                            {selectedUser.userType === 'OWNER' ? '주문 기록이 없습니다(물주)' : '배송 기록이 없습니다(차주)'}
-                        </Typography>
-                    ) : (
-                        <Table size="small">
-                            <TableHead>
-                                <TableRow>
-                                    <TableCell>출발 날짜</TableCell>
-                                    <TableCell>출발지</TableCell>
-                                    <TableCell>도착지</TableCell>
-                                    <TableCell>거리</TableCell>
-                                    <TableCell>종류</TableCell>
-                                    <TableCell>금액</TableCell>
-                                    <TableCell>화물주</TableCell>
-                                </TableRow>
-                            </TableHead>
-                            <TableBody>
-                                {selectedUser.details.map((d, i) => (
-                                    <TableRow key={i}>
+                        </TableHead>
+                        <TableBody>
+                            {allDeliveries.length > 0 ? (
+                                allDeliveries.map((d, i) => (
+                                    <TableRow key={d.deliveryNo ?? i}>
                                         <TableCell>{d.date}</TableCell>
                                         <TableCell>{d.start}</TableCell>
                                         <TableCell>{d.end}</TableCell>
@@ -132,44 +118,19 @@ const DeliveryPage = () => {
                                         <TableCell>{d.type}</TableCell>
                                         <TableCell>{d.amount}</TableCell>
                                         <TableCell>{d.owner}</TableCell>
+                                        <TableCell>{d.carrierName}</TableCell>
+                                        <TableCell>{getStatusChip(d.deliveryStatus)}</TableCell>
                                     </TableRow>
-                                ))}
-                            </TableBody>
-                        </Table>
-                    )}
-                </Paper>
-            ) : selectedUser && (
-                <Paper variant="outlined" sx={{ mb: 2, p: 2 }}>
-                    <Typography variant="subtitle1" fontWeight="bold" mb={1}>
-                        배송 내역
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 2 }}>
-                        {selectedUser.userType === 'OWNER' ? '주문 기록이 없습니다(물주)' : '배송 기록이 없습니다(차주)'}
-                    </Typography>
-                </Paper>
-            )}
-
-            {selectedUser && (selectedUser.history || []).length > 0 ? (
-                <Paper variant="outlined" sx={{ p: 2 }}>
-                    <Typography variant="subtitle1" fontWeight="bold" mb={1}>
-                        지난 배송 내역
-                    </Typography>
-                    {selectedUser.history.map((h, idx) => (
-                        <Box key={idx} display="flex" justifyContent="space-between" mb={0.5}>
-                            <Typography>{h.route}</Typography>
-                            <Typography>{h.roend}</Typography>
-                            <Typography>{h.date}</Typography>
-                        </Box>
-                    ))}
-                </Paper>
-            ) : selectedUser && (
-                <Paper variant="outlined" sx={{ p: 2 }}>
-                    <Typography variant="subtitle1" fontWeight="bold" mb={1}>
-                        지난 배송 내역
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 2 }}>
-                        {selectedUser.userType === 'OWNER' ? '지난 주문 기록이 없습니다(물주)' : '지난 배송 기록이 없습니다(차주)'}
-                    </Typography>
+                                ))
+                            ) : (
+                                <TableRow>
+                                    <TableCell colSpan={9} align="center">
+                                        배송 기록이 없습니다.
+                                    </TableCell>
+                                </TableRow>
+                            )}
+                        </TableBody>
+                    </Table>
                 </Paper>
             )}
         </Box>

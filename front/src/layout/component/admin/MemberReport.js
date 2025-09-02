@@ -27,6 +27,7 @@ import { useNavigate, useLocation, NavLink } from "react-router-dom";
 import {
   fetchReports,
   fetchUnreadCount,
+  markReportRead,
 } from "../../../api/adminApi/adminReportsApi";
 
 const MemberReport = () => {
@@ -105,9 +106,18 @@ const MemberReport = () => {
     load();
   }, [page, size, keyword, unreadOnly]);
 
-  const handleView = (report) => {
+  const handleView = async (report) => {
     setSelectedReport(report);
     setDialogOpen(true);
+    if (!report.adminRead) {
+      try {
+        await markReportRead(report.id, true);
+        loadUnreadCount();
+        load();
+      } catch (e) {
+        console.error("Failed to mark report as read:", e);
+      }
+    }
   };
 
   const handleClose = () => {
@@ -119,6 +129,24 @@ const MemberReport = () => {
     if (!selectedReport) return;
     if (window.confirm(`정말로 ${selectedReport.targetId} 회원을 탈퇴 처리하시겠습니까?`)) {
         alert("회원탈퇴 기능은 아직 준비되지 않았습니다.");
+    }
+  };
+
+  const handleMarkRead = async (id) => {
+    if (!id) {
+      console.error("신고 ID가 유효하지 않습니다. 신고를 읽음으로 표시할 수 없습니다.");
+      alert("신고 ID가 유효하지 않습니다. 신고를 읽음으로 표시할 수 없습니다.");
+      return;
+    }
+    try {
+      await markReportRead(id, true);
+      loadUnreadCount();
+      load();
+      setDialogOpen(false);
+      window.dispatchEvent(new CustomEvent('reportRead')); // Dispatch custom event
+    } catch (e) {
+      console.error("신고를 읽음으로 표시하는 데 실패했습니다.", e);
+      alert("신고를 읽음으로 표시하는 데 실패했습니다.");
     }
   };
 
@@ -207,7 +235,6 @@ const MemberReport = () => {
         <Dialog open={dialogOpen} onClose={handleClose} fullWidth maxWidth="sm">
           <DialogTitle>신고 상세 정보</DialogTitle>
           <DialogContent dividers>
-              <Typography gutterBottom><b>신고 ID:</b> {selectedReport.id}</Typography>
               <Typography gutterBottom><b>신고대상:</b> {selectedReport.targetId ?? "-"}</Typography>
               <Typography gutterBottom><b>신고자:</b> {selectedReport.reporterId ?? "-"}</Typography>
               <Typography gutterBottom><b>신고일:</b> {fmtDate(selectedReport.createdAt)}</Typography>
@@ -219,6 +246,9 @@ const MemberReport = () => {
           </DialogContent>
           <DialogActions>
               <Button onClick={handleClose}>닫기</Button>
+              {!selectedReport?.adminRead && ( // Only show if not already read
+                <Button onClick={() => handleMarkRead(selectedReport.id)} color="primary" variant="contained">관리자 확인</Button>
+              )}
               <Button onClick={handleSanction} color="error" variant="contained">회원탈퇴 처리</Button>
           </DialogActions>
         </Dialog>

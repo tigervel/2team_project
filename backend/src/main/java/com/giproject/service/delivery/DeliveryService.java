@@ -18,6 +18,7 @@ public interface DeliveryService {
 	default Delivery dtoToEntity(Payment payment) {
 		Delivery delivery = Delivery.builder()
 							.payment(payment)
+							.cargoOwner(payment.getOrderSheet().getMatching().getCargoOwner()) // Added cargoOwner
 							.build();
 		return delivery;
 	}

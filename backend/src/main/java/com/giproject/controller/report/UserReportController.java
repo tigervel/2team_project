@@ -34,11 +34,11 @@ public class UserReportController {
         return ResponseEntity.ok(service.list(unreadOnly, keyword, pageable));
     }
     
-    @PatchMapping("/{id}/read")
+    @PutMapping("/{id}/read")
     public ResponseEntity<UserReportDTO> markRead(
-            @PathVariable Long id,
+            @PathVariable(name = "id") Long id,
             @RequestParam("read") boolean read
-    ) {
+    ) { System.out.println("--------------------------------읽음");
         return ResponseEntity.ok(service.markRead(id, read));
     }
 
