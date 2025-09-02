@@ -1,4 +1,7 @@
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, useEffect } from "react";
+import { useSelector } from "react-redux";
+import { useNavigate } from "react-router-dom";
+
 import MemberOwner from "../layout/component/admin/MemberOwner";
 import MemberCowner from "../layout/component/admin/MemberCowner";
 import MemberReport from "../layout/component/admin/MemberReport";
@@ -15,61 +18,76 @@ const MemberAll = lazy(() => import("../layout/component/admin/MemberAll"));
 
 const loading = <div>로딩중입니다.....</div>
 
+const AdminRouteWrapper = ({ children }) => {
+    const { roles } = useSelector(state => state.login);
+    const navigate = useNavigate();
+
+    useEffect(() => {
+        const isAdmin = roles.includes("ROLE_ADMIN");
+        if (!isAdmin) {
+            alert("접근이 불가능합니다.");
+            navigate('/', { replace: true });
+        }
+    }, [roles, navigate]);
+    return children;
+};
+
 const adminRouter = () => {
     return [
         {
-            index: true, // 기본 진입 시 /admin -> AdminPage
-            element: <Suspense fallback={loading}><AdminPage /></Suspense>,
+            index: true,
+            element: <AdminRouteWrapper><Suspense fallback={loading}><AdminPage /></Suspense></AdminRouteWrapper>,
         },
         {
             path: "delivery",
-            element: <Suspense fallback={loading}><DeliveryPage /></Suspense>,
+            element: <AdminRouteWrapper><Suspense fallback={loading}><DeliveryPage /></Suspense></AdminRouteWrapper>,
         },
         {
             //전체회원
             path: "memberAll",
-            element: <Suspense fallback={loading}><MemberAll /></Suspense>,
+            element: <AdminRouteWrapper><Suspense fallback={loading}><MemberAll /></Suspense></AdminRouteWrapper>,
         },
         {
             //화주
             path: "memberOwner",
-            element: <Suspense fallback={loading}><MemberOwner /></Suspense>,
+            element: <AdminRouteWrapper><Suspense fallback={loading}><MemberOwner /></Suspense></AdminRouteWrapper>,
         },
         {
             //차주
             path: "memberCowner",
-            element: <Suspense fallback={loading}><MemberCowner /></Suspense>,
+            element: <AdminRouteWrapper><Suspense fallback={loading}><MemberCowner /></Suspense></AdminRouteWrapper>,
         },
         {
             //신고내역
             path: "memberReport",
-            element: <Suspense fallback={loading}><MemberReport /></Suspense>,
+            element: <AdminRouteWrapper><Suspense fallback={loading}><MemberReport /></Suspense></AdminRouteWrapper>,
         },
         {
             //관리자관리
             path: "memberAdmin",
-            element: <Suspense fallback={loading}><MemberAdmin /></Suspense>,
+            element: <AdminRouteWrapper><Suspense fallback={loading}><MemberAdmin /></Suspense></AdminRouteWrapper>,
         },
         {
             path: "notice",
-            element: <Suspense fallback={loading}><Notice /></Suspense>,
+            element: <AdminRouteWrapper><Suspense fallback={loading}><Notice /></Suspense></AdminRouteWrapper>,
         },
         {
             path: "inquirie",
-            element: <Suspense fallback={loading}><Inquirie /></Suspense>,
+            element: <AdminRouteWrapper><Suspense fallback={loading}><Inquirie /></Suspense></AdminRouteWrapper>,
         },
         {
             path: "feesBasic",
-            element: <Suspense fallback={loading}><FeesBasic /></Suspense>,
+            element: <AdminRouteWrapper><Suspense fallback={loading}><FeesBasic /></Suspense></AdminRouteWrapper>,
         },
         {
             path: "feesExtra",
-            element: <Suspense fallback={loading}><FeesExtra /></Suspense>,
+            element: <AdminRouteWrapper><Suspense fallback={loading}><FeesExtra /></Suspense></AdminRouteWrapper>,
         },
         {
             path: "deliveryPage",
-            element: <Suspense fallback={loading}><DeliveryPage /></Suspense>,
+            element: <AdminRouteWrapper><Suspense fallback={loading}><DeliveryPage /></Suspense></AdminRouteWrapper>,
         },
     ]
 };
 export default adminRouter;
+
