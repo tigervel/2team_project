@@ -105,7 +105,7 @@ public class FeesBasicServiceImpl implements FeesBasicService {
 
 	@Override
 	public Map<String, String> uploadImg(Long tno, MultipartFile file) {
-		String uploadDir = "D:/2team_Project_Git/uploads/";
+		String uploadDir = "../uploads/";
 		try {
 			FeesBasic basic = feesBasicRepository.findById(tno)
 					.orElseThrow(() -> new RuntimeException("해당 차량이 존재하지 않음" + tno));
