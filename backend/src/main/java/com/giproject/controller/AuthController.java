@@ -1,3 +1,4 @@
+// src/main/java/com/giproject/controller/AuthController.java
 package com.giproject.controller;
 
 import com.giproject.dto.auth.SignupRequest;
