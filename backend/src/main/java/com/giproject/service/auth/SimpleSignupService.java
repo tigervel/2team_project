@@ -144,7 +144,7 @@ public class SimpleSignupService {
         String refresh = jwtService.createRefreshToken(Map.of(UID, loginId), loginId);
 
         // 6) 반환 DTO
-        return MemberDTO.builder()
+        return MemberDTO.newBuilder()
                 .loginId(loginId)
                 .email(email)
                 .role(domainRole.name())
