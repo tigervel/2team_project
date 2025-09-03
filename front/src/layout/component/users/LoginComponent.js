@@ -1,4 +1,3 @@
-// src/layout/component/users/LoginComponent.jsx
 import * as React from 'react';
 import { AppProvider } from '@toolpad/core/AppProvider';
 import { useTheme } from '@mui/material/styles';
@@ -7,28 +6,39 @@ import Divider from '@mui/material/Divider';
 import TextField from '@mui/material/TextField';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
-// import Checkbox / FormControlLabel 필요없으면 생략
 import SNSLoginComponent from './SNSLoginComponent';
 
 const LoginComponent = ({
   onSubmit,
   onFindId,
-  onFindPassword,          // ✅ 추가
+  onFindPassword,
   loading = false,
-  error = '',
-  initialLoginId = '',     // ✅ 추가 (프리필)
+  initialLoginId = '',
+  resetSignal = 0, // 실패 시 비번 초기화 트리거
 }) => {
   const theme = useTheme();
   const [form, setForm] = React.useState({
-    loginId: initialLoginId,   // ✅ 프리필 반영
+    loginId: initialLoginId,
     password: '',
     remember: true,
   });
 
-  // initialLoginId가 쿼리로 바뀌면 폼에도 반영
+  // ID 프리필 동기화
   React.useEffect(() => {
     setForm((prev) => ({ ...prev, loginId: initialLoginId || '' }));
   }, [initialLoginId]);
+
+  // 실패 시 비밀번호 초기화 + 포커스 (처음 렌더링 시엔 포커스 안 줌)
+  const pwRef = React.useRef(null);
+  const firstRender = React.useRef(true);
+  React.useEffect(() => {
+    if (firstRender.current) {
+      firstRender.current = false;
+      return; // 첫 진입일 때는 포커스 주지 않음
+    }
+    setForm((prev) => ({ ...prev, password: '' }));
+    pwRef.current?.focus();
+  }, [resetSignal]);
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -45,15 +55,35 @@ const LoginComponent = ({
 
   return (
     <AppProvider theme={theme}>
-      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '90vh', backgroundColor: '#f5f5f5', px: 2 }}>
+      <Box
+        sx={{
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          minHeight: '90vh',
+          backgroundColor: '#f5f5f5',
+          px: 2,
+        }}
+      >
         <Box
           component="form"
           onSubmit={handleSubmit}
-          sx={{ width: '100%', maxWidth: 400, p: 4, border: '1px solid #ddd', borderRadius: 2, boxShadow: 3, backgroundColor: 'white', fontFamily: 'SUIT, sans-serif' }}
+          sx={{
+            width: '100%',
+            maxWidth: 400,
+            p: 4,
+            border: '1px solid #ddd',
+            borderRadius: 2,
+            boxShadow: 3,
+            backgroundColor: 'white',
+            fontFamily: 'SUIT, sans-serif',
+          }}
         >
-          <Typography variant="h5" align="center" gutterBottom>Sign in</Typography>
+          <Typography variant="h5" align="center" gutterBottom>
+            Sign in
+          </Typography>
 
-          {error ? <Typography sx={{ mb: 1 }} color="error">{error}</Typography> : null}
+          {/* 오류 문구는 alert만 사용 */}
 
           <TextField
             label="ID"
@@ -76,9 +106,16 @@ const LoginComponent = ({
             sx={{ mb: 2 }}
             disabled={loading}
             autoComplete="current-password"
+            inputRef={pwRef} // 실패 시 포커스 이동
           />
 
-          <Button fullWidth variant="contained" color="primary" type="submit" disabled={!canSubmit}>
+          <Button
+            fullWidth
+            variant="contained"
+            color="primary"
+            type="submit"
+            disabled={!canSubmit}
+          >
             {loading ? '로그인 중…' : '로그인'}
           </Button>
 
@@ -86,8 +123,6 @@ const LoginComponent = ({
             <Button type="button" onClick={onFindId} disabled={loading}>
               아이디 찾기
             </Button>
-
-            {/* ✅ onFindPassword에 현재 입력된 ID 넘겨주기 */}
             <Button
               type="button"
               onClick={() => onFindPassword?.(form.loginId)}

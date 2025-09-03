@@ -1,4 +1,3 @@
-// src/main/java/com/giproject/controller/TokenAuthController.java
 package com.giproject.controller;
 
 import static com.giproject.security.jwt.JwtClaimKeys.EMAIL;
@@ -25,6 +24,7 @@ import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.*;
@@ -33,6 +33,7 @@ import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 @Slf4j
@@ -52,7 +53,16 @@ public class TokenAuthController {
 
     private final PasswordEncoder passwordEncoder;
 
-    // ===== 0) 일반 로그인 =====
+    /* ----------------------------
+     * 공통 에러 포맷
+     * ---------------------------- */
+    @Data @AllArgsConstructor
+    static class ApiError {
+        private String code;
+        private String message;
+    }
+
+    /* ===== 0) 일반 로그인 ===== */
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody LoginReq req) {
         try {
@@ -69,17 +79,22 @@ public class TokenAuthController {
             ));
         } catch (BadCredentialsException | UsernameNotFoundException e) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body("아이디 또는 비밀번호가 올바르지 않습니다.");
+                    .body(new ApiError("BAD_CREDENTIALS", "아이디 또는 비밀번호가 올바르지 않습니다."));
         } catch (LockedException e) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("잠긴 계정입니다. 관리자에게 문의하세요.");
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(new ApiError("LOCKED", "잠긴 계정입니다. 관리자에게 문의하세요."));
         } catch (DisabledException e) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("비활성화된 계정입니다. 관리자에게 문의하세요.");
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(new ApiError("DISABLED", "비활성화된 계정입니다. 관리자에게 문의하세요."));
         } catch (AccountExpiredException e) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("계정 사용기간이 만료되었습니다.");
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(new ApiError("ACCOUNT_EXPIRED", "계정 사용기간이 만료되었습니다."));
         } catch (CredentialsExpiredException e) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("비밀번호 사용기간이 만료되었습니다.");
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(new ApiError("CREDENTIALS_EXPIRED", "비밀번호 사용기간이 만료되었습니다."));
         } catch (AuthenticationException e) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("로그인에 실패했습니다.");
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(new ApiError("AUTH_FAILED", "로그인에 실패했습니다."));
         }
     }
 
@@ -89,21 +104,30 @@ public class TokenAuthController {
         private String password;
     }
 
-    // ===== 1) 소셜 첫가입 컨텍스트 =====
+    /* ===== 1) 소셜 첫가입 컨텍스트 ===== */
     @GetMapping("/social/signup-context")
-    public ResponseEntity<SignupContextDTO> signupContext(@RequestParam("ticket") String ticket) {
-        if (ticket == null || ticket.isBlank()) return ResponseEntity.noContent().build();
+    public ResponseEntity<?> signupContext(@RequestParam("ticket") String ticket) {
+        if (ticket == null || ticket.isBlank()) {
+            return ResponseEntity.status(404).body(new ApiError("TICKET_MISSING", "유효한 가입 티켓이 없습니다."));
+        }
         try {
             Map<String, Object> claims = jwtService.parseTempToken(ticket);
 
-            String email      = (String) claims.get(EMAIL);
-            String provider   = (String) claims.get(PROVIDER);
-            String nameMaybe  = claims.get("name") instanceof String ? (String) claims.get("name") : null;
+            // ✅ 최소 목적 검증
+            if (!"signup".equalsIgnoreCase(String.valueOf(claims.getOrDefault("purpose", "")))) {
+                return ResponseEntity.status(404).body(new ApiError("TICKET_INVALID", "가입용 티켓이 아닙니다."));
+            }
 
-            if (email == null || email.isBlank()) return ResponseEntity.noContent().build();
-            return ResponseEntity.ok(new SignupContextDTO(email, provider, nameMaybe));
+            String email    = (String) claims.get(EMAIL);
+            String provider = (String) claims.get(PROVIDER);
+            String name     = claims.get("name") instanceof String ? (String) claims.get("name") : null;
+
+            if (email == null || email.isBlank()) {
+                return ResponseEntity.status(404).body(new ApiError("EMAIL_REQUIRED", "이메일 동의가 필요합니다."));
+            }
+            return ResponseEntity.ok(new SignupContextDTO(email, provider, name));
         } catch (Exception e) {
-            return ResponseEntity.noContent().build();
+            return ResponseEntity.status(404).body(new ApiError("TICKET_EXPIRED", "가입 티켓이 만료되었거나 올바르지 않습니다."));
         }
     }
 
@@ -114,20 +138,24 @@ public class TokenAuthController {
         private String name; // 프리필용(없을 수 있음)
     }
 
-    // ===== 2) 소셜 첫가입 완료 =====
+    /* ===== 2) 소셜 첫가입 완료 ===== */
+    @Transactional
     @PostMapping("/social/complete-signup")
     public ResponseEntity<?> completeSignup(@RequestBody CompleteSignupReq req) {
 
         // 2-0) 티켓 파싱
         if (req.getSignupTicket() == null || req.getSignupTicket().isBlank()) {
-            return ResponseEntity.badRequest().body("NO_SIGNUP_TICKET");
+            return ResponseEntity.badRequest().body(new ApiError("NO_SIGNUP_TICKET", "가입 티켓이 없습니다."));
         }
 
         final Map<String, Object> stClaims;
         try {
             stClaims = jwtService.parseTempToken(req.getSignupTicket());
+            if (!"signup".equalsIgnoreCase(String.valueOf(stClaims.getOrDefault("purpose", "")))) {
+                return ResponseEntity.badRequest().body(new ApiError("TICKET_INVALID", "가입용 티켓이 아닙니다."));
+            }
         } catch (Exception e) {
-            return ResponseEntity.badRequest().body("SIGNUP_TICKET_EXPIRED");
+            return ResponseEntity.badRequest().body(new ApiError("SIGNUP_TICKET_EXPIRED", "가입 티켓이 만료되었거나 올바르지 않습니다."));
         }
 
         final String emailFromSocial = (String) stClaims.get(EMAIL);
@@ -138,147 +166,142 @@ public class TokenAuthController {
                 emailFromSocial, providerStr, providerId, stClaims);
 
         if (emailFromSocial == null || emailFromSocial.isBlank()) {
-            log.warn("[complete-signup] EMAIL missing in signup ticket -> EMAIL_REQUIRED");
-            return ResponseEntity.badRequest().body("EMAIL_REQUIRED");
+            return ResponseEntity.badRequest().body(new ApiError("EMAIL_REQUIRED", "이메일이 필요합니다."));
         }
         if (providerStr == null || providerStr.isBlank()) {
-            return ResponseEntity.badRequest().body("PROVIDER_REQUIRED");
+            return ResponseEntity.badRequest().body(new ApiError("PROVIDER_REQUIRED", "제공자 정보가 누락되었습니다."));
         }
         if (providerId == null || providerId.isBlank()) {
-            return ResponseEntity.badRequest().body("PROVIDER_ID_REQUIRED");
+            return ResponseEntity.badRequest().body(new ApiError("PROVIDER_ID_REQUIRED", "제공자 ID가 누락되었습니다."));
         }
 
         // 2-1) 입력값 검증
         if (req.getLoginId() == null || req.getLoginId().isBlank()) {
-            return ResponseEntity.badRequest().body("LOGIN_ID_REQUIRED");
+            return ResponseEntity.badRequest().body(new ApiError("LOGIN_ID_REQUIRED", "아이디가 필요합니다."));
         }
         if (req.getRole() == null || req.getRole().isBlank()) {
-            return ResponseEntity.badRequest().body("ROLE_REQUIRED");
+            return ResponseEntity.badRequest().body(new ApiError("ROLE_REQUIRED", "역할이 필요합니다."));
         }
+
+        // ✅ 사전 중복 체크 (아이디/이메일)
         if (userIndexRepo.existsByLoginId(req.getLoginId())) {
-            return ResponseEntity.badRequest().body("LOGIN_ID_TAKEN");
+            return ResponseEntity.badRequest().body(new ApiError("LOGIN_ID_TAKEN", "이미 사용 중인 아이디입니다."));
+        }
+        if (memberRepository.findByMemEmail(emailFromSocial).isPresent()
+                || cargoOwnerRepository.findByCargoEmail(emailFromSocial).isPresent()) {
+            return ResponseEntity.badRequest().body(new ApiError("EMAIL_TAKEN", "이미 사용 중인 이메일입니다."));
         }
 
         final UserIndex.Role domainRole;
         try {
             domainRole = UserIndex.Role.valueOf(req.getRole().toUpperCase()); // SHIPPER / DRIVER / ADMIN
         } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().body("INVALID_ROLE");
+            return ResponseEntity.badRequest().body(new ApiError("INVALID_ROLE", "허용되지 않는 역할입니다."));
         }
 
         final LocalDateTime now = LocalDateTime.now();
 
-        // 2-2) 저장 직전 값 로깅
-        log.info("[complete-signup] to save user_index loginId={}, email={}, provider={}, providerId={}",
-                req.getLoginId(), emailFromSocial, providerStr, providerId);
-
-        // 2-3) user_index 저장 (★ email/provider/providerId/타임스탬프 포함)
-        UserIndex ui = UserIndex.builder()
-                .loginId(req.getLoginId())
-                .email(emailFromSocial)   // ★ NOT NULL 방지
-                .provider(providerStr)
-                .providerId(providerId)
-                .role(domainRole)
-                .createdAt(now)
-                .updatedAt(now)
-                .build();
-
-        // 최종 방어
-        if (ui.getEmail() == null) {
-            log.error("[complete-signup] ui.email is NULL just before save! ui={}", ui);
-            return ResponseEntity.badRequest().body("EMAIL_REQUIRED");
-        }
-        userIndexRepo.save(ui);
-
-        // 2-4) 본 테이블 저장 (비밀번호 암호화)
-        String encodedPw = passwordEncoder.encode(req.getPassword());
-
-        switch (domainRole) {
-            case SHIPPER -> {
-                Member m = Member.builder()
-                        .memId(req.getLoginId())
-                        .memPw(encodedPw)
-                        .memEmail(emailFromSocial)
-                        .memName(req.getName())
-                        .memPhone(req.getPhone())
-                        .memAddress(req.getAddress())
-                        .memCreateIdDateTime(now)
-                        .build();
-                memberRepository.save(m);
-            }
-            case DRIVER -> {
-                CargoOwner c = CargoOwner.builder()
-                        .cargoId(req.getLoginId())
-                        .cargoPw(encodedPw)
-                        .cargoEmail(emailFromSocial)
-                        .cargoName(req.getName())
-                        .cargoPhone(req.getPhone())
-                        .cargoAddress(req.getAddress())
-                        .cargoCreatedDateTime(now)
-                        .build();
-                cargoOwnerRepository.save(c);
-            }
-            case ADMIN -> {
-                // 필요 시 ADMIN 도메인 스키마에 맞게 처리
-                Member m = Member.builder()
-                        .memId(req.getLoginId())
-                        .memPw(encodedPw)
-                        .memEmail(emailFromSocial)
-                        .memName(req.getName())
-                        .memPhone(req.getPhone())
-                        .memAddress(req.getAddress())
-                        .memCreateIdDateTime(now)
-                        .build();
-                memberRepository.save(m);
-            }
-        }
-
-        // 2-5) social_account 업서트
-        SocialAccount.Provider providerEnum;
         try {
-            providerEnum = SocialAccount.Provider.valueOf(providerStr.toUpperCase());
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body("UNSUPPORTED_PROVIDER");
+            // 2-3) user_index 저장
+            UserIndex ui = UserIndex.builder()
+                    .loginId(req.getLoginId())
+                    .email(emailFromSocial)
+                    .provider(providerStr)
+                    .providerId(providerId)
+                    .role(domainRole)
+                    .createdAt(now)
+                    .updatedAt(now)
+                    .build();
+            userIndexRepo.save(ui);
+
+            // 2-4) 본 테이블 저장 (비밀번호 암호화)
+            String encodedPw = passwordEncoder.encode(req.getPassword());
+
+            switch (domainRole) {
+                case SHIPPER -> {
+                    Member m = Member.builder()
+                            .memId(req.getLoginId())
+                            .memPw(encodedPw)
+                            .memEmail(emailFromSocial)
+                            .memName(req.getName())
+                            .memPhone(req.getPhone())
+                            .memAddress(req.getAddress())
+                            .memCreateIdDateTime(now)
+                            .build();
+                    memberRepository.save(m);
+                }
+                case DRIVER -> {
+                    CargoOwner c = CargoOwner.builder()
+                            .cargoId(req.getLoginId())
+                            .cargoPw(encodedPw)
+                            .cargoEmail(emailFromSocial)
+                            .cargoName(req.getName())
+                            .cargoPhone(req.getPhone())
+                            .cargoAddress(req.getAddress())
+                            .cargoCreatedDateTime(now)
+                            .build();
+                    cargoOwnerRepository.save(c);
+                }
+                case ADMIN -> {
+                    Member m = Member.builder()
+                            .memId(req.getLoginId())
+                            .memPw(encodedPw)
+                            .memEmail(emailFromSocial)
+                            .memName(req.getName())
+                            .memPhone(req.getPhone())
+                            .memAddress(req.getAddress())
+                            .memCreateIdDateTime(now)
+                            .build();
+                    memberRepository.save(m);
+                }
+            }
+
+            // 2-5) social_account 업서트
+            SocialAccount.Provider providerEnum;
+            try {
+                providerEnum = SocialAccount.Provider.valueOf(providerStr.toUpperCase());
+            } catch (Exception e) {
+                return ResponseEntity.badRequest().body(new ApiError("UNSUPPORTED_PROVIDER", "지원하지 않는 소셜 제공자입니다."));
+            }
+
+            SocialAccount sa = socialAccountRepo
+                    .findByProviderAndProviderUserId(providerEnum, providerId)
+                    .orElseGet(() -> SocialAccount.builder()
+                            .provider(providerEnum)
+                            .providerUserId(providerId)
+                            .build());
+
+            sa.setEmail(emailFromSocial);
+            sa.setLoginId(req.getLoginId());
+            sa.setLinkedAt(now);
+            sa.setSignupTicket(null);
+            sa.setSignupTicketExpireAt(null);
+            socialAccountRepo.save(sa);
+
+            // 2-6) JWT 발급
+            List<String> roles = new ArrayList<>();
+            roles.add("ROLE_" + domainRole.name());
+            roles.add(domainRole == UserIndex.Role.ADMIN ? "ROLE_ADMIN" : "ROLE_USER");
+
+            Map<String, Object> loginClaims = new HashMap<>();
+            loginClaims.put(EMAIL, emailFromSocial);
+            loginClaims.put(UID, req.getLoginId());
+            loginClaims.put(ROLES, new ArrayList<>(new LinkedHashSet<>(roles)));
+            loginClaims.put(PROVIDER, providerStr.toUpperCase());
+            loginClaims.put(PROVIDER_ID, providerId);
+
+            String subject = req.getLoginId(); // 내부 로그인키
+            String access  = jwtService.createAccessToken(loginClaims, subject);
+            String refresh = jwtService.createRefreshToken(Map.of(UID, subject), subject);
+
+            return ResponseEntity.ok(Map.of(
+                "accessToken", access,
+                "refreshToken", refresh
+            ));
+
+        } catch (DataIntegrityViolationException dive) {
+            return ResponseEntity.status(409).body(new ApiError("CONFLICT", "이미 존재하는 정보입니다."));
         }
-
-        SocialAccount sa = socialAccountRepo
-                .findByProviderAndProviderUserId(providerEnum, providerId)
-                .orElseGet(() -> SocialAccount.builder()
-                        .provider(providerEnum)
-                        .providerUserId(providerId)
-                        .build());
-
-        sa.setEmail(emailFromSocial);
-        sa.setLoginId(req.getLoginId());
-        sa.setLinkedAt(now);
-        sa.setSignupTicket(null);
-        sa.setSignupTicketExpireAt(null);
-        socialAccountRepo.save(sa);
-
-        // 2-6) JWT 발급 (roles: ROLE_USER/ROLE_ADMIN + ROLE_SHIPPER/ROLE_DRIVER/ROLE_ADMIN)
-        List<String> roles = new ArrayList<>();
-        roles.add("ROLE_" + domainRole.name());
-        if (domainRole == UserIndex.Role.ADMIN) {
-            roles.add("ROLE_ADMIN");
-        } else {
-            roles.add("ROLE_USER");
-        }
-
-        Map<String, Object> loginClaims = new HashMap<>();
-        loginClaims.put(EMAIL, emailFromSocial);
-        loginClaims.put(UID, req.getLoginId());
-        loginClaims.put(ROLES, new ArrayList<>(new LinkedHashSet<>(roles)));
-        loginClaims.put(PROVIDER, providerStr.toUpperCase());
-        loginClaims.put(PROVIDER_ID, providerId);
-
-        String subject = req.getLoginId(); // 내부 로그인키
-        String access  = jwtService.createAccessToken(loginClaims, subject);
-        String refresh = jwtService.createRefreshToken(Map.of(UID, subject), subject);
-
-        return ResponseEntity.ok(Map.of(
-            "accessToken", access,
-            "refreshToken", refresh
-        ));
     }
 
     @Data
@@ -293,12 +316,12 @@ public class TokenAuthController {
         private String address;
     }
 
-    // ===== 3) 리프레시 → 액세스 재발급 =====
+    /* ===== 3) 리프레시 → 액세스 재발급 ===== */
     @PostMapping("/refresh")
     public ResponseEntity<?> refresh(@RequestBody RefreshReq req) {
         String refreshToken = req.getRefreshToken();
         if (refreshToken == null || refreshToken.isBlank() || !jwtService.validate(refreshToken)) {
-            return ResponseEntity.status(401).body("INVALID_REFRESH");
+            return ResponseEntity.status(401).body(new ApiError("INVALID_REFRESH", "리프레시 토큰이 유효하지 않습니다."));
         }
 
         String username = jwtService.getUsername(refreshToken);
@@ -315,19 +338,19 @@ public class TokenAuthController {
         private String refreshToken;
     }
 
-    // ===== 4) 로그아웃 =====
+    /* ===== 4) 로그아웃 ===== */
     @PostMapping("/logout")
     public ResponseEntity<?> logout() {
         return ResponseEntity.ok(Map.of("ok", true));
     }
 
-    // ===== 5) 아이디 찾기 =====
+    /* ===== 5) 아이디 찾기 ===== */
     @GetMapping("/find-id")
     public ResponseEntity<?> findId(@RequestParam("email") String email) {
         var opt = memberRepository.findByMemEmail(email);
         if (opt.isPresent()) {
             return ResponseEntity.ok(Map.of("loginId", opt.get().getMemId()));
         }
-        return ResponseEntity.status(404).body("NOT_FOUND");
+        return ResponseEntity.status(404).body(new ApiError("NOT_FOUND", "일치하는 아이디가 없습니다."));
     }
 }
