@@ -1,3 +1,4 @@
+// src/main/java/com/giproject/controller/CargoController.java
 package com.giproject.controller;
 
 import com.giproject.dto.cargo.CargoDTO;
@@ -10,11 +11,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.List;
-import java.util.UUID;
+import java.nio.file.*;
+import java.util.*;
 
 @CrossOrigin(origins = "http://localhost:3000", allowCredentials = "true")
 @RestController
@@ -24,6 +22,10 @@ public class CargoController {
 
     private final CargoRepository cargoRepository;
     private final CargoOwnerRepository cargoOwnerRepository;
+
+    // userinfo와 동일한 방식으로 '절대경로' 고정
+    private static final Path UPLOAD_ROOT = Paths.get("../uploads").toAbsolutePath().normalize();
+    private static final Path CARGO_DIR   = UPLOAD_ROOT.resolve("cargo");
 
     /**
      * 차량 목록 조회 (소유자 ID 기준)
@@ -45,7 +47,7 @@ public class CargoController {
 
             Cargo cargo = new Cargo();
             cargo.setCargoName(dto.getName());
-            cargo.setCargoType(dto.getAddress());
+            cargo.setCargoType(dto.getAddress());   // 네이밍 정리 전 호환 유지
             cargo.setCargoCapacity(dto.getWeight());
             cargo.setCargoOwner(owner);
 
@@ -83,6 +85,7 @@ public class CargoController {
     @DeleteMapping("/delete/{cargoNo}")
     public ResponseEntity<?> deleteCargo(@PathVariable("cargoNo") Integer cargoNo) {
         try {
+            // 물리 파일까지 지우고 싶으면 여기서 cargoImage 읽어서 파일 삭제 로직 추가 가능
             cargoRepository.deleteById(cargoNo);
             return ResponseEntity.ok("삭제 성공");
         } catch (Exception e) {
@@ -98,31 +101,48 @@ public class CargoController {
             @PathVariable("cargoNo") Integer cargoNo,
             @RequestParam("image") MultipartFile file) {
         try {
-            // DB에서 해당 cargo 조회
             Cargo cargo = cargoRepository.findById(cargoNo)
                     .orElseThrow(() -> new RuntimeException("차량 없음: " + cargoNo));
 
-            // 기존 이미지 파일 삭제
-            if (cargo.getCargoImage() != null) {
-                String existingImagePath = "src/main/resources/static" + cargo.getCargoImage();
-                Path existingPath = Paths.get(existingImagePath);
-                if (Files.exists(existingPath)) {
-                    Files.delete(existingPath); // 파일 존재하면 삭제
+            if (file.isEmpty()) return ResponseEntity.badRequest().body("파일이 없습니다.");
+            String ct = Optional.ofNullable(file.getContentType()).orElse("").toLowerCase();
+            if (!ct.startsWith("image/")) {
+                return ResponseEntity.badRequest().body("이미지 파일만 업로드 가능합니다.");
+            }
+
+            Files.createDirectories(CARGO_DIR);
+
+            // 기존 이미지 삭제
+            String prevWeb = cargo.getCargoImage(); // 예: /g2i4/uploads/cargo/xxx.jpg
+            if (prevWeb != null && !prevWeb.isBlank()) {
+                String prevName = prevWeb.replace('\\','/');
+                int i = prevName.lastIndexOf('/');
+                if (i != -1) {
+                    prevName = prevName.substring(i + 1);
+                    Files.deleteIfExists(CARGO_DIR.resolve(prevName));
                 }
             }
 
             // 새 파일 저장
-            String fileName = UUID.randomUUID() + "_" + file.getOriginalFilename();
-            Path uploadPath = Paths.get("src/main/resources/static/uploads/" + fileName);
+            String original = file.getOriginalFilename();
+            String ext = (original != null && original.lastIndexOf('.') != -1)
+                    ? original.substring(original.lastIndexOf('.')).toLowerCase()
+                    : "";
+            String savedFilename = UUID.randomUUID() + ext;
 
-            Files.createDirectories(uploadPath.getParent());
-            Files.write(uploadPath, file.getBytes());
+            Path savePath = CARGO_DIR.resolve(savedFilename).normalize();
+            file.transferTo(savePath.toFile());
 
-            // DB에 새 경로 저장
-            cargo.setCargoImage("/uploads/" + fileName);
+            // DB엔 정적매핑과 일치하는 "웹 경로" 저장
+            String webPath = "/g2i4/uploads/cargo/" + savedFilename;
+            cargo.setCargoImage(webPath);
             cargoRepository.save(cargo);
 
-            return ResponseEntity.ok("업로드 성공");
+            // 프론트에서 곧바로 미리보기 가능하도록 webPath 반환
+            Map<String, Object> res = new HashMap<>();
+            res.put("webPath", webPath);
+            res.put("filename", savedFilename);
+            return ResponseEntity.ok(res);
         } catch (Exception e) {
             e.printStackTrace();
             return ResponseEntity.status(500).body("이미지 업로드 실패: " + e.getMessage());
