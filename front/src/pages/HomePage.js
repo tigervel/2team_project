@@ -146,7 +146,7 @@ const HomePage = () => {
           backgroundPosition: 'center',
           backgroundRepeat: 'no-repeat',
         }}>
-          <Typography variant="h3" color="white">여기는 메인페이지여</Typography>
+          <Typography variant="h3" color="white"></Typography>
         </Box>
         <Box sx={{
           height: 400,
@@ -159,7 +159,7 @@ const HomePage = () => {
           backgroundPosition: 'center',
           backgroundRepeat: 'no-repeat',
         }}>
-          <Typography variant="h3" color="white">SUMMER 2025</Typography>
+          <Typography variant="h3" color="white"></Typography>
         </Box>
              <Box sx={{
           height: 400,
@@ -172,7 +172,7 @@ const HomePage = () => {
           backgroundPosition: 'center',
           backgroundRepeat: 'no-repeat',
         }}>
-          <Typography variant="h3" color="white">SUMMER 2025</Typography>
+          <Typography variant="h3" color="white"></Typography>
         </Box>
         
       </Carousel>
@@ -241,9 +241,9 @@ const HomePage = () => {
       </Box>
       <Box sx={{ width: '100%', display: 'flex', justifyContent: 'center', py: 6 }}>
         <Box sx={{ width: '100%', maxWidth: '1200px', px: 2 }}>
-          <Grid container spacing={5} justifyContent="center">
+          <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 5 }}>
             {/* 간편조회 */}
-            <Grid item xs={12} md={6}>
+            <Box sx={{ width: { xs: '100%', md: '50%' } }}>
               <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
                 <Typography variant="h6" fontWeight="bold" gutterBottom>간편조회</Typography>
                 <Grid container spacing={2}>
@@ -321,10 +321,10 @@ const HomePage = () => {
                   </Button>
                 </Box>
               </Box>
-            </Grid>
+            </Box>
 
             {/* 공지사항 */}
-            <Grid item xs={12} md={6}>
+            <Box sx={{ width: { xs: '100%', md: '50%' } }}>
               <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
                 <Typography variant="h6" fontWeight="bold" gutterBottom>공지사항</Typography>
                 <Grid container spacing={0.5}>
@@ -360,9 +360,9 @@ const HomePage = () => {
                   ))}
                 </Grid>
               </Box>
-            </Grid>
+            </Box>
 
-          </Grid>
+          </Box>
 
         </Box >
       </Box >
