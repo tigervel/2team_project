@@ -6,6 +6,7 @@ import com.giproject.repository.fees.FeesBasicRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,6 +27,9 @@ import java.util.stream.Collectors;
 public class FeesBasicServiceImpl implements FeesBasicService {
 
 	private final FeesBasicRepository feesBasicRepository;
+	
+	@Value("${file.upload-dir:../uploads}")
+	private String uploadDir;
 
 	private static final List<String> COLS = List.of("거리별 요금", "기본 요금");
 
@@ -105,33 +109,31 @@ public class FeesBasicServiceImpl implements FeesBasicService {
 
 	@Override
 	public Map<String, String> uploadImg(Long tno, MultipartFile file) {
-		String uploadDir = "../uploads/";
-		try {
-			FeesBasic basic = feesBasicRepository.findById(tno)
-					.orElseThrow(() -> new RuntimeException("해당 차량이 존재하지 않음" + tno));
+		 try {
+			    FeesBasic basic = feesBasicRepository.findById(tno)
+			        .orElseThrow(() -> new RuntimeException("해당 차량이 존재하지 않음: " + tno));
 
-			if (basic.getCargoImage() != null) {
-				String oldUrl = basic.getCargoImage();     
-				String oldName = Paths.get(oldUrl).getFileName().toString(); 
-				Path oldPath = Paths.get(uploadDir, oldName);      
-				Files.deleteIfExists(oldPath);
-					
-			}
-			Files.createDirectories(Paths.get(uploadDir));
-			String fileName = UUID.randomUUID() +"_"+file.getOriginalFilename();
-			Path savePath  = Paths.get(uploadDir + fileName);
-			Files.write(savePath, file.getBytes());
-			
-			
-			
-			
-			basic.setCargoImage("/g2i4/uploads/"+fileName);
-			feesBasicRepository.save(basic);
-			
-		} catch (Exception e) {
-		    e.printStackTrace();
-            return Map.of("이미지 업로드 실패" , e.getMessage());
-		}
-		return Map.of("이미지 업로드 성공" , "success");
-	}
+			    Path base = Paths.get(uploadDir).toAbsolutePath().normalize();
+			    Files.createDirectories(base);
+
+			    // 기존 파일 삭제
+			    if (basic.getCargoImage() != null && !basic.getCargoImage().isBlank()) {
+			      String oldName = Paths.get(basic.getCargoImage()).getFileName().toString();
+			      Files.deleteIfExists(base.resolve(oldName));
+			    }
+
+			    String fileName = UUID.randomUUID() + "_" + Objects.requireNonNull(file.getOriginalFilename());
+			    Path savePath = base.resolve(fileName);
+			    file.transferTo(savePath.toFile());
+
+			    // DB에는 현재 컨벤션 유지: /g2i4/uploads/{fileName}
+			    basic.setCargoImage("/g2i4/uploads/" + fileName);
+			    feesBasicRepository.save(basic);
+
+			    return Map.of("이미지 업로드 성공", "success");
+			  } catch (Exception e) {
+			    e.printStackTrace();
+			    return Map.of("이미지 업로드 실패", e.getMessage());
+			  }
+		 }
 }
