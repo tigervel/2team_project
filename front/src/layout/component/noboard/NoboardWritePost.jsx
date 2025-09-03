@@ -76,11 +76,10 @@ const WritePost = () => {
       console.error('카테고리 로드 실패:', err);
       // 기본 카테고리 설정
       setCategories([
-        { value: 'GENERAL', displayName: '전체' },
+        { value: 'GENERAL', displayName: '사용안내' },
         { value: 'SYSTEM', displayName: '시스템' },
         { value: 'SERVICE', displayName: '서비스' },
-        { value: 'UPDATE', displayName: '업데이트' },
-        { value: 'MAINTENANCE', displayName: '점검' }
+        { value: 'UPDATE', displayName: '업데이트' }
       ]);
     }
   };
@@ -132,11 +131,11 @@ const WritePost = () => {
       if (isEditing) {
         console.log('수정 API 호출 중...');
         await updateNotice(id, formData);
-        setSnackbar({ open: true, message: '게시글이 성공적으로 수정되었습니다.', severity: 'success' });
+        setSnackbar({ open: true, message: '공지가 성공적으로 수정되었습니다.', severity: 'success' });
       } else {
         console.log('생성 API 호출 중...');
         await createNotice(formData);
-        setSnackbar({ open: true, message: '새 게시글이 성공적으로 작성되었습니다.', severity: 'success' });
+        setSnackbar({ open: true, message: '새 공지가 성공적으로 작성되었습니다.', severity: 'success' });
       }
       
       // 성공 메시지 표시 후 1.5초 뒤 목록으로 이동
@@ -213,7 +212,7 @@ const WritePost = () => {
               fontWeight: 'bold'
             }}
           >
-            {isEditing ? '게시글 수정' : '새 게시글 작성'}
+            {isEditing ? '공지 수정' : '새 공지 작성'}
           </Typography>
         </Container>
       </Box>
@@ -231,7 +230,7 @@ const WritePost = () => {
                   onChange={(e) => handleInputChange('title', e.target.value)}
                   error={!!errors.title}
                   helperText={errors.title}
-                  placeholder="게시글 제목을 입력하세요"
+                  placeholder="공지 제목을 입력하세요"
                   required
                   disabled={loading}
                 />
@@ -278,7 +277,7 @@ const WritePost = () => {
                   onChange={(e) => handleInputChange('content', e.target.value)}
                   error={!!errors.content}
                   helperText={errors.content}
-                  placeholder="게시글 내용을 입력하세요"
+                  placeholder="공지 내용을 입력하세요"
                   required
                   disabled={loading}
                   sx={{

@@ -25,7 +25,7 @@ import com.giproject.service.estimate.EstimateService;
 import com.giproject.service.estimate.matching.MatchingService;
 
 import jakarta.transaction.Transactional;
-import lombok.RequiredArgsConstructor;
+
 @Transactional
 @SpringBootTest
 @Rollback(false)

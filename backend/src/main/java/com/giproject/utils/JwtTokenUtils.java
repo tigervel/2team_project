@@ -18,8 +18,8 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class JwtTokenUtils {
 
-    @Value("${jwt.secret}")
-    private String secretKey;
+    // JWTUtil.java와 동일한 비밀키 사용 (호환성을 위해)
+    private final String secretKey = "123456789012345678901234567890817682825";
 
     // 토큰 생성 메서드 (인스턴스)
     public String generateToken(Map<String, Object> valueMap, int min) {
@@ -47,14 +47,22 @@ public class JwtTokenUtils {
         Map<String, Object> claim = null;
 
         try {
+            log.debug("JWT 토큰 검증 시작 - 토큰 길이: {}", token != null ? token.length() : "null");
+            
             SecretKey key = Keys.hmacShaKeyFor(secretKey.getBytes("UTF-8"));
+            log.debug("JWT 비밀키 생성 완료 - 키 길이: {}", secretKey.length());
 
             claim = Jwts.parser()
                     .setSigningKey(key)
                     .build()
                     .parseClaimsJws(token)
                     .getBody();
+                    
+            log.debug("JWT 토큰 파싱 성공 - Claims: {}", claim);
         } catch (Exception e) {
+            log.error("JWT 토큰 검증 실패 - 토큰: {}, 에러: {}", 
+                     token != null ? token.substring(0, Math.min(20, token.length())) + "..." : "null", 
+                     e.getMessage(), e);
             throw new CustomJWTException("Token validation failed: " + e.getMessage());
         }
 
@@ -63,19 +71,26 @@ public class JwtTokenUtils {
 
     // Request에서 사용자 정보를 추출하는 인스턴스 메서드
     public UserInfo getUserInfoFromRequest(HttpServletRequest request) {
+        log.debug("JWT 토큰 추출 시작");
+        
         String authHeader = request.getHeader("Authorization");
+        log.debug("Authorization 헤더: {}", authHeader != null ? "Bearer " + authHeader.substring(0, Math.min(20, authHeader.length())) + "..." : "null");
         
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            log.warn("JWT 토큰 없음 - Authorization 헤더가 없거나 Bearer로 시작하지 않음");
             return null;
         }
         
         String token = authHeader.substring(7);
+        log.debug("JWT 토큰 추출 완료 - 토큰 길이: {}", token.length());
         
         try {
             Map<String, Object> claims = this.validateToken(token);
-            return new UserInfo(claims);
+            UserInfo userInfo = new UserInfo(claims);
+            log.debug("사용자 정보 추출 성공 - authorId: {}, roles: {}", userInfo.getAuthorId(), java.util.Arrays.toString(userInfo.getRoles()));
+            return userInfo;
         } catch (Exception e) {
-            log.warn("토큰 검증 실패: {}", e.getMessage());
+            log.error("JWT 토큰에서 사용자 정보 추출 실패: {}", e.getMessage(), e);
             return null;
         }
     }
@@ -86,9 +101,16 @@ public class JwtTokenUtils {
         private final String[] roles;
         
         public UserInfo(Map<String, Object> claims) {
-            this.authorId = (String) claims.get("sub");
-            Object rolesObj = claims.get("roles");
-            if (rolesObj instanceof String[]) {
+            // JWT Claims에서 사용자 ID 추출 (memId 또는 sub 필드 사용)
+            this.authorId = (String) claims.getOrDefault("memId", claims.get("sub"));
+            
+            // JWT Claims에서 권한 정보 추출 (rolenames 또는 roles 필드 사용)
+            Object rolesObj = claims.getOrDefault("rolenames", claims.get("roles"));
+            if (rolesObj instanceof java.util.List) {
+                @SuppressWarnings("unchecked")
+                java.util.List<String> roleList = (java.util.List<String>) rolesObj;
+                this.roles = roleList.toArray(new String[0]);
+            } else if (rolesObj instanceof String[]) {
                 this.roles = (String[]) rolesObj;
             } else if (rolesObj instanceof String) {
                 this.roles = new String[]{(String) rolesObj};
@@ -116,7 +138,7 @@ public class JwtTokenUtils {
         }
         
         public boolean isAdmin() {
-            return hasRole("ADMIN") || (authorId != null && authorId.toLowerCase().contains("admin"));
+            return hasRole("ADMIN") || hasRole("ROLE_ADMIN") || (authorId != null && authorId.toLowerCase().contains("admin"));
         }
     }
 }

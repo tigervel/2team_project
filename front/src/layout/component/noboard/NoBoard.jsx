@@ -41,11 +41,10 @@ const BulletinBoard = () => {
   // 공지사항 카테고리 정의
   const categories = [
     { id: 'ALL', name: '전체' },
-    { id: 'GENERAL', name: '전체' },
+    { id: 'GENERAL', name: '사용안내' },
     { id: 'SYSTEM', name: '시스템' },
     { id: 'SERVICE', name: '서비스' },
-    { id: 'UPDATE', name: '업데이트' },
-    { id: 'MAINTENANCE', name: '점검' }
+    { id: 'UPDATE', name: '업데이트' }
   ];
 
   // 공지사항 목록 로드
@@ -155,7 +154,7 @@ const BulletinBoard = () => {
                 borderRadius: 2
               }}
             >
-              새 게시글
+              새 공지 작성
             </Button>
           </Box>
         )}
