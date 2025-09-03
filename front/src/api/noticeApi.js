@@ -96,11 +96,10 @@ export const deleteNotice = async (noticeId, userInfo = null) => {
 // 카테고리 한글 매핑
 export const getCategoryDisplayName = (categoryValue) => {
     const categoryMap = {
-        'GENERAL': '전체',
+        'GENERAL': '사용안내',
         'SYSTEM': '시스템',
         'SERVICE': '서비스',
-        'UPDATE': '업데이트',
-        'MAINTENANCE': '점검'
+        'UPDATE': '업데이트'
     };
     return categoryMap[categoryValue] || categoryValue;
 };
