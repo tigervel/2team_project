@@ -1,8 +1,9 @@
-// EditVehicleInform.jsx
+// src/pages/mypage/EditVehicleInform.jsx
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import {
-  Box, Grid, Paper, Typography, Button, Modal, TextField, IconButton, Select, MenuItem, InputLabel, FormControl
+  Box, Grid, Paper, Typography, Button, Modal, TextField,
+  IconButton, Select, MenuItem, InputLabel, FormControl
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import { useParams, useNavigate } from 'react-router-dom';
@@ -24,14 +25,24 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
+// 구/신 경로 모두 보정
+const toPreviewUrl = (p) => {
+  if (!p) return null;
+  const s = String(p);
+  if (s.startsWith('http')) return s;
+  if (s.startsWith('/g2i4/uploads/')) return `${API_BASE}${s}`;
+  if (s.startsWith('/uploads/')) return `${API_BASE}/g2i4${s}`; // 구버전 보정
+  return `${API_BASE}/g2i4/uploads/cargo/${encodeURIComponent(s)}`; // 파일명만 있는 경우
+};
+
 const EditVehicleInform = () => {
-  const { cargoId } = useParams();           // ← 라우트에서 받음
+  const { cargoId } = useParams();
   const navigate = useNavigate();
 
   const [vehicles, setVehicles] = useState([]);
   const [open, setOpen] = useState(false);
   const [editingIndex, setEditingIndex] = useState(null);
-  const [weightOptions, setWeightOptions] = useState([]);
+  const [weightOptions, setWeightOptions] = useState(['0.5톤','1톤','2톤','3톤','4톤','5톤이상']); // 폴백
   const [formData, setFormData] = useState({
     no: null,
     name: '',
@@ -40,15 +51,13 @@ const EditVehicleInform = () => {
     preview: null
   });
 
-  // 권한 가드: cargoId 없으면 튕김
   useEffect(() => {
     if (!cargoId) {
       alert('접근 권한이 없습니다. (cargoId 누락)');
-      navigate('/login', { replace: true }); // 필요에 따라 '/' 또는 403 페이지로
+      navigate('/login', { replace: true });
     }
   }, [cargoId, navigate]);
 
-  // 차량 목록 불러오기
   const fetchVehicles = async () => {
     if (!cargoId) return;
     try {
@@ -59,11 +68,7 @@ const EditVehicleInform = () => {
         address: cargo.cargoType,
         weight: cargo.cargoCapacity,
         imagePath: cargo.cargoImage,
-        preview: cargo.cargoImage
-          ? (String(cargo.cargoImage).startsWith('http')
-            ? cargo.cargoImage
-            : `${API_BASE}${cargo.cargoImage}`)
-          : null
+        preview: toPreviewUrl(cargo.cargoImage)
       }));
       setVehicles(data);
     } catch (err) {
@@ -75,26 +80,21 @@ const EditVehicleInform = () => {
       }
     }
   };
+
   const fetchWeightOptions = async () => {
     try {
       const res = await api.get(`/g2i4/admin/fees/basic/rows`);
-      // 중복/공백 정리
       const uniq = Array.from(new Set(res.data || [])).filter(Boolean);
-      setWeightOptions(uniq);
+      if (uniq.length) setWeightOptions(uniq);
     } catch (err) {
-      console.error('weight 옵션 불러오기 실패:', err);
-      // 임시 폴백
-      setWeightOptions(['0.5톤', '1톤', '2톤', '3톤', '4톤', '5톤이상']);
+      console.warn('weight 옵션 불러오기 실패(폴백 사용):', err);
     }
   };
+
   useEffect(() => {
     fetchVehicles();
     fetchWeightOptions();
   }, [cargoId]);
-
-
-
-  useEffect(() => { fetchVehicles(); }, [cargoId]); // cargoId 바뀌어도 재호출
 
   const handleOpen = (index = null) => {
     setEditingIndex(index);
@@ -118,42 +118,38 @@ const EditVehicleInform = () => {
 
   const handleImageChange = (e) => {
     const file = e.target.files?.[0];
-    if (file) {
-      setFormData(prev => ({
-        ...prev,
-        image: file,
-        preview: URL.createObjectURL(file)
-      }));
-    }
+    if (!file) return;
+    setFormData(prev => ({
+      ...prev,
+      image: file,
+      preview: URL.createObjectURL(file)
+    }));
   };
 
   const handleSave = async () => {
     const { no, name, weight, image } = formData;
     if (!cargoId) { alert('접근 권한이 없습니다.'); return; }
-    if (!name || !weight) { alert('이름과 적재 무게를 선택/입력해주세요.'); return; }
+    if (!name || !weight) { alert('이름과 적재 무게를 입력/선택해주세요.'); return; }
 
     try {
       let cargoNo = no;
-
-      // 백엔드가 cargoType(=address)을 여전히 요구하면 기존 값만 유지해서 보냄
       const payload = { name, weight };
-      const existingType = editingIndex !== null ? vehicles[editingIndex]?.address : undefined;
-      if (existingType !== undefined && existingType !== null) {
-        payload.address = existingType; // 필요 시 호환 전송
-      }
 
+      // 수정
       if (no != null) {
         const res = await api.put(`/g2i4/cargo/update/${no}`, payload);
         cargoNo = res.data.cargoNo;
       } else {
+        // 등록
         const res = await api.post(`/g2i4/cargo/add/${cargoId}`, payload);
         cargoNo = res.data.cargoNo;
       }
 
+      // 이미지 업로드
       if (image) {
-        const fileForm = new FormData();
-        fileForm.append('image', image);
-        await api.post(`/g2i4/cargo/upload/${String(cargoNo).trim()}`, fileForm, {
+        const fd = new FormData();
+        fd.append('image', image);
+        await api.post(`/g2i4/cargo/upload/${String(cargoNo).trim()}`, fd, {
           headers: { 'Content-Type': 'multipart/form-data' }
         });
       }
@@ -176,7 +172,6 @@ const EditVehicleInform = () => {
     const target = vehicles[index];
     if (!target?.no) return;
     if (!window.confirm('정말 삭제하시겠습니까?')) return;
-
     try {
       await api.delete(`/g2i4/cargo/delete/${target.no}`);
       await fetchVehicles();
@@ -242,8 +237,6 @@ const EditVehicleInform = () => {
             </Box>
             <Box flex={1} display="flex" flexDirection="column" gap={2}>
               <TextField label="차량 이름" value={formData.name} onChange={handleChange('name')} fullWidth />
-
-       
               <FormControl fullWidth>
                 <InputLabel id="weight-label">적재 무게</InputLabel>
                 <Select
