@@ -262,7 +262,7 @@ const EditMyInform = () => {
     try {
       setUploading(true);
       const { data } = await api.post('/g2i4/user/upload-image', fd);
-      const url = normalizeProfileUrl(data?.webPath || data?.filename);
+      const url = normalizeProfileUrl(data?.webPath ?? data?.filename);
       if (url) {
         const cacheBustedUrl = `${url}?v=${Date.now()}`;
         setAvatarUrl(cacheBustedUrl); // 로컬 UI 즉시 업데이트
