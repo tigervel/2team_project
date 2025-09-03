@@ -13,12 +13,11 @@ const MyPageLayout = () => {
     <>
       {/* 상단 앱바 */}
       <ResponsiveAppBar />
-       <Toolbar sx={{ minHeight: APPBAR_HEIGHT }} />
       {/* 사이드바 + 메인 콘텐츠 */}
       <Box sx={{ display: 'flex' }}>
         <Sidebar ownerId={ownerId} />
 
-        <Box component="main" sx={{ flexGrow: 1, p: 0, ml: `${DRAWER_WIDTH}px` }}>
+        <Box component="main" sx={{ flexGrow: 1, p: 0 }}>
           {/* 앱바 아래 내용 밀기 */}
           <Outlet />
         </Box>

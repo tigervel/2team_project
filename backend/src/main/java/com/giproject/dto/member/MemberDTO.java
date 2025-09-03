@@ -3,7 +3,6 @@ package com.giproject.dto.member;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -21,14 +20,16 @@ import lombok.ToString;
 
 @Getter
 @Setter
-@ToString(exclude = "memPw")
+@ToString(exclude = "memPw") // 비밀번호 로그 노출 방지
 public class MemberDTO extends User {
 
     private static final long serialVersionUID = 1L;
 
+    /** == loginId 개념 (Spring Security username) */
     private String memId;
+
     @JsonIgnore
-    private String memPw;
+    private String memPw; // 직렬화 방지(안전)
 
     private String memEmail;
     private String memName;
@@ -36,16 +37,18 @@ public class MemberDTO extends User {
     private String memAddress;
     private LocalDateTime memCreateIdDateTime;
 
+    /** 권한 이름(예: "USER","ADMIN"). 생성자에서 "ROLE_" 접두 자동 보정 */
     private List<String> roleNames = new ArrayList<>();
 
-    private boolean social;
-    private String provider;
-    private String socialId;
+    /** 🔽 소셜 로그인 관련(있으면 세팅) */
+    private String provider;  // "KAKAO" | "NAVER" | "GOOGLE" | "LOCAL" | null
+    private String socialId;  // 각 제공자 고유 식별자(카카오 id, 네이버 id, 구글 sub 등)
 
+    /** 🔽 응답용 토큰 */
     private String accessToken;
     private String refreshToken;
 
-    // ===== 생성자 =====
+    // ===== 기본 생성자(권한 자동 보정) =====
     public MemberDTO(String memId,
                      String memPw,
                      String memEmail,
@@ -56,13 +59,14 @@ public class MemberDTO extends User {
                      List<String> rolenames) {
 
         super(
+            // User(username, password, authorities)
             memId,
             (memPw == null ? "" : memPw),
             (rolenames == null ? List.<String>of() : rolenames).stream()
                 .filter(Objects::nonNull)
                 .map(String::trim)
                 .filter(s -> !s.isEmpty())
-                .map(r -> r.startsWith("ROLE_") ? r : "ROLE_" + r)
+                .map(role -> role.startsWith("ROLE_") ? role : "ROLE_" + role)
                 .map(SimpleGrantedAuthority::new)
                 .collect(Collectors.toList())
         );
@@ -77,53 +81,56 @@ public class MemberDTO extends User {
         this.roleNames = rolenames != null ? new ArrayList<>(rolenames) : new ArrayList<>();
     }
 
+    /** 계정 상태 플래그 제어가 필요한 경우 사용(선택) */
     public MemberDTO(String memId,
                      String memPw,
                      boolean enabled,
                      boolean accountNonExpired,
                      boolean credentialsNonExpired,
                      boolean accountNonLocked,
-                     Collection<? extends SimpleGrantedAuthority> authorities) {
-        super(memId, (memPw == null ? "" : memPw),
-              enabled, accountNonExpired, credentialsNonExpired, accountNonLocked, authorities);
+                     List<SimpleGrantedAuthority> authorities) {
+        super(memId,
+              (memPw == null ? "" : memPw),
+              enabled, accountNonExpired, credentialsNonExpired, accountNonLocked,
+              authorities);
         this.memId = memId;
         this.memPw = memPw;
     }
 
-    // ===== 클레임 =====
+    /** 안전한 클레임(비밀번호 제외) */
     public Map<String, Object> getClaims() {
         Map<String, Object> dataMap = new HashMap<>();
-        dataMap.put("loginId", memId);
         dataMap.put("memId", memId);
         dataMap.put("memEmail", memEmail);
         dataMap.put("memName", memName);
         dataMap.put("memPhone", memPhone);
         dataMap.put("memAddress", memAddress);
         dataMap.put("memCreateIdDateTime", memCreateIdDateTime);
-        dataMap.put("rolenames", roleNames);
-
-        dataMap.put("social", social);
+        dataMap.put("rolenames", roleNames); // 기존 호환 유지
         if (provider != null) dataMap.put("provider", provider);
         if (socialId != null) dataMap.put("socialId", socialId);
         return dataMap;
     }
 
-    // ===== 엔티티 변환 =====
+    /** 엔티티 → DTO 변환 (roles 전달) */
     public static MemberDTO fromMember(com.giproject.entity.member.Member m, List<String> roles) {
         List<String> r = (roles == null || roles.isEmpty())
                 ? new ArrayList<>(List.of("USER"))
                 : new ArrayList<>(roles);
 
+        // 도메인 역할(예: 화주/차주) 자동 포함해 인가 편의 제공 (예외 안전)
         try {
             if (m.getUserIndex() != null && m.getUserIndex().getRole() != null) {
                 String domainRole = m.getUserIndex().getRole().name();
-                if (domainRole != null && !domainRole.isBlank()) r.add(domainRole);
+                if (domainRole != null && !domainRole.isBlank()) {
+                    r.add(domainRole);
+                }
             }
-        } catch (Exception ignore) {}
+        } catch (Exception ignore) { /* 안전 차원 */ }
 
-        MemberDTO dto = new MemberDTO(
+        return new MemberDTO(
             m.getMemId(),
-            m.getMemPw(),
+            m.getMemPw(),                 // 해시 저장 전제
             m.getMemEmail(),
             m.getMemName(),
             m.getMemPhone(),
@@ -131,118 +138,54 @@ public class MemberDTO extends User {
             m.getMemCreateIdDateTime(),
             r
         );
-
-        dto.social = m.isSocial();
-        try {
-            if (m.getSocialAccount() != null) {
-                dto.provider = String.valueOf(m.getSocialAccount().getProvider());
-                dto.socialId = m.getSocialAccount().getProviderUserId();
-                if (dto.memEmail == null && m.getSocialAccount().getEmail() != null) {
-                    dto.memEmail = m.getSocialAccount().getEmail();
-                }
-            }
-        } catch (Exception ignore) {}
-        return dto;
     }
 
+    /** 엔티티 → DTO 변환 (roles 생략 시 엔티티의 memberRoleList 사용) */
     public static MemberDTO fromMember(com.giproject.entity.member.Member m) {
         return fromMember(m, m.getMemberRoleList());
     }
 
-    public String getSocialId() {
-        return socialId;
-    }
+    /** 소셜 제공자 고유 식별자 반환 */
+    public String getSocialId() { return socialId; }
 
-    // ===== Builder =====
-    public static Builder newBuilder() { return new Builder(); }
-
-    public static class Builder {
-        private String loginId;
-        private String password;
-        private String email;
-        private String name;
-        private String phone;
-        private String address;
-        private LocalDateTime createdAt;
-
-        private List<String> roles = new ArrayList<>();
-        private boolean social;
-        private String provider;
-        private String socialId;
-
-        private String accessToken;
-        private String refreshToken;
-
-        private Boolean enabled;
-        private Boolean accountNonExpired;
-        private Boolean credentialsNonExpired;
-        private Boolean accountNonLocked;
-
-        public Builder loginId(String v) { this.loginId = v; return this; }
-        public Builder password(String v) { this.password = v; return this; }
-        public Builder email(String v) { this.email = v; return this; }
-        public Builder name(String v) { this.name = v; return this; }
-        public Builder phone(String v) { this.phone = v; return this; }
-        public Builder address(String v) { this.address = v; return this; }
-        public Builder createdAt(LocalDateTime v) { this.createdAt = v; return this; }
-
-        public Builder roles(Collection<String> rs) { if (rs != null) this.roles = new ArrayList<>(rs); return this; }
-        public Builder addRole(String role) { if (role != null && !role.isBlank()) this.roles.add(role.trim()); return this; }
-        public Builder role(String role) { return addRole(role); } // ✅ 단수 role 지원
-
-        public Builder social(boolean v) { this.social = v; return this; }
-        public Builder provider(String v) { this.provider = v; return this; }
-        public Builder socialId(String v) { this.socialId = v; return this; }
-
-        public Builder accessToken(String v) { this.accessToken = v; return this; }
-        public Builder refreshToken(String v) { this.refreshToken = v; return this; }
-
-        public Builder enabled(boolean v) { this.enabled = v; return this; }
-        public Builder accountNonExpired(boolean v) { this.accountNonExpired = v; return this; }
-        public Builder credentialsNonExpired(boolean v) { this.credentialsNonExpired = v; return this; }
-        public Builder accountNonLocked(boolean v) { this.accountNonLocked = v; return this; }
-
-        public MemberDTO build() {
-            if (loginId == null || loginId.isBlank()) {
-                throw new IllegalArgumentException("loginId(username) must not be blank");
-            }
-
-            var authorities = roles.stream()
-                    .filter(Objects::nonNull)
-                    .map(String::trim)
-                    .filter(s -> !s.isEmpty())
-                    .map(r -> r.startsWith("ROLE_") ? r : "ROLE_" + r)
-                    .map(SimpleGrantedAuthority::new)
-                    .collect(Collectors.toList());
-
-            String pw = (password == null ? "" : password);
-
-            MemberDTO dto;
-            if (enabled != null || accountNonExpired != null || credentialsNonExpired != null || accountNonLocked != null) {
-                dto = new MemberDTO(loginId, pw,
-                        enabled == null ? true : enabled,
-                        accountNonExpired == null ? true : accountNonExpired,
-                        credentialsNonExpired == null ? true : credentialsNonExpired,
-                        accountNonLocked == null ? true : accountNonLocked,
-                        authorities);
-                dto.memEmail = email;
-                dto.memName = name;
-                dto.memPhone = phone;
-                dto.memAddress = address;
-                dto.memCreateIdDateTime = createdAt;
-                dto.roleNames = new ArrayList<>(roles);
-            } else {
-                dto = new MemberDTO(loginId, pw, email, name, phone, address, createdAt, new ArrayList<>(roles));
-            }
-
-            dto.social = this.social;
-            dto.provider = this.provider;
-            dto.socialId = this.socialId;
-            dto.accessToken = this.accessToken;
-            dto.refreshToken = this.refreshToken;
-            return dto;
-        }
-    }
-
+    /** 편의: loginId 별칭 */
     public String getLoginId() { return memId; }
+
+    // ====== ✅ 정적 팩토리 (빌더 충돌 회피) ======
+
+    /** 비밀번호 모를 때(응답 DTO 중심) */
+    public static MemberDTO of(String loginId,
+                               String email,
+                               String name,
+                               String phone,
+                               String address,
+                               LocalDateTime createdAt,
+                               List<String> roles) {
+        return new MemberDTO(
+            loginId,
+            "", // pw 모르면 빈 문자열
+            email,
+            name,
+            phone,
+            address,
+            createdAt,
+            roles
+        );
+    }
+
+    /** 토큰까지 한 번에 세팅하는 오버로드 */
+    public static MemberDTO of(String loginId,
+                               String email,
+                               String name,
+                               String phone,
+                               String address,
+                               LocalDateTime createdAt,
+                               List<String> roles,
+                               String accessToken,
+                               String refreshToken) {
+        MemberDTO dto = of(loginId, email, name, phone, address, createdAt, roles);
+        dto.setAccessToken(accessToken);
+        dto.setRefreshToken(refreshToken);
+        return dto;
+    }
 }
