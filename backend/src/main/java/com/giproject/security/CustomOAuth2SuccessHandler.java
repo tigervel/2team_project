@@ -4,13 +4,16 @@ package com.giproject.security;
 import static com.giproject.security.jwt.JwtClaimKeys.EMAIL;
 import static com.giproject.security.jwt.JwtClaimKeys.PROVIDER;
 import static com.giproject.security.jwt.JwtClaimKeys.PROVIDER_ID;
-import static com.giproject.security.jwt.JwtClaimKeys.UID;
 import static com.giproject.security.jwt.JwtClaimKeys.ROLES;
+import static com.giproject.security.jwt.JwtClaimKeys.UID;
 
-import com.giproject.entity.member.Member;
 import com.giproject.entity.account.UserIndex;
-import com.giproject.repository.member.MemberRepository;
+import com.giproject.entity.member.Member;
 import com.giproject.repository.account.UserIndexRepo;
+import com.giproject.repository.member.MemberRepository;
+
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -22,30 +25,26 @@ import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.security.web.authentication.SimpleUrlAuthenticationSuccessHandler;
 import org.springframework.stereotype.Component;
 
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
-
 import java.io.IOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
-import java.time.Duration;
 import java.util.*;
 
 /**
  * 소셜 로그인 성공 시 분기:
- *  - 기존 회원(email로 매칭) => access/refresh 즉시 발급 후 콜백으로 리다이렉트
- *  - 미가입 => 프리필용 임시 토큰(signup_ticket) 발급 후 /signup 으로 리다이렉트
+ *  - 기존 회원(email 매칭)  : Access/Refresh 즉시 발급 → /auth/callback 으로 해시 전달
+ *  - 미가입(첫 소셜 로그인): 5분 TTL 임시 토큰(signup_ticket) 발급 → /signup#signup_ticket=... 으로 리다이렉트
  *
- * ✅ JwtClaimKeys 상수를 사용해 토큰 클레임 키를 전 구간에서 일치시킵니다.
+ * JwtService.createTempToken(...)는 "초 단위" TTL을 받으므로 주의!
  */
 @Slf4j
 @Component
 @RequiredArgsConstructor
 public class CustomOAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler {
 
-    private final JwtService jwtService;              // 액세스/리프레시 & 프리필(임시) 토큰 생성
-    private final MemberRepository memberRepository;  // 가입 여부/회원 조회
-    private final UserIndexRepo userIndexRepo;        // user_index 도메인 권한 조회
+    private final JwtService jwtService;               // Access/Refresh/Temp 토큰 발급
+    private final MemberRepository memberRepository;   // 이메일로 기존회원 조회
+    private final UserIndexRepo userIndexRepo;         // 도메인 권한(SHIPPER/DRIVER/ADMIN) 조회
 
     @Value("${frontend.base-url:http://localhost:3000}")
     private String frontendBaseUrl;
@@ -56,44 +55,44 @@ public class CustomOAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHa
                                         Authentication authentication) throws IOException {
 
         OAuth2AuthenticationToken token = (OAuth2AuthenticationToken) authentication;
-        String provider   = token.getAuthorizedClientRegistrationId(); // "google" | "kakao" | "naver"
+        String provider = token.getAuthorizedClientRegistrationId();           // google | kakao | naver
         String providerUp = provider == null ? null : provider.toUpperCase();
 
-        OAuth2User oAuth2User = token.getPrincipal();
+        OAuth2User oAuth2User = (OAuth2User) token.getPrincipal();
         Map<String, Object> attributes = oAuth2User.getAttributes();
 
-        String email      = extractEmail(provider, attributes);
-        String name       = extractName(provider, attributes);
-        String providerId = extractProviderId(provider, attributes);
+        String email = extractEmail(provider, attributes);
+        String name  = extractName(provider, attributes);
+        String provId = extractProviderId(provider, attributes);
 
-        log.info("OAuth2 success provider={}, email={}, name={}, providerId={}", provider, email, name, providerId);
+        log.info("OAuth2 success provider={}, email={}, name={}, providerId={}", provider, email, name, provId);
 
-        // 1) 이메일 동의 누락 → 가입 페이지로 (프리필 불가)
+        // 1) 이메일 동의 누락 → 가입 페이지로(프리필 불가)
         if (email == null || email.isBlank()) {
-            String redirect = frontendBaseUrl + "/signup?social=" + provider + "&reason=no_email";
+            String redirect = frontendBaseUrl + "/signup?social=" + safe(provider) + "&reason=no_email";
             getRedirectStrategy().sendRedirect(request, response, redirect);
             return;
         }
 
-        // 2) 기존 회원: 액세스/리프레시 발급 → 콜백 페이지로 전달(#hash)
+        // 2) 기존 회원: 바로 Access/Refresh 발급 → /auth/callback#access=...&refresh=...
         Optional<Member> maybeMember = memberRepository.findByMemEmail(email);
         if (maybeMember.isPresent()) {
-            Member m = maybeMember.get();
-            String subject = m.getMemId(); // JWT subject: 내부 로그인키(memId)
+            Member member = maybeMember.get();
+            String subject = member.getMemId(); // JWT subject: 내부 로그인키(memId)
 
-            // (1) 엔티티 보유 권한 수집 (전역권한)
-            List<String> base = toRoleNames(m);          // 예: ["USER"] 또는 ["ADMIN"]
-            List<String> roles = prefixRoles(base);      // 예: ["ROLE_USER"] 또는 ["ROLE_ADMIN"]
+            // (1) 엔티티 권한 수집 (예: ["USER"] / ["ADMIN"])
+            List<String> base = toRoleNames(member);
+            List<String> roles = prefixRoles(base);
 
-            // (2) user_index의 도메인 권한(SHIPPER/DRIVER/ADMIN) 추가
+            // (2) 도메인 권한 합산 (ROLE_SHIPPER / ROLE_DRIVER / ROLE_ADMIN)
             userIndexRepo.findByLoginId(subject).ifPresent(ui -> {
                 UserIndex.Role domain = ui.getRole();
                 if (domain != null) {
-                    roles.add("ROLE_" + domain.name());  // ROLE_SHIPPER / ROLE_DRIVER / ROLE_ADMIN
+                    roles.add("ROLE_" + domain.name());
                 }
             });
 
-            // (3) 전역 권한 보정: ADMIN 없으면 최소 ROLE_USER 보장
+            // (3) 전역 보정: ADMIN 없으면 최소 ROLE_USER 보장
             if (roles.stream().noneMatch("ROLE_ADMIN"::equals)) {
                 roles.add("ROLE_USER");
             }
@@ -102,44 +101,44 @@ public class CustomOAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHa
             List<String> authorities = new ArrayList<>(new LinkedHashSet<>(roles));
 
             Map<String, Object> claims = new HashMap<>();
-            claims.put(EMAIL, email);               // ✅ 상수 사용
-            claims.put(UID, subject);               // ✅ 상수 사용
-            claims.put(ROLES, authorities);         // ✅ 상수 사용
-            if (providerUp != null)  claims.put(PROVIDER,   providerUp);   // ✅ 상수 사용
-            if (providerId != null)  claims.put(PROVIDER_ID, providerId);  // ✅ 상수 사용
+            claims.put(EMAIL, email);
+            claims.put(UID, subject);
+            claims.put(ROLES, authorities);
+            if (providerUp != null) claims.put(PROVIDER, providerUp);
+            if (provId != null)     claims.put(PROVIDER_ID, provId);
 
             String access  = jwtService.createAccessToken(claims, subject);
             String refresh = jwtService.createRefreshToken(Map.of(UID, subject), subject);
 
-            String hash = "#access="  + URLEncoder.encode(access,  StandardCharsets.UTF_8)
-                        + "&refresh=" + URLEncoder.encode(refresh, StandardCharsets.UTF_8);
+            String hash = "#access="  + url(access) +
+                          "&refresh=" + url(refresh);
 
             getRedirectStrategy().sendRedirect(request, response, frontendBaseUrl + "/auth/callback" + hash);
             return;
         }
 
-        // 3) 첫 소셜 로그인(미가입): 프리필용 임시 토큰(5분) → 가입 페이지로 전달(#hash)
-        Map<String, Object> prefillClaims = new HashMap<>();
-        prefillClaims.put(EMAIL,    email);       // ✅ 상수 사용
-        prefillClaims.put(PROVIDER, providerUp);  // ✅ 상수 사용
-        if (name != null)       prefillClaims.put("name", name); // 이름은 별도 키 유지
-        if (providerId != null) prefillClaims.put(PROVIDER_ID, providerId); // ✅ 상수 사용
+        // 3) 첫 소셜 로그인(미가입): 프리필용 임시 토큰(5분 = 300초) → /signup#signup_ticket=...&social=...
+        Map<String, Object> prefill = new HashMap<>();
+        prefill.put(EMAIL, email);
+        if (providerUp != null) prefill.put(PROVIDER, providerUp);
+        if (name != null)       prefill.put("name", name);
+        if (provId != null)     prefill.put(PROVIDER_ID, provId);
+        prefill.put("purpose", "signup"); // ← 목적 태그 추가(컨트롤러에서 검증)
 
         // 임시 토큰 subject: providerId 우선, 없으면 email 사용
-        String tempSubject = (providerUp != null && providerId != null)
-                ? (providerUp + ":" + providerId)
+        String tempSubject = (providerUp != null && provId != null)
+                ? (providerUp + ":" + provId)
                 : ("SOCIAL_PREFILL:" + email);
 
-        long ttlMillis = Duration.ofMinutes(5).toMillis(); // JwtService 인자가 밀리초라고 가정
-        String signupTicket = jwtService.createTempToken(tempSubject, prefillClaims, ttlMillis);
+        long ttlSeconds = 5 * 60; // ✅ JwtService는 "초 단위" TTL
+        String signupTicket = jwtService.createTempToken(tempSubject, prefill, ttlSeconds);
 
-        String hash = "#signup_ticket=" + URLEncoder.encode(signupTicket, StandardCharsets.UTF_8)
-                    + "&social=" + provider;
-
+        String hash = "#signup_ticket=" + url(signupTicket) + "&social=" + safe(provider);
         getRedirectStrategy().sendRedirect(request, response, frontendBaseUrl + "/signup" + hash);
     }
 
-    // ====== Provider별 이메일/이름/ID 추출 유틸 ======
+    /* ====================== Provider attribute extractors ====================== */
+
     @SuppressWarnings("unchecked")
     private String extractEmail(String provider, Map<String, Object> attributes) {
         if ("google".equals(provider)) {
@@ -188,6 +187,8 @@ public class CustomOAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHa
         return null;
     }
 
+    /* =============================== Helpers =============================== */
+
     /** Member → role 이름 리스트(프로젝트 스키마에 맞게 유연 처리) */
     private List<String> toRoleNames(Member m) {
         try {
@@ -209,6 +210,8 @@ public class CustomOAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHa
                     names.add(String.valueOf(v));
                 } catch (NoSuchMethodException e) {
                     names.add(String.valueOf(r));
+                } catch (Exception ignore) {
+                    // reflection 실패 시 skip
                 }
             }
             return names;
@@ -226,5 +229,13 @@ public class CustomOAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHa
             out.add(n.startsWith("ROLE_") ? n : ("ROLE_" + n));
         }
         return out;
+    }
+
+    private static String url(String s) {
+        return URLEncoder.encode(s, StandardCharsets.UTF_8);
+    }
+
+    private static String safe(String s) {
+        return s == null ? "" : s;
     }
 }
