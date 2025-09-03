@@ -1,3 +1,4 @@
+//front/src/layout/component/mypage/DeliveryInformCargo.js
 import React, { useEffect, useState } from 'react';
 import {
   Box, Typography, Table, TableBody, TableCell, TableContainer,

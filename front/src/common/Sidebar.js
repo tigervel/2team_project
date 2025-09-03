@@ -146,14 +146,12 @@ const Sidebar = () => {
         [`& .MuiDrawer-paper`]: {
           width: drawerWidth,
           boxSizing: 'border-box',
-           position: 'fixed',
-         top: { xs: APPBAR_HEIGHT_MOBILE, md: APPBAR_HEIGHT_DESKTOP },
-         height: {
-           xs: `calc(100% - ${APPBAR_HEIGHT_MOBILE}px)`,
-           md: `calc(100% - ${APPBAR_HEIGHT_DESKTOP}px)`
-         },
-        }
-      }}
+          position: 'sticky',
+          top: APPBAR_HEIGHT_MOBILE,   // 데스크탑에서도 자동으로 sticky 됨
+          alignSelf: 'flex-start',     // flex 컨테이너 안에서 정상 동작하도록
+        },
+      }
+      }
     >
       <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', p: 2 }}>
         <Typography variant="h6" fontWeight="bold" gutterBottom>
@@ -224,7 +222,7 @@ const Sidebar = () => {
           </NavLink>
         )}
       </List>
-    </Drawer>
+    </Drawer >
   );
 };
 

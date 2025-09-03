@@ -1,3 +1,4 @@
+// src/main/java/com/giproject/config/UserinfoController.java
 package com.giproject.controller.common;
 
 import java.io.IOException;
@@ -27,11 +28,26 @@ public class UserInfoController {
 
     private final MemberRepository memberRepository;
     private final CargoOwnerRepository cargoOwnerRepository;
-
+    private static Path resolveUploadRoot() {
+        Path rootA = Paths.get("../uploads").toAbsolutePath().normalize();
+        Path rootB = Paths.get("uploads").toAbsolutePath().normalize();
+        try {
+            if (Files.isDirectory(rootA) || (!Files.exists(rootA) && Files.createDirectories(rootA) != null)) {
+                return rootA;
+            }
+        } catch (IOException ignore) {}
+        try {
+            if (Files.isDirectory(rootB) || (!Files.exists(rootB) && Files.createDirectories(rootB) != null)) {
+                return rootB;
+            }
+        } catch (IOException ignore) {}
+        // 둘 다 못 만들었을 때: 실행 디렉터리 하위 uploads 시도
+        return Paths.get("uploads").toAbsolutePath().normalize();
+    }
     // ✅ 상대경로 입력이더라도 런타임에서 절대경로로 고정
-    private static final Path UPLOAD_ROOT = Paths.get("../uploads").toAbsolutePath().normalize();
+    private static final Path UPLOAD_ROOT = resolveUploadRoot();
     private static final Path USER_PROFILE_DIR = UPLOAD_ROOT.resolve("user_profile");
-
+    
     @GetMapping("/info")
     public ResponseEntity<?> getUserInfo(Authentication auth) {
         if (auth == null || !auth.isAuthenticated() || auth instanceof AnonymousAuthenticationToken) {
