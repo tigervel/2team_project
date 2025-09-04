@@ -73,7 +73,7 @@ const EstimateComponent = () => {
 
     if (!email || (!isShipper && !isAdmin)) {
       authChecked.current = true;
-      alert("로그인 후 이용해주세요.");
+      alert("일반회원만 주문이 가능합니다.");
       navigate("/", { replace: true });
       return;
     }

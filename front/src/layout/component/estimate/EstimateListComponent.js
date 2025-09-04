@@ -40,7 +40,7 @@ const EstimateListComponent = () => {
 
     if (!email || !isDriver || isAdmin) {
       authChecked.current = true; // ✅ 체크 완료로 표시
-      alert("로그인 후 이용해주세요.");
+      alert("차주회원만 이용이 가능합니다.");
       navigate("/", { replace: true });
       return;
     }
