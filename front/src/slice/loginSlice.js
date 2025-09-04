@@ -1,4 +1,3 @@
-
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import axios from "axios";
 
@@ -22,7 +21,7 @@ const normalizeProfileUrl = (v) => {
     return `${API_BASE}/g2i4/uploads/user_profile/${encodeURIComponent(v)}`;
 };
 
-// 초기 상태 (기존 필드 유지 + 상태/토큰 필드 추가)
+// 초기 상태 (기존 필드 유지 + 상태/토큰 필드 + ✅socialPrefill 추가)
 const initState = {
     email: "",
     roles: ["USER"],
@@ -32,6 +31,11 @@ const initState = {
     status: "idle",      // 'idle' | 'loading' | 'succeeded' | 'failed'
     error: null,         // 에러 메시지
     tokens: null,        // { tokenType, accessToken, refreshToken, expiresIn }
+
+    // ✅ 소셜 프리필 (임시 데이터: 소셜→회원가입 페이지에서만 사용)
+    //   - localStorage에 저장하지 말 것!
+    //   - 필요 시 TTL(기본 5분) 만료 검사해서 자동 삭제
+    socialPrefill: null, // { email: string, name: string, expiresAt: number } | null
 };
 
 // ✅ 로그인 API 호출 (정규화해서 loginId/password 추출)
@@ -60,7 +64,6 @@ async function getUserInfoApi() {
     });
     return raw;
 }
-
 
 // 비동기 thunk (이름은 기존 유지)
 export const loginPostAsync = createAsyncThunk(
@@ -93,7 +96,6 @@ export const getUserInfoAsync = createAsyncThunk(
     }
 );
 
-
 // slice
 const loginSlice = createSlice({
     name: "LoginSlice",
@@ -117,6 +119,27 @@ const loginSlice = createSlice({
         },
         updateProfileImage: (state, action) => {
             state.profileImage = action.payload;
+        },
+
+        // ✅ 소셜 프리필 세팅/초기화
+        // 사용처:
+        // - OAuth2 성공 후 프론트에서 /signup/social 진입 전에 setSocialPrefill({ email, name, ttlMs? })
+        // - /signup/social 이탈/취소, 일반 /signup 진입 시 clearSocialPrefill()
+        setSocialPrefill: (state, action) => {
+            const { email, name, ttlMs = 5 * 60 * 1000 } = action.payload || {};
+            if (!email && !name) {
+                // 잘못된 호출 방어
+                state.socialPrefill = null;
+                return;
+            }
+            state.socialPrefill = {
+                email: email ?? "",
+                name: name ?? "",
+                expiresAt: Date.now() + ttlMs,
+            };
+        },
+        clearSocialPrefill: (state) => {
+            state.socialPrefill = null;
         },
     },
     extraReducers: (builder) => {
@@ -150,6 +173,20 @@ const loginSlice = createSlice({
     },
 });
 
-export const { login, logout, updateProfileImage } = loginSlice.actions;
+export const {
+    login,
+    logout,
+    updateProfileImage,
+    // ✅ 새로 추가된 액션
+    setSocialPrefill,
+    clearSocialPrefill,
+} = loginSlice.actions;
+
 export default loginSlice.reducer;
 
+// (선택) 셀렉터들
+export const selectSocialPrefill = (state) => state.login?.socialPrefill || null;
+export const selectIsSocialPrefillValid = (state) => {
+    const sp = state.login?.socialPrefill;
+    return !!(sp && typeof sp.expiresAt === 'number' && Date.now() <= sp.expiresAt);
+};

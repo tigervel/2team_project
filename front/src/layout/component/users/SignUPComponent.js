@@ -28,6 +28,40 @@ function getTicketFromHash(hash) {
     return map.get('signup_ticket') || map.get('signupTicket') || map.get('ticket');
 }
 
+/* ========= signup_ticket TTL 유틸 ========= */
+const SIGNUP_TICKET_KEY = 'signup_ticket';
+const SIGNUP_TICKET_TTL_MS = 5 * 60 * 1000; // 5분
+
+function saveSignupTicketRaw(rawTicket) {
+    if (!rawTicket) return;
+    const payload = {
+        value: String(rawTicket),
+        exp: Date.now() + SIGNUP_TICKET_TTL_MS,
+    };
+    try { sessionStorage.setItem(SIGNUP_TICKET_KEY, JSON.stringify(payload)); } catch { }
+}
+
+function loadSignupTicket() {
+    try {
+        const raw = sessionStorage.getItem(SIGNUP_TICKET_KEY);
+        if (!raw) return null;
+        const obj = JSON.parse(raw);
+        if (!obj?.value || typeof obj.exp !== 'number') return null;
+        if (Date.now() > obj.exp) {
+            sessionStorage.removeItem(SIGNUP_TICKET_KEY);
+            return null;
+        }
+        return obj.value;
+    } catch {
+        return null;
+    }
+}
+
+function clearSignupTicket() {
+    try { sessionStorage.removeItem(SIGNUP_TICKET_KEY); } catch { }
+}
+/* ======================================== */
+
 const SignUpComponent = () => {
     const navigate = useNavigate();
     const { hash } = useLocation();
@@ -88,47 +122,88 @@ const SignUpComponent = () => {
         if (ok) setOpenEmailModal(false);
     };
 
-    // ===============================
-    // 소셜 첫가입 컨텍스트 로드 (이메일/이름 프리필 & 잠금)
-    // - 우선 해시에서 signup_ticket이 왔으면 세션에 저장
-    // - 세션의 signup_ticket로 컨텍스트 요청
-    // ===============================
+    /* ===============================
+       소셜 첫가입 컨텍스트: 단일 가드 + 로더
+       - 해시에 티켓 없으면: 무조건 일반 모드로 초기화 후 return
+       - 해시에 티켓 있으면: 세션 저장(TTL) → 컨텍스트 로드
+       =============================== */
     React.useEffect(() => {
         const fromHash = getTicketFromHash(hash);
-        if (fromHash) {
-            try {
-                sessionStorage.setItem('signup_ticket', fromHash);
-                // URL 해시 제거 (민감 데이터 흔적 제거)
-                window.history.replaceState({}, document.title, window.location.pathname + window.location.search);
-            } catch { }
+
+        // A) 일반 경로(해시에 티켓 없음) → 강제 일반화 + 세션 정리
+        if (!fromHash) {
+            clearSignupTicket();
+            setEmailLocked(false);
+            setEmailVerified(false);
+            setEmailLocal('');
+            setEmailDomain('');
+            setName('');
+            return; // ✅ 세션에 남아 있더라도 컨텍스트 로드 시도 자체를 하지 않음
         }
 
-        const ticket = sessionStorage.getItem('signup_ticket');
-        if (!ticket) return; // 일반 가입 플로우
+        // B) 소셜 리다이렉트(해시에 티켓 있음) → 세션 저장 후 해시 제거
+        saveSignupTicketRaw(fromHash);
+        try {
+            window.history.replaceState({}, document.title, window.location.pathname + window.location.search);
+        } catch {}
 
+        const ticket = loadSignupTicket();
+        if (!ticket) {
+            // TTL 만료 등 → 일반 모드로
+            clearSignupTicket();
+            setEmailLocked(false);
+            setEmailVerified(false);
+            setEmailLocal('');
+            setEmailDomain('');
+            setName('');
+            return;
+        }
+
+        // C) 소셜 컨텍스트 로드
         (async () => {
             try {
                 const r = await fetch(
                     `${API_BASE}/api/auth/social/signup-context?ticket=${encodeURIComponent(ticket)}`,
                     { headers: { Accept: 'application/json' } }
                 );
-                if (!r.ok) return; // 티켓 만료/없음 → 일반 가입으로
+                if (!r.ok) {
+                    clearSignupTicket();
+                    setEmailLocked(false);
+                    setEmailVerified(false);
+                    setEmailLocal('');
+                    setEmailDomain('');
+                    setName('');
+                    return;
+                }
                 const data = await r.json(); // { email, provider, name }
+
                 if (data?.email) {
                     const [local, ...rest] = String(data.email).split('@');
                     setEmailLocal(local || '');
                     setEmailDomain(rest.join('@') || '');
-                    setEmailVerified(true); // ✅ 서버 이메일이면 인증 완료 처리
-                    setEmailLocked(true);   // ✅ 읽기 전용
+                    setEmailVerified(true); // 서버 이메일이면 인증 완료 처리
+                    setEmailLocked(true);   // 읽기 전용
                 }
-                if (data?.name) {
-                    setName(data.name);
-                }
+                if (data?.name) setName(data.name);
             } catch {
-                // 무시: 소셜 컨텍스트 없으면 일반 가입으로
+                clearSignupTicket();
+                setEmailLocked(false);
+                setEmailVerified(false);
+                setEmailLocal('');
+                setEmailDomain('');
+                setName('');
             }
         })();
     }, [hash]);
+
+    /* ===============================
+       페이지 이탈(unmount) 시 티켓 정리 (추가 안전망)
+       =============================== */
+    React.useEffect(() => {
+        return () => {
+            clearSignupTicket();
+        };
+    }, []);
 
     // ===============================
     // ID 중복 확인 (고정 경로: /api/auth/check-id)
@@ -255,15 +330,10 @@ const SignUpComponent = () => {
                 address: `${selectedAddress} ${detailAddress}`.trim()
             };
 
-            if (emailLocked) {
-                // ✅ 소셜 첫가입: signup_ticket 포함해 complete-signup 호출
-                const signupTicket = sessionStorage.getItem('signup_ticket');
-                if (!signupTicket) {
-                    setSubmitError('가입 티켓이 없습니다. 소셜 로그인부터 다시 진행해주세요.');
-                    setSubmitting(false);
-                    return;
-                }
+            const signupTicket = loadSignupTicket();
 
+            if (emailLocked && signupTicket) {
+                // ✅ 소셜 첫가입: signup_ticket 포함해 complete-signup 호출
                 const res = await fetch(`${API_BASE}/api/auth/social/complete-signup`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -284,7 +354,7 @@ const SignUpComponent = () => {
                 // 성공 → 토큰 저장 후 홈
                 if (data?.accessToken) localStorage.setItem('accessToken', data.accessToken);
                 if (data?.refreshToken) localStorage.setItem('refreshToken', data.refreshToken);
-                sessionStorage.removeItem('signup_ticket');
+                clearSignupTicket();
                 navigate('/', { replace: true });
                 return;
             }

@@ -4,7 +4,6 @@ package com.giproject.service.auth;
 import com.giproject.dto.auth.SocialSignupCompleteRequest;
 import com.giproject.dto.cargo.CargoOwnerDTO;
 import com.giproject.dto.member.MemberDTO;
-import com.giproject.dto.user.DtoConverters;
 import com.giproject.entity.account.UserIndex;
 import com.giproject.entity.account.UserIndex.Role;
 import com.giproject.entity.cargo.CargoOwner;
@@ -16,12 +15,12 @@ import com.giproject.repository.member.MemberRepository;
 import com.giproject.repository.oauth.SocialAccountRepo;
 
 import lombok.*;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.util.*;
 
 @Service
 @RequiredArgsConstructor
@@ -35,7 +34,7 @@ public class SocialSignupService {
 
     /** 소셜 첫가입 완료 */
     @Transactional
-    public MemberDTO completeSignup(SocialSignupCommand cmd) {
+    public UserDetails completeSignup(SocialSignupCommand cmd) {
         // 1) 티켓 검증
         SocialAccount acc = socialAccountRepo.findBySignupTicket(cmd.getTicket())
                 .orElseThrow(() -> new IllegalArgumentException("유효하지 않은 티켓"));
@@ -64,7 +63,7 @@ public class SocialSignupService {
         }
 
         // 3) user_index insert
-        String provider  = acc.getProvider() == null ? null : acc.getProvider().name(); // GOOGLE/KAKAO/NAVER
+        String provider   = acc.getProvider() == null ? null : acc.getProvider().name(); // GOOGLE/KAKAO/NAVER
         String providerId = acc.getProviderUserId();
 
         Role role = Role.valueOf(cmd.getRole()); // "SHIPPER" or "DRIVER" or "ADMIN"
@@ -78,7 +77,7 @@ public class SocialSignupService {
 
         // 4) 역할별 본 테이블 insert
         switch (role) {
-            case SHIPPER -> {
+            case SHIPPER, ADMIN -> {
                 Member m = Member.builder()
                         .memId(loginId)
                         .memPw(encoder.encode(cmd.getPassword()))
@@ -102,19 +101,6 @@ public class SocialSignupService {
                         .build();
                 cargoRepo.save(c);
             }
-            case ADMIN -> {
-                // 필요 시 ADMIN용 생성 로직
-                Member m = Member.builder()
-                        .memId(loginId)
-                        .memPw(encoder.encode(cmd.getPassword()))
-                        .memEmail(email)
-                        .memName(cmd.getName())
-                        .memPhone(cmd.getPhone())
-                        .memAddress(cmd.getAddress())
-                        .memCreateIdDateTime(LocalDateTime.now())
-                        .build();
-                memberRepo.save(m);
-            }
         }
 
         // 5) 소셜 계정 ↔ 서비스 ID 연결
@@ -124,18 +110,16 @@ public class SocialSignupService {
         acc.setSignupTicketExpireAt(null);
         socialAccountRepo.save(acc);
 
-        // 6) 반환 DTO 구성 (토큰 발급 등에 사용)
-        MemberDTO dto;
+        // 6) 최종 UserDetails 구성 (역할별 DTO 원형 유지)
         if (role == Role.DRIVER) {
-            // CargoOwner → MemberDTO로 변환
-            CargoOwner saved = cargoRepo.findByCargoId(loginId).orElseThrow();
-            dto = DtoConverters.toMemberDTO(CargoOwnerDTO.fromCargoOwner(saved, null));
-            dto.setRoleNames(new ArrayList<>(List.of("USER", "DRIVER")));
+            CargoOwner saved = cargoRepo.findByCargoId(loginId)
+                    .orElseThrow(() -> new IllegalStateException("가입 직후 CargoOwner 조회 실패"));
+            return CargoOwnerDTO.fromCargoOwner(saved); // 내부에서 roles 자동 추론
         } else {
-            Member saved = memberRepo.findByMemId(loginId).orElseThrow();
-            dto = MemberDTO.fromMember(saved, new ArrayList<>(List.of("USER", "SHIPPER")));
+            Member saved = memberRepo.findByMemId(loginId)
+                    .orElseThrow(() -> new IllegalStateException("가입 직후 Member 조회 실패"));
+            return MemberDTO.fromMember(saved); // 내부에서 roles 자동 추론
         }
-        return dto;
     }
 
     /** 컨트롤러 DTO → 커맨드 변환 헬퍼 */
@@ -154,7 +138,7 @@ public class SocialSignupService {
 
     // ===== Command 객체 (기본 생성자 포함) =====
     @Getter @Setter
-    @NoArgsConstructor // ← 이게 없어 기본 생성자 에러가 났던 부분
+    @NoArgsConstructor
     @AllArgsConstructor
     @Builder
     public static class SocialSignupCommand {
