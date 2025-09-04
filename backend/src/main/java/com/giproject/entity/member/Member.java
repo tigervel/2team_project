@@ -2,7 +2,6 @@
 package com.giproject.entity.member;
 
 import com.giproject.entity.account.UserIndex;
-import com.giproject.entity.oauth.SocialAccount;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -17,19 +16,20 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-@ToString(exclude = { "memberRoleList", "memPw", "userIndex", "socialAccount" })
+@ToString(exclude = { "memberRoleList", "memPw", "userIndex" })
 @EqualsAndHashCode(onlyExplicitlyIncluded = true)
 public class Member {
 
     /** 전역 login_id와 동일 값 (PK) */
-	@Id
-	@Column(name = "mem_id", length = 50, nullable = false, columnDefinition = "varchar(50)")
-	@org.hibernate.annotations.JdbcTypeCode(org.hibernate.type.SqlTypes.VARCHAR)
-    private String memId; // ★ 문자열 PK (로그인 ID)
+    @Id
+    @EqualsAndHashCode.Include
+    @Column(name = "mem_id", length = 50, nullable = false)
+    private String memId; // 문자열 PK (로그인 ID)
 
     /** user_index.login_id 와 읽기 전용 연결 */
     @OneToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "mem_id", referencedColumnName = "login_id", insertable = false, updatable = false)
+    @JoinColumn(name = "mem_id", referencedColumnName = "login_id",
+            insertable = false, updatable = false)
     private UserIndex userIndex;
 
     @Column(name = "mem_email", unique = true, nullable = false, length = 120)
@@ -62,14 +62,9 @@ public class Member {
     @Builder.Default
     private List<String> memberRoleList = new ArrayList<>();
 
-    /** 소셜 가입 여부(옵션) */
+    /** 소셜 가입 여부 캐시(옵션) */
     @Column(name = "social")
     private boolean social;
-
-    /** 소셜 계정 상세(연결되면 login_id = mem_id 로 매핑) */
-    @OneToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "mem_id", referencedColumnName = "login_id", insertable = false, updatable = false)
-    private SocialAccount socialAccount;
 
     // ===== 권한 편의 메서드 =====
     public void addRole(String role) {

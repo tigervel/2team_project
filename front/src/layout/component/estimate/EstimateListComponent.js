@@ -41,7 +41,8 @@ useEffect(() => {
 
     // 권한 체크 (관리자는 접근 불가, 운전기사만)
     if (!email || !isDriver || isAdmin) {
-      alert("운전기사만 접근 가능합니다.");
+      authChecked.current = true; // ✅ 체크 완료로 표시
+      alert("로그인 후 이용해주세요.");
       navigate("/", { replace: true });
       return;
     }

@@ -5,7 +5,7 @@ import com.giproject.dto.member.MemberDTO;
 import com.giproject.entity.account.UserIndex;
 import com.giproject.entity.cargo.CargoOwner;
 import com.giproject.entity.member.Member;
-import com.giproject.repository.account.UserIndexRepo;
+import com.giproject.repository.account.UserIndexRepository;
 import com.giproject.repository.cargo.CargoOwnerRepository;
 import com.giproject.repository.member.MemberRepository;
 import jakarta.annotation.PostConstruct;
@@ -23,11 +23,9 @@ public class CustomUserDetailsService implements UserDetailsService {
   private final UserIndexRepo userIndexRepo;
   private final MemberRepository memberRepository;
   private final CargoOwnerRepository cargoOwnerRepository;
-
-  @Override
-  public UserDetails loadUserByUsername(String username) {
-    var idx = userIndexRepo.findByLoginId(username)
-        .orElseThrow(() -> new UsernameNotFoundException("사용자 없음: " + username));
+    private final UserIndexRepository userIndexRepo;
+    private final MemberRepository memberRepository;
+    private final CargoOwnerRepository cargoOwnerRepository;
 
     return switch (idx.getRole()) {
       case SHIPPER, ADMIN -> memberRepository.findByMemId(username)
