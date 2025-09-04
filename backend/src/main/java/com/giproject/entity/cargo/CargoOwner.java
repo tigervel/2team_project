@@ -25,6 +25,7 @@ public class CargoOwner {
     @Id
     @EqualsAndHashCode.Include
     @Column(name = "cargo_id", nullable = false)
+    @org.hibernate.annotations.JdbcTypeCode(org.hibernate.type.SqlTypes.VARCHAR)
     private String cargoId; // ★ 문자열 PK (로그인 ID)
 
     /** user_index.login_id 와 읽기 전용으로 연결 */

@@ -30,27 +30,36 @@ const EstimateListComponent = () => {
   const [selectedEno, setSelectedEno] = useState(null)
   const [accepting, setAccepting] = useState(false)
 
-  useEffect(() => {
-    if (authChecked.current) {
-      return; // ✅ 이미 체크했다면 중복 실행 방지
-    }
+useEffect(() => {
+  let ignore = false;
 
-    const isDriver = roles.includes("ROLE_DRIVER");
-    const isAdmin = roles.includes("ROLE_ADMIN");
+  const run = async () => {
+    // roles가 undefined일 수 있으니 안전하게
+    const safeRoles = Array.isArray(roles) ? roles : [];
+    const isDriver = safeRoles.includes("ROLE_DRIVER");
+    const isAdmin  = safeRoles.includes("ROLE_ADMIN");
 
+    // 권한 체크 (관리자는 접근 불가, 운전기사만)
     if (!email || !isDriver || isAdmin) {
-      authChecked.current = true; // ✅ 체크 완료로 표시
       alert("운전기사만 접근 가능합니다.");
       navigate("/", { replace: true });
       return;
     }
 
     try {
-      getEstimateList({ page, size }).then(data => {
-        setServerData(data)
-      })
+      const data = await getEstimateList({ page, size });
+      if (!ignore) setServerData(data);
     } catch (err) {
-      const status = err?.response?.status;
+      const status  = err?.response?.status;
+      const backend = err?.response?.data; // 백엔드가 보낸 메시지(문자열/JSON)
+      console.error("[EstimateList] load failed:", { status, backend, err });
+
+      const msg =
+        backend?.message ||
+        backend?.error ||
+        (typeof backend === "string" ? backend : null) ||
+        "목록을 불러오는 중 오류가 발생했습니다.";
+
       if (status === 401) {
         alert("로그인이 필요합니다.");
         navigate("/", { replace: true });
@@ -61,10 +70,14 @@ const EstimateListComponent = () => {
         alert("기사 계정 정보가 없습니다.");
         navigate("/", { replace: true });
       } else {
-        alert("목록을 불러오는 중 오류가 발생했습니다.");
+        alert(`[${status ?? "ERR"}] ${msg}`);
       }
     }
-  }, [page, size, refresh, navigate, roles, email]);
+  };
+
+  run();
+  return () => { ignore = true; };
+}, [page, size, refresh, navigate, roles, email]);
 
   const handleCancelClose = () => {
     setOpenEstimateListAccept(false);

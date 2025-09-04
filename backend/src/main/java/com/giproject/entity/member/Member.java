@@ -22,9 +22,9 @@ import java.util.List;
 public class Member {
 
     /** 전역 login_id와 동일 값 (PK) */
-    @Id
-    @EqualsAndHashCode.Include
-    @Column(name = "mem_id", length = 50, nullable = false)
+	@Id
+	@Column(name = "mem_id", length = 50, nullable = false, columnDefinition = "varchar(50)")
+	@org.hibernate.annotations.JdbcTypeCode(org.hibernate.type.SqlTypes.VARCHAR)
     private String memId; // ★ 문자열 PK (로그인 ID)
 
     /** user_index.login_id 와 읽기 전용 연결 */
