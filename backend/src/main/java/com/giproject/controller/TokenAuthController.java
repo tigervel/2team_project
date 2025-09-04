@@ -1,3 +1,4 @@
+// src/main/java/com/giproject/controller/TokenAuthController.java
 package com.giproject.controller;
 
 import static com.giproject.security.jwt.JwtClaimKeys.EMAIL;
@@ -206,7 +207,7 @@ public class TokenAuthController {
             UserIndex ui = UserIndex.builder()
                     .loginId(req.getLoginId())
                     .email(emailFromSocial)
-                    .provider(providerStr)
+                    .provider(providerStr.toUpperCase())   // ✅ 저장 규칙 통일(대문자)
                     .providerId(providerId)
                     .role(domainRole)
                     .createdAt(now)
@@ -256,7 +257,7 @@ public class TokenAuthController {
                 }
             }
 
-            // 2-5) social_account 업서트
+            // 2-5) social_account 업서트 (+ 반드시 FK 연결)
             SocialAccount.Provider providerEnum;
             try {
                 providerEnum = SocialAccount.Provider.valueOf(providerStr.toUpperCase());
@@ -271,8 +272,9 @@ public class TokenAuthController {
                             .providerUserId(providerId)
                             .build());
 
+            sa.setUser(ui);                    // ✅ FK 연결이 핵심! (다음 로그인에서 바로 토큰 발급 경로)
             sa.setEmail(emailFromSocial);
-            sa.setLoginId(req.getLoginId());
+            sa.setLoginId(req.getLoginId());   // 보조 필드 유지 시
             sa.setLinkedAt(now);
             sa.setSignupTicket(null);
             sa.setSignupTicketExpireAt(null);
@@ -287,7 +289,7 @@ public class TokenAuthController {
             loginClaims.put(EMAIL, emailFromSocial);
             loginClaims.put(UID, req.getLoginId());
             loginClaims.put(ROLES, new ArrayList<>(new LinkedHashSet<>(roles)));
-            loginClaims.put(PROVIDER, providerStr.toUpperCase());
+            loginClaims.put(PROVIDER, providerEnum.name());
             loginClaims.put(PROVIDER_ID, providerId);
 
             String subject = req.getLoginId(); // 내부 로그인키

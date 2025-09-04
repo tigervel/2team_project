@@ -14,6 +14,19 @@ import useIdForm from '../../../hooks/useIdForm';
 import usePasswordForm from '../../../hooks/usePasswordForm';
 import EmailVerifyDialog from '../auth/EmailVerifyDialog';
 
+// ✅ 공통 에러 메시지 헬퍼: 객체/배열/Error 모두 문자열로 변환
+function getErrorMessage(data) {
+    if (data == null) return '요청에 실패했습니다.';
+    if (typeof data === 'string') return data;
+    if (data instanceof Error) return data.message || '오류가 발생했습니다.';
+    if (typeof data === 'object') {
+        if (typeof data.message === 'string') return data.message;
+        if (Array.isArray(data)) return data.map(getErrorMessage).join('\n');
+        try { return JSON.stringify(data); } catch { return '오류가 발생했습니다.'; }
+    }
+    return String(data);
+}
+
 // 백엔드 베이스 URL
 const API_BASE =
     (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE) ||
@@ -34,13 +47,9 @@ const SIGNUP_TICKET_TTL_MS = 5 * 60 * 1000; // 5분
 
 function saveSignupTicketRaw(rawTicket) {
     if (!rawTicket) return;
-    const payload = {
-        value: String(rawTicket),
-        exp: Date.now() + SIGNUP_TICKET_TTL_MS,
-    };
+    const payload = { value: String(rawTicket), exp: Date.now() + SIGNUP_TICKET_TTL_MS };
     try { sessionStorage.setItem(SIGNUP_TICKET_KEY, JSON.stringify(payload)); } catch { }
 }
-
 function loadSignupTicket() {
     try {
         const raw = sessionStorage.getItem(SIGNUP_TICKET_KEY);
@@ -52,11 +61,8 @@ function loadSignupTicket() {
             return null;
         }
         return obj.value;
-    } catch {
-        return null;
-    }
+    } catch { return null; }
 }
-
 function clearSignupTicket() {
     try { sessionStorage.removeItem(SIGNUP_TICKET_KEY); } catch { }
 }
@@ -102,7 +108,7 @@ const SignUpComponent = () => {
     const [detailAddress, setDetailAddress] = React.useState('');
 
     const [submitting, setSubmitting] = React.useState(false);
-    const [submitError, setSubmitError] = React.useState('');
+    const [submitError, setSubmitError] = React.useState(''); // ✅ 문자열만 저장
 
     const fullEmail = React.useMemo(() => {
         const l = emailLocal.trim(); const d = emailDomain.trim();
@@ -124,13 +130,11 @@ const SignUpComponent = () => {
 
     /* ===============================
        소셜 첫가입 컨텍스트: 단일 가드 + 로더
-       - 해시에 티켓 없으면: 무조건 일반 모드로 초기화 후 return
-       - 해시에 티켓 있으면: 세션 저장(TTL) → 컨텍스트 로드
        =============================== */
     React.useEffect(() => {
         const fromHash = getTicketFromHash(hash);
 
-        // A) 일반 경로(해시에 티켓 없음) → 강제 일반화 + 세션 정리
+        // A) 일반 경로(해시에 티켓 없음)
         if (!fromHash) {
             clearSignupTicket();
             setEmailLocked(false);
@@ -138,18 +142,17 @@ const SignUpComponent = () => {
             setEmailLocal('');
             setEmailDomain('');
             setName('');
-            return; // ✅ 세션에 남아 있더라도 컨텍스트 로드 시도 자체를 하지 않음
+            return;
         }
 
         // B) 소셜 리다이렉트(해시에 티켓 있음) → 세션 저장 후 해시 제거
         saveSignupTicketRaw(fromHash);
         try {
             window.history.replaceState({}, document.title, window.location.pathname + window.location.search);
-        } catch {}
+        } catch { }
 
         const ticket = loadSignupTicket();
         if (!ticket) {
-            // TTL 만료 등 → 일반 모드로
             clearSignupTicket();
             setEmailLocked(false);
             setEmailVerified(false);
@@ -345,8 +348,8 @@ const SignUpComponent = () => {
                 try { data = JSON.parse(text); } catch { data = text; }
 
                 if (!res.ok) {
-                    const msg = Array.isArray(data) ? data.join('\n') : (data || '가입 실패');
-                    setSubmitError(msg);
+                    const msg = getErrorMessage(data) || '가입 실패';
+                    setSubmitError(msg);       // ✅ 문자열만 저장
                     setSubmitting(false);
                     return;
                 }
@@ -372,13 +375,13 @@ const SignUpComponent = () => {
             try { data = JSON.parse(text); } catch { data = text; }
 
             if (!res.ok) {
-                const msg = Array.isArray(data) ? data.join('\n') : (data || '가입 실패');
-                setSubmitError(msg);
+                const msg = getErrorMessage(data) || '가입 실패';
+                setSubmitError(msg);         // ✅ 문자열만 저장
                 setSubmitting(false);
                 return;
             }
 
-            // 일반 가입 성공 UX (필요시 로그인 페이지로 이동하거나 자동 로그인 로직 추가)
+            // 일반 가입 성공 UX
             navigate('/login?joined=1', { replace: true });
         } catch (err) {
             console.error(err);
@@ -509,7 +512,7 @@ const SignUpComponent = () => {
                     <Typography sx={{ width: 32, height: 56, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>@</Typography>
                     <Autocomplete
                         freeSolo
-                        options={domainOptions}
+                        options={['gmail.com', 'naver.com', 'daum.net']}
                         value={emailDomain}
                         onInputChange={(_, v) => { if (!emailLocked) { setEmailDomain(v); setEmailVerified(false); } }}
                         renderInput={(params) => (
@@ -595,7 +598,9 @@ const SignUpComponent = () => {
 
                 {/* 서버 에러 */}
                 {submitError && (
-                    <Typography color="error" sx={{ mb: 1, whiteSpace: 'pre-line' }}>{submitError}</Typography>
+                    <Typography color="error" sx={{ mb: 1, whiteSpace: 'pre-line' }}>
+                        {submitError}
+                    </Typography>
                 )}
 
                 <Box sx={{ width: '100%', display: 'flex' }}>
