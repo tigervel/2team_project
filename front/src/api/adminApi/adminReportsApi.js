@@ -3,9 +3,9 @@ import { API_SERVER_HOST } from "../serverConfig";
 
 const PREFIX = `${API_SERVER_HOST}/g2i4/admin/reports`;
 
-export async function fetchReports({ status, keyword, page = 0, size = 10, sort = "createdAt,desc" }) {
+export async function fetchReports({ status, keyword, searchType, page = 0, size = 10, sort = "createdAt,desc" }) {
   const { data } = await axios.get(PREFIX, {
-    params: { status, keyword, page, size, sort },
+    params: { status, keyword, searchType, page, size, sort },
     withCredentials: false,
   });
   return data;

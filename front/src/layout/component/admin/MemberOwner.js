@@ -65,11 +65,12 @@ const MemberOwner = () => {
     setLoading(true); setError("");
     try {
       const data = await fetchMembers({
-        type: "SHIPPER",
+        type: "OWNER",
         page: page - 1,
         size,
         sort,
         keyword: keyword?.trim() || undefined,
+        searchType: "name",
       });
       setRows(data.content ?? []);
       setTotalPages(Math.max(data.totalPages || 1, 1));
@@ -99,7 +100,7 @@ const MemberOwner = () => {
         </Box>
         <TextField
           variant="outlined"
-          placeholder="Search"
+          placeholder="회원 이름 검색"
           size="small"
           value={keyword}
           onChange={handleSearchChange}

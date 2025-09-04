@@ -8,9 +8,15 @@ export const fetchMembers = async ({
   size = 10,
   sort = "memCreateidDateTime,desc",
   keyword = "",
+  searchType = "",
 } = {}) => {
   const params = new URLSearchParams({ type, page, size, sort });
-  if (keyword && keyword.trim()) params.append("keyword", keyword.trim());
+  if (keyword && keyword.trim()) {
+    params.append("keyword", keyword.trim());
+  }
+  if (searchType) {
+    params.append("searchType", searchType);
+  }
 
   const res = await fetch(`${BASE}?${params.toString()}`);
   if (!res.ok) {

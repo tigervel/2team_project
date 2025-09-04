@@ -28,6 +28,6 @@ public class AdminMemberAliasController {
             @RequestParam(name="keyword", required=false) String keyword,
             @PageableDefault(size=10, sort="memCreateidDateTime", direction = Sort.Direction.DESC) Pageable pageable
     ){
-        return adminMemberService.list(type, keyword, pageable);
+        return adminMemberService.list(type, keyword, null, pageable);
     }
 }

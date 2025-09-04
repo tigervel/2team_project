@@ -12,6 +12,8 @@ import com.giproject.entity.report.UserReport;
 import com.giproject.repository.delivery.DeliveryRepository;
 import com.giproject.repository.matching.MatchingRepository;
 import com.giproject.repository.report.UserReportRepository;
+import com.giproject.repository.member.MemberRepository;
+import com.giproject.repository.cargo.CargoOwnerRepository;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.GeneratedValue;
@@ -24,6 +26,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -33,32 +38,55 @@ public class UserReportServiceImpl implements UserReportService {
 	
     private final UserReportRepository repo;
     private final MatchingRepository matchingRepository;
+    private final MemberRepository memberRepository;
+    private final CargoOwnerRepository cargoOwnerRepository;
+
     @Override
     public long countUnread() {
         return repo.countByAdminReadFalse();
     }
 
     @Override
-    public Page<UserReportDTO> list(Boolean unreadOnly, String keyword, Pageable pageable) {
-        Page<UserReport> page;
-
-        if (Boolean.TRUE.equals(unreadOnly)) {
-            page = (keyword == null || keyword.isBlank())
-                    ? repo.findByAdminRead(false, pageable)
-                    : repo.findByReporterIdContainingIgnoreCaseOrTargetIdContainingIgnoreCaseOrContentContainingIgnoreCase(
-                        keyword, keyword, keyword, pageable
-                    ).map(r -> r);
-        } else {
-            if (keyword == null || keyword.isBlank()) {
-                page = repo.findAll(pageable);
+    public Page<UserReportDTO> list(Boolean unreadOnly, String keyword, String searchType, Pageable pageable) {
+        
+        if ("name".equalsIgnoreCase(searchType) && keyword != null && !keyword.isBlank()) {
+            List<UserReport> allReports;
+            if (Boolean.TRUE.equals(unreadOnly)) {
+                allReports = repo.findByAdminRead(false);
             } else {
-                page = repo.findByReporterIdContainingIgnoreCaseOrTargetIdContainingIgnoreCaseOrContentContainingIgnoreCase(
-                        keyword, keyword, keyword, pageable
-                );
+                allReports = repo.findAll();
             }
-        }
 
-        return page.map(this::entityToDto);
+            List<UserReportDTO> dtos = allReports.stream()
+                .map(this::entityToDto)
+                .filter(dto -> dto.getTargetName() != null && dto.getTargetName().toLowerCase().contains(keyword.toLowerCase()))
+                .collect(Collectors.toList());
+
+            int start = (int) pageable.getOffset();
+            int end = Math.min((start + pageable.getPageSize()), dtos.size());
+            List<UserReportDTO> pageContent = dtos.subList(start, end);
+            
+            return new PageImpl<>(pageContent, pageable, dtos.size());
+
+        } else {
+            Page<UserReport> page;
+            if (Boolean.TRUE.equals(unreadOnly)) {
+                page = (keyword == null || keyword.isBlank())
+                        ? repo.findByAdminRead(false, pageable)
+                        : repo.findByReporterIdContainingIgnoreCaseOrTargetIdContainingIgnoreCaseOrContentContainingIgnoreCase(
+                            keyword, keyword, keyword, pageable
+                        );
+            } else {
+                if (keyword == null || keyword.isBlank()) {
+                    page = repo.findAll(pageable);
+                } else {
+                    page = repo.findByReporterIdContainingIgnoreCaseOrTargetIdContainingIgnoreCaseOrContentContainingIgnoreCase(
+                            keyword, keyword, keyword, pageable
+                    );
+                }
+            }
+            return page.map(this::entityToDto);
+        }
     }
 
     @Override
@@ -129,5 +157,34 @@ public class UserReportServiceImpl implements UserReportService {
 							.build();
 		return dto;
 	}
-}
 
+    @Override
+    public UserReportDTO entityToDto(UserReport e) {
+        if (e == null) return null;
+
+        String targetName = findUserName(e.getTargetId());
+
+        return UserReportDTO.builder()
+                .id(e.getId())
+                .reporterId(e.getReporterId())
+                .targetId(e.getTargetId())
+                .targetName(targetName)
+                .content(e.getContent())
+                .createdAt(e.getCreatedAt())
+                .adminRead(e.isAdminRead())
+                .build();
+    }
+
+    private String findUserName(String userId) {
+        if (userId == null) return null;
+        Optional<Member> memberOpt = memberRepository.findByMemId(userId);
+        if (memberOpt.isPresent()) {
+            return memberOpt.get().getMemName();
+        }
+        Optional<CargoOwner> cargoOwnerOpt = cargoOwnerRepository.findByCargoId(userId);
+        if (cargoOwnerOpt.isPresent()) {
+            return cargoOwnerOpt.get().getCargoName();
+        }
+        return null;
+    }
+}

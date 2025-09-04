@@ -46,8 +46,6 @@ const MemberAdmin = () => {
   }, [location.pathname]);
 
   const handleTabChange = (_e, newValue) => {
-    // setActiveTab(newValue); // This is already handled by useEffect based on location.pathname
-    // No need to set activeTab here if we navigate
     setCurrentPage(1);
     if (newValue === 0) navigate("/admin/memberAll");
     else if (newValue === 1) navigate("/admin/memberOwner");
