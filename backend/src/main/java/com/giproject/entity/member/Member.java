@@ -2,6 +2,7 @@
 package com.giproject.entity.member;
 
 import com.giproject.entity.account.UserIndex;
+import com.giproject.entity.oauth.SocialAccount;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -16,7 +17,7 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-@ToString(exclude = { "memberRoleList", "memPw", "userIndex" })
+@ToString(exclude = { "memberRoleList", "memPw", "userIndex", "socialAccount" })
 @EqualsAndHashCode(onlyExplicitlyIncluded = true)
 public class Member {
 
@@ -46,10 +47,10 @@ public class Member {
 
     @Column(name = "mem_address", length = 255)
     private String memAddress;
-    
-    @Column(name = "profile_image") 
+
+    @Column(name = "profile_image")
     private String profileImage;
-    
+
     /** 생성 시각 (NOT NULL) */
     @Column(name = "mem_create_id_datetime", nullable = false)
     private LocalDateTime memCreateIdDateTime;
@@ -64,6 +65,11 @@ public class Member {
     /** 소셜 가입 여부(옵션) */
     @Column(name = "social")
     private boolean social;
+
+    /** 소셜 계정 상세(연결되면 login_id = mem_id 로 매핑) */
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "mem_id", referencedColumnName = "login_id", insertable = false, updatable = false)
+    private SocialAccount socialAccount;
 
     // ===== 권한 편의 메서드 =====
     public void addRole(String role) {

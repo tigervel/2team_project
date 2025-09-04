@@ -164,7 +164,7 @@ const AdminPage = () => {
                 },
                 plugins: {
                   title: { display: true, text: "신규 회원가입", font: { size: 18, weight: "bold" } },
-                  legend: { display: true, position: "bottom" },
+                  legend: { display: false },
                   tooltip: { mode: "index", intersect: false },
                 },
                 categoryPercentage: 0.6,
@@ -187,7 +187,7 @@ const AdminPage = () => {
                 },
                 plugins: {
                   title: { display: true, text: "월별 배송 내역", font: { size: 18, weight: "bold" } },
-                  legend: { display: true, position: "bottom" },
+                  legend: { display: false },
                   tooltip: { mode: "index", intersect: false },
                 },
                 categoryPercentage: 0.6,

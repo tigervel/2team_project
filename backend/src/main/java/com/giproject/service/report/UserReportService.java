@@ -35,7 +35,7 @@ public interface UserReportService {
 
     long countUnread();
 
-    Page<UserReportDTO> list(Boolean unreadOnly, String keyword, Pageable pageable);
+    Page<UserReportDTO> list(Boolean unreadOnly, String keyword, String searchType, Pageable pageable);
 
     UserReportDTO markRead(Long id, boolean read);
 

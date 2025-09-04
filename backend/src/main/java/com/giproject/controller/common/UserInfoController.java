@@ -27,6 +27,7 @@ public class UserInfoController {
 
     private final MemberRepository memberRepository;
     private final CargoOwnerRepository cargoOwnerRepository;
+
     private static Path resolveUploadRoot() {
         Path rootA = Paths.get("../uploads").toAbsolutePath().normalize();
         Path rootB = Paths.get("uploads").toAbsolutePath().normalize();

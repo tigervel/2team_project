@@ -1,36 +1,49 @@
-import React, { useEffect, useState } from 'react';
+// src/common/Sidebar.js
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   Drawer, List, ListItemIcon, ListItemText, ListItemButton,
-  Typography, Avatar, Divider, Box, Toolbar
+  Typography, Avatar, Divider, Box
 } from '@mui/material';
 import { NavLink } from 'react-router-dom';
 import HomeIcon from '@mui/icons-material/Home';
 import DescriptionIcon from '@mui/icons-material/Description';
 import PersonIcon from '@mui/icons-material/Person';
 import BuildIcon from '@mui/icons-material/Build';
+import { useSelector } from 'react-redux';
 import axios from 'axios';
 
 const drawerWidth = 240;
 const APPBAR_HEIGHT_MOBILE = 56;
 const APPBAR_HEIGHT_DESKTOP = 100;
-
-// === DEBUG 스위치 ===
-const DEBUG_SIDEBAR = true;
-
-// === API 베이스 ===
+const DEFAULT_AVATAR = '/image/placeholders/avatar.svg';
+const pickCargoId = (obj) => {
+  if (!obj || typeof obj !== 'object') return null;
+  return (
+    obj.cargoId ??
+    obj.cargo_id ??
+    obj.ownerId ??
+    obj.cargoOwnerId ??
+    obj.loginId ??             // ★ 콘솔 payload/응답에 loginId 있었음
+    obj?.user?.cargoId ??
+    null
+  );
+};
+// ✅ API 베이스 (앱 전반과 동일 규칙)
 const API_BASE =
-  import.meta?.env?.VITE_API_BASE ||
-  process.env.REACT_APP_API_BASE ||
+  (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE) ||
+  (typeof process !== 'undefined' && process.env?.REACT_APP_API_BASE) ||
   'http://localhost:8080';
 
-const DEFAULT_AVATAR = '/image/placeholders/avatar.svg';
-
-const normalizeProfileUrl = (v) => {
-  if (!v) return null;
-  if (String(v).startsWith('http')) return v;
-  if (String(v).startsWith('/g2i4/uploads/')) return `${API_BASE}${v}`;
-  return `${API_BASE}/g2i4/uploads/user_profile/${encodeURIComponent(v)}`;
-};
+const api = axios.create({ baseURL: API_BASE });
+api.interceptors.request.use((config) => {
+  const token =
+    localStorage.getItem('accessToken') ||
+    sessionStorage.getItem('accessToken') ||
+    localStorage.getItem('ACCESS_TOKEN') ||
+    sessionStorage.getItem('ACCESS_TOKEN');
+  if (token) config.headers.Authorization = `Bearer ${token}`;
+  return config;
+});
 
 const pickToken = () =>
   localStorage.getItem('accessToken') ||
@@ -39,102 +52,116 @@ const pickToken = () =>
   sessionStorage.getItem('ACCESS_TOKEN') ||
   null;
 
-const parseUserType = (raw) => {
-  const t = raw?.userType || raw?.type || raw?.role || raw?.loginType || null;
-  if (t === 'MEMBER' || t === 'CARGO_OWNER') return t;
-  const data = raw?.data || raw?.user || raw?.payload || raw?.profile || raw?.account || raw?.result || {};
-  const guess = data?.userType || data?.type || data?.role || data?.loginType || null;
-  return (guess === 'MEMBER' || guess === 'CARGO_OWNER') ? guess : null;
-};
+function decodeJwt(token) {
+  try {
+    const base64Url = token.split('.')[1];
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    const json = decodeURIComponent(
+      atob(base64)
+        .split('')
+        .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+        .join('')
+    );
+    return JSON.parse(json);
+  } catch {
+    return null;
+  }
+}
 
-const pickCargoId = (raw) => {
-  const sources = [
-    raw?.cargoId, raw?.cargo_id, raw?.ownerId, raw?.cid,
-    raw?.data?.cargoId, raw?.data?.cargo_id, raw?.result?.cargoId,
-    raw?.profile?.cargoId, raw?.user?.cargoId,
-  ];
-  return sources.find(Boolean) ?? null;
-};
+function normalizeRoles(raw) {
+  if (!raw) return [];
+  const arr = Array.isArray(raw) ? raw : [raw];
+  return arr
+    .flatMap((r) => {
+      if (!r) return [];
+      if (typeof r === 'string') return [r];
+      if (r.authority) return [r.authority];
+      if (r.role) return [r.role];
+      if (r.roleName) return [r.roleName];
+      if (r.name) return [r.name];
+      return [String(r)];
+    })
+    .map((s) => s.toUpperCase());
+}
 
 const Sidebar = () => {
-  const [avatarUrl, setAvatarUrl] = useState(null);
-  const [cargoId, setCargoId] = useState(null);
-  const [isOwner, setIsOwner] = useState(false);
+  const loginState = useSelector((state) => state?.login) || {};
+  const token = typeof window !== 'undefined' ? pickToken() : null;
+  const payload = token ? decodeJwt(token) : null;
 
+  const [fetchedUserType, setFetchedUserType] = useState(null); // 'MEMBER' | 'CARGO_OWNER'
+  const [fetchedCargoId, setFetchedCargoId] = useState(null);
+  const [ready, setReady] = useState(false);
+  // 🔎 백엔드에서 최종 확정(토큰에 권한 없을 수 있으니)
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const token = pickToken();
-
-      if (DEBUG_SIDEBAR) {
-        console.groupCollapsed('%c[Sidebar:init] 요청 준비', 'color:#888');
-        console.log('API_BASE =', API_BASE);
-        console.log('token exists =', !!token, token ? `(prefix) ${String(token).slice(0, 12)}...` : '');
-        console.groupEnd();
-      }
-
       try {
-        const { data: raw } = await axios.get(`${API_BASE}/g2i4/user/info`, {
-          headers: token ? { Authorization: `Bearer ${token}` } : {},
-        });
+        const { data } = await api.get('/g2i4/user/info');
+        const t =
+          data?.userType || data?.data?.userType || data?.type || data?.role || data?.loginType || null;
 
-        const data =
-          raw?.data || raw?.user || raw?.payload || raw?.profile || raw?.account || raw?.result || {};
-        const nameOrWebPath =
-          data.webPath ||
-          data.profileImage ||
-          data.mem_profile_image ||
-          data.cargo_profile_image ||
-          data.profile ||
-          '';
+        // ★ 여기서 넓게 줍기: top-level → data → user 순
+        let cid =
+          pickCargoId(data) ||
+          pickCargoId(data?.data) ||
+          pickCargoId(data?.user) ||
+          null;
 
-        const url = normalizeProfileUrl(nameOrWebPath);
-        const type = parseUserType(raw);
-        const cid = pickCargoId(raw);
-
-        if (DEBUG_SIDEBAR) {
-          console.groupCollapsed('%c[Sidebar:init] 응답 파싱', 'color:#4a8');
-          console.log('raw =', raw);
-          console.log('parsed userType =', type);
-          console.log('picked cargoId  =', cid);
-          console.log('profile name/webPath =', nameOrWebPath);
-          console.log('normalized avatarUrl =', url);
-          console.groupEnd();
+        // ★ 추가 보정: 차주인데 아직 못 찾았으면 loginId/payload.loginId로 보정
+        if (!cid && (t === 'CARGO_OWNER')) {
+          // 토큰 payload도 이미 계산돼 있음
+          cid = data?.loginId || data?.data?.loginId || payload?.loginId || null;
         }
 
         if (!cancelled) {
-          setAvatarUrl(url);
-          setIsOwner(type === 'CARGO_OWNER');
-          setCargoId(cid);
+          if (t) setFetchedUserType(t);
+          if (cid) setFetchedCargoId(cid);
         }
-      } catch (e) {
-        if (DEBUG_SIDEBAR) {
-          console.group('%c[Sidebar:init] 요청 실패', 'color:#c44');
-          console.log('error =', e);
-          console.log('status =', e?.response?.status);
-          console.log('response.data =', e?.response?.data);
-          console.groupEnd();
-        }
-        if (!cancelled) {
-          setAvatarUrl(null);
-          setIsOwner(false);
-          setCargoId(null);
-        }
+      } finally {
+        if (!cancelled) setReady(true);
       }
     })();
     return () => { cancelled = true; };
   }, []);
+  const avatarUrl = loginState?.profileImage || DEFAULT_AVATAR;
 
-  // 상태가 바뀔 때마다 표시조건도 함께 로그
-  useEffect(() => {
-    if (!DEBUG_SIDEBAR) return;
-    console.groupCollapsed('%c[Sidebar:state] 변경됨', 'color:#888');
-    console.table([{ isOwner, cargoId, showVehicleMenu: Boolean(isOwner && cargoId) }]);
-    console.groupEnd();
-  }, [isOwner, cargoId]);
+  // ✅ Redux/토큰 역할
+  const roles = useMemo(() => {
+    const fromRedux = normalizeRoles(loginState?.roles || loginState?.rolenames);
+    const fromToken = normalizeRoles(payload?.roles || payload?.rolenames || payload?.authorities);
+    return [...fromRedux, ...fromToken];
+  }, [loginState, payload]);
+
+  // ✅ 토큰/리덕스 기반 차주 판정
+  const isOwnerFromTokenOrRedux = useMemo(
+    () => roles.some((r) => r.endsWith('CARGO_OWNER')),
+    [roles]
+  );
+
+  // ✅ 백엔드 기반 차주 판정
+  const isOwnerFromAPI = fetchedUserType === 'CARGO_OWNER';
+
+  // ✅ 최종 차주 판정: 둘 중 하나라도 true면 차주로 본다
+  const isOwner = isOwnerFromTokenOrRedux || isOwnerFromAPI;
+
+  // ✅ cargoId: Redux/토큰/백엔드 다 뒤져보기
+  const cargoId =
+    loginState?.cargoId ??
+    loginState?.user?.cargoId ??
+    payload?.cargoId ??
+    payload?.user?.cargoId ??
+    fetchedCargoId ??              // ← 위에서 세팅
+    payload?.loginId ??            // ★ 마지막 보정
+    null;
+  // 버튼은 차주면 무조건 노출(UX 이득). 링크는 cargoId 있으면 개인 경로, 없으면 기본 경로
+  const vehicleHref = `/mypage/vehicle/${cargoId}`;
 
   const navStyle = { textDecoration: 'none', color: 'inherit' };
   const activeStyle = { backgroundColor: '#e0e0e0' };
+
+  // 👉 꼭 한 번 확인해보세요 (임시 디버깅 UI)
+  // console.log('[Sidebar] isOwner?', { roles, isOwnerFromTokenOrRedux, fetchedUserType, isOwner, cargoId });
 
   return (
     <Drawer
@@ -146,11 +173,10 @@ const Sidebar = () => {
           width: drawerWidth,
           boxSizing: 'border-box',
           position: 'sticky',
-          top: APPBAR_HEIGHT_MOBILE,   // 데스크탑에서도 자동으로 sticky 됨
-          alignSelf: 'flex-start',     // flex 컨테이너 안에서 정상 동작하도록
+          top: { xs: APPBAR_HEIGHT_MOBILE, md: APPBAR_HEIGHT_DESKTOP },
+          alignSelf: 'flex-start',
         },
-      }
-      }
+      }}
     >
       <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', p: 2 }}>
         <Typography variant="h6" fontWeight="bold" gutterBottom>
@@ -159,13 +185,12 @@ const Sidebar = () => {
 
         <Avatar
           sx={{ width: 56, height: 56, bgcolor: 'grey.200', color: 'grey.500' }}
-          src={avatarUrl || DEFAULT_AVATAR}
+          src={avatarUrl}
           imgProps={{
             referrerPolicy: 'no-referrer',
-            onError: () => {
-              if (DEBUG_SIDEBAR) console.warn('[Sidebar] avatar load error → fallback');
-              setAvatarUrl(null);
-            },
+            crossOrigin: 'anonymous',
+            loading: 'lazy',
+            onError: (e) => { e.currentTarget.src = DEFAULT_AVATAR; },
           }}
           alt="프로필"
         >
@@ -194,6 +219,7 @@ const Sidebar = () => {
           )}
         </NavLink>
 
+
         <NavLink to="/mypage/edit" style={navStyle}>
           {({ isActive }) => (
             <ListItemButton sx={isActive ? activeStyle : null}>
@@ -202,16 +228,8 @@ const Sidebar = () => {
             </ListItemButton>
           )}
         </NavLink>
-
-        {/* 차주이고 cargoId가 있을 때만 노출 */}
         {isOwner && cargoId && (
-          <NavLink
-            to={`/mypage/vehicle/${cargoId}`}
-            style={navStyle}
-            onClick={() => {
-              if (DEBUG_SIDEBAR) console.log('[Sidebar] 차량관리 클릭 cargoId =', cargoId);
-            }}
-          >
+          <NavLink to={`vehicle/${cargoId}`} style={navStyle}>
             {({ isActive }) => (
               <ListItemButton sx={isActive ? activeStyle : null}>
                 <ListItemIcon><BuildIcon /></ListItemIcon>
@@ -221,7 +239,10 @@ const Sidebar = () => {
           </NavLink>
         )}
       </List>
-    </Drawer >
+
+
+
+    </Drawer>
   );
 };
 

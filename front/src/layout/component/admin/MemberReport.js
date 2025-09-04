@@ -83,6 +83,7 @@ const MemberReport = () => {
       const data = await fetchReports({
         unreadOnly,
         keyword,
+        searchType: "name",
         page: page - 1,
         size,
         sort: "createdAt,desc",
@@ -171,7 +172,7 @@ const MemberReport = () => {
 
           <TextField
             variant="outlined"
-            placeholder="Search"
+            placeholder="신고대상 이름 검색"
             size="small"
             value={keyword}
             onChange={(e) => { setPage(1); setKeyword(e.target.value); }}
@@ -193,7 +194,8 @@ const MemberReport = () => {
           <Table sx={{ minWidth: 800 }}>
             <TableHead>
               <TableRow>
-                <TableCell>신고대상</TableCell>
+                <TableCell>신고대상ID</TableCell>
+                <TableCell>신고대상 이름</TableCell>
                 <TableCell>신고자</TableCell>
                 <TableCell>신고일</TableCell>
                 <TableCell>사유</TableCell>
@@ -207,6 +209,7 @@ const MemberReport = () => {
                   sx={{ cursor: 'pointer', '&:hover': { backgroundColor: '#f5f5f5' } }}
                 >
                   <TableCell>{r.targetId ?? "-"}</TableCell>
+                  <TableCell>{r.targetName ?? "-"}</TableCell>
                   <TableCell>{r.reporterId ?? "-"}</TableCell>
                   <TableCell>{fmtDate(r.createdAt)}</TableCell>
                   <TableCell>{r.content ? `${r.content.substring(0, 40)}...` : "-"}</TableCell>

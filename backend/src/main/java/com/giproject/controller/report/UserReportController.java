@@ -29,9 +29,10 @@ public class UserReportController {
     public ResponseEntity<Page<UserReportDTO>> list(
             @RequestParam(name = "unreadOnly", required = false) Boolean unreadOnly,
             @RequestParam(name = "keyword", required = false) String keyword,
+            @RequestParam(name = "searchType", required = false) String searchType,
             Pageable pageable
     ) {
-        return ResponseEntity.ok(service.list(unreadOnly, keyword, pageable));
+        return ResponseEntity.ok(service.list(unreadOnly, keyword, searchType, pageable));
     }
     
     @PutMapping("/{id}/read")

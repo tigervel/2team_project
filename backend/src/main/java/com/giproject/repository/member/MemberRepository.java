@@ -35,6 +35,8 @@ public interface MemberRepository extends JpaRepository<Member, String> {
     Optional<Member> findByMemId(String memId);
     
     Optional<Member> findByMemEmail(String memEmail);
+
+    List<Member> findByMemNameContainingIgnoreCase(String memName);
     
 
     // 검색

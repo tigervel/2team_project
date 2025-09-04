@@ -1,3 +1,4 @@
+// src/main/java/com/giproject/config/ResourceConfig.java
 package com.giproject.config;
 
 import org.springframework.context.annotation.Configuration;

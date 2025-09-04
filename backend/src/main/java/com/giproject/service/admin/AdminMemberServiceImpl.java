@@ -40,47 +40,84 @@ public class AdminMemberServiceImpl implements AdminMemberService {
 	private final AdminDeliveryService adminDeliveryService; // Added
 	private final UserIndexRepository userIndexRepository; // Added
 
-	public Page<AdminMemberDTO> list(String type, String keyword, Pageable pageable) {
+	@Override
+	public Page<AdminMemberDTO> list(String type, String keyword, String searchType, Pageable pageable) {
 		String t = (type == null ? "all" : type.trim()).toUpperCase(Locale.ROOT);
 		boolean hasKeyword = keyword != null && !keyword.isBlank();
 
-		log.info("[Service] list IN type={}, hasKeyword={}, pageable={}", t, hasKeyword, pageable);
+		log.info("[Service] list IN type={}, hasKeyword={}, searchType={}, pageable={}", t, hasKeyword, searchType, pageable);
 
-		List<AdminMemberDTO> rows;
+		List<AdminMemberDTO> rows = new ArrayList<>();
 		try {
-			switch (t) {
-			case "OWNER" -> rows = toOwners(hasKeyword ? keyword : null);
-			case "COWNER" -> rows = toCowners(hasKeyword ? keyword : null);
-			case "ADMIN" -> rows = toAdmins(hasKeyword ? keyword : null);
-			default -> {
-				List<UserIndex.Role> roles = List.of(UserIndex.Role.SHIPPER, UserIndex.Role.DRIVER, UserIndex.Role.ADMIN);
-				List<UserIndex> userIndices;
-				if (hasKeyword) {
-					userIndices = userIndexRepository.findByRolesAndKeyword(roles, keyword);
-				} else {
-					userIndices = userIndexRepository.findByRoles(roles);
-				}
-				List<AdminMemberDTO> merged = userIndices.stream()
-						.map(ui -> {
-							if (ui.getRole() == UserIndex.Role.SHIPPER) {
-								return memberRepository.findByMemId(ui.getLoginId())
-										.map(this::ownerToDto)
-										.orElse(null);
-							} else if (ui.getRole() == UserIndex.Role.DRIVER) {
-								return cargoOwnerRepository.findByCargoId(ui.getLoginId())
-										.map(this::cownerToDto)
-										.orElse(null);
-							} else if (ui.getRole() == UserIndex.Role.ADMIN) {
-								return memberRepository.findByMemId(ui.getLoginId())
-										.map(this::adminToDto)
-										.orElse(null);
+			if (hasKeyword && "name".equalsIgnoreCase(searchType)) {
+                log.info("[NameSearch] Starting name search for type '{}' with keyword '{}'", t, keyword);
+				if ("ALL".equals(t) || "OWNER".equals(t) || "ADMIN".equals(t)) {
+					List<Member> members = memberRepository.findByMemNameContainingIgnoreCase(keyword);
+                    log.info("[NameSearch] Found {} members for keyword '{}'", members.size(), keyword);
+					members.forEach(m -> {
+                        log.info("[NameSearch] Processing member: {}", m.getMemId());
+						userIndexRepository.findByLoginId(m.getMemId()).ifPresent(ui -> {
+                            log.info("[NameSearch] Found UserIndex for {}: role={}", ui.getLoginId(), ui.getRole());
+							if (ui.getRole() == Role.SHIPPER && ("ALL".equals(t) || "OWNER".equals(t))) {
+                                log.info("[NameSearch] Adding owner DTO for {}", m.getMemId());
+								rows.add(ownerToDto(m));
+							} else if (ui.getRole() == Role.ADMIN && ("ALL".equals(t) || "ADMIN".equals(t))) {
+                                log.info("[NameSearch] Adding admin DTO for {}", m.getMemId());
+								rows.add(adminToDto(m));
 							}
-							return null;
-						})
-						.filter(java.util.Objects::nonNull)
-						.collect(Collectors.toList());
-				rows = merged;
-			}
+						});
+					});
+				}
+				if ("ALL".equals(t) || "COWNER".equals(t)) {
+					List<CargoOwner> cargoOwners = cargoOwnerRepository.findByCargoNameContainingIgnoreCase(keyword);
+                    log.info("[NameSearch] Found {} cargo owners for keyword '{}'", cargoOwners.size(), keyword);
+					cargoOwners.forEach(c -> {
+                        log.info("[NameSearch] Adding cowner DTO for {}", c.getCargoId());
+                        rows.add(cownerToDto(c));
+                    });
+				}
+			} else {
+				// Existing logic for ID/email search
+				switch (t) {
+					case "OWNER":
+						rows.addAll(toOwners(hasKeyword ? keyword : null));
+						break;
+					case "COWNER":
+						rows.addAll(toCowners(hasKeyword ? keyword : null));
+						break;
+					case "ADMIN":
+						rows.addAll(toAdmins(hasKeyword ? keyword : null));
+						break;
+					default:
+						List<UserIndex.Role> roles = List.of(UserIndex.Role.SHIPPER, UserIndex.Role.DRIVER);
+						List<UserIndex> userIndices;
+						if (hasKeyword) {
+							userIndices = userIndexRepository.findByRolesAndKeyword(roles, keyword);
+						} else {
+							userIndices = userIndexRepository.findByRoles(roles);
+						}
+						List<AdminMemberDTO> merged = userIndices.stream()
+								.map(ui -> {
+									if (ui.getRole() == UserIndex.Role.SHIPPER) {
+										return memberRepository.findByMemId(ui.getLoginId())
+												.map(this::ownerToDto)
+												.orElse(null);
+									} else if (ui.getRole() == UserIndex.Role.DRIVER) {
+										return cargoOwnerRepository.findByCargoId(ui.getLoginId())
+												.map(this::cownerToDto)
+												.orElse(null);
+									} else if (ui.getRole() == UserIndex.Role.ADMIN) {
+										return memberRepository.findByMemId(ui.getLoginId())
+												.map(this::adminToDto)
+												.orElse(null);
+									}
+									return null;
+								})
+								.filter(java.util.Objects::nonNull)
+								.collect(Collectors.toList());
+						rows.addAll(merged);
+						break;
+				}
 			}
 		} catch (Exception e) {
 			log.error("[Service] building rows failed: type={}, keyword={}", t, keyword, e);
@@ -135,17 +172,17 @@ public class AdminMemberServiceImpl implements AdminMemberService {
 
 	@Override
 	public Page<AdminMemberDTO> owners(String keyword, Pageable pageable) {
-		return list("OWNER", keyword, pageable);
+		return list("OWNER", keyword, null, pageable);
 	}
 
 	@Override
 	public Page<AdminMemberDTO> cowners(String keyword, Pageable pageable) {
-		return list("COWNER", keyword, pageable);
+		return list("COWNER", keyword, null, pageable);
 	}
 
 	@Override
 	public Page<AdminMemberDTO> admins(String keyword, Pageable pageable) {
-		return list("ADMIN", keyword, pageable);
+		return list("ADMIN", keyword, null, pageable);
 	}
 
 	private List<AdminMemberDTO> toOwners(String keyword) {

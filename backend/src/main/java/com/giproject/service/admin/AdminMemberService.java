@@ -6,7 +6,7 @@ import org.springframework.data.domain.Pageable;
 
 public interface AdminMemberService {
 
-	Page<AdminMemberDTO> list(String type, String keyword, Pageable pageable);
+	Page<AdminMemberDTO> list(String type, String keyword, String searchType, Pageable pageable);
 
 	Page<AdminMemberDTO> owners(String keyword, Pageable pageable);
 

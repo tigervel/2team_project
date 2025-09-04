@@ -13,35 +13,35 @@ import com.giproject.entity.delivery.Delivery;
 public interface OwnerDeliveryQueryRepository extends Repository<com.giproject.entity.delivery.Delivery, Long> {
 
     /** 미결제: 매칭 승인됨 + 주문서는 존재 + 해당 주문서에 결제 없음 */
-    @Query("""
-        select new com.giproject.dto.delivery.DeliveryRowDTO(
-            e.eno,
-            e.cargoType,
-            cast(e.cargoWeight as string),
-            e.startAddress,
-            e.endAddress,
-            e.startTime,
-            e.member.memId, 
-            co.cargoName,
-            null,
-            m.matchingNo,
-            null
-        )
-        from com.giproject.entity.matching.Matching m
-        join m.estimate e
-        join m.cargoOwner co
-        left join m.orderSheet os
-        where co.cargoId = :cargoId
-          and m.isAccepted = true
-          and os is not null
-          and not exists (
-                select p.paymentNo
-                from com.giproject.entity.payment.Payment p
-                where p.orderSheet = os
-          )
-        order by e.eno desc
-    """)
-    List<DeliveryRowDTO> findUnpaidByCargoId(@Param("cargoId") String cargoId);
+	@Query("""
+			select new com.giproject.dto.delivery.DeliveryRowDTO(
+			    e.eno,
+			    e.cargoType,
+			    cast(e.cargoWeight as string),
+			    e.startAddress,
+			    e.endAddress,
+			    e.startTime,
+			    e.member.memId, 
+			    co.cargoName,
+			    null,          
+			    m.matchingNo,
+			    null            
+			)
+			from com.giproject.entity.matching.Matching m
+			join m.estimate e
+			join m.cargoOwner co
+			left join m.orderSheet os
+			left join com.giproject.entity.payment.Payment p on p.orderSheet = os
+			left join com.giproject.entity.delivery.Delivery d on d.payment = p
+			where co.cargoId = :cargoId
+			  and m.isAccepted = true
+			  and (os is null or p is null)  
+			  and (d is null or d.status <> com.giproject.entity.delivery.DeliveryStatus.COMPLETED)
+			order by m.matchingNo desc
+			""")
+			List<DeliveryRowDTO> findUnpaidByCargoId(@Param("cargoId") String cargoId);
+
+
 
     /** 결제됨(대기/배송중): 해당 주문서 결제 있음 + Delivery가 없거나(=대기) / 완료가 아님 */
     @Query("""
