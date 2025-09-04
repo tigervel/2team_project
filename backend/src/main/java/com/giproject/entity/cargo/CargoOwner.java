@@ -24,16 +24,13 @@ public class CargoOwner {
     /** 전역 login_id와 동일 값 (PK) */
     @Id
     @EqualsAndHashCode.Include
-    @Column(name = "cargo_id", nullable = false)
-    private String cargoId; // ★ 문자열 PK (로그인 ID)
+    @Column(name = "cargo_id", length = 50, nullable = false)
+    private String cargoId; // 문자열 PK (로그인 ID)
 
-    /** user_index.login_id 와 읽기 전용으로 연결 */
+    /** user_index.login_id 와 읽기 전용 연결 */
     @OneToOne(fetch = FetchType.LAZY)
-    @JoinColumn(
-        name = "cargo_id",                 // 이 엔티티의 FK(=PK)
-        referencedColumnName = "login_id", // user_index의 UNIQUE/PK 컬럼
-        insertable = false, updatable = false
-    )
+    @JoinColumn(name = "cargo_id", referencedColumnName = "login_id",
+            insertable = false, updatable = false)
     private UserIndex userIndex;
 
     /** 반드시 해시 저장(BCrypt) */
@@ -52,19 +49,23 @@ public class CargoOwner {
     @Column(name = "cargo_address", length = 255)
     private String cargoAddress;
 
-    /** 생성 시각 (NOT NULL) — Member와 컬럼명 일관화 */
+    /** 생성 시각 (NOT NULL) */
     @Column(name = "cargo_created_date_time", nullable = false)
     private LocalDateTime cargoCreatedDateTime;
 
     @Column(name = "profile_image", length = 255)
     private String profileImage;
 
+    /** 소셜 가입 여부 캐시(옵션) — 화면 빠른 표시용 */
+    @Column(name = "social")
+    private boolean social;
+
     @OneToMany(mappedBy = "cargoOwner", cascade = CascadeType.ALL, orphanRemoval = true)
     @JsonManagedReference
     @Builder.Default
     private List<Cargo> cargoList = new ArrayList<>();
 
-    // 생성 시각 자동 세팅
+    // ===== 생성시각 자동 세팅 =====
     @PrePersist
     protected void onCreate() {
         if (cargoCreatedDateTime == null) {

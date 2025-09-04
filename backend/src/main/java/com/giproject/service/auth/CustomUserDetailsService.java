@@ -5,7 +5,7 @@ import com.giproject.dto.member.MemberDTO;
 import com.giproject.entity.account.UserIndex;
 import com.giproject.entity.cargo.CargoOwner;
 import com.giproject.entity.member.Member;
-import com.giproject.repository.account.UserIndexRepo;
+import com.giproject.repository.account.UserIndexRepository;
 import com.giproject.repository.cargo.CargoOwnerRepository;
 import com.giproject.repository.member.MemberRepository;
 import lombok.RequiredArgsConstructor;
@@ -21,7 +21,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Log4j2
 public class CustomUserDetailsService implements UserDetailsService {
 
-    private final UserIndexRepo userIndexRepo;
+    private final UserIndexRepository userIndexRepo;
     private final MemberRepository memberRepository;
     private final CargoOwnerRepository cargoOwnerRepository;
 

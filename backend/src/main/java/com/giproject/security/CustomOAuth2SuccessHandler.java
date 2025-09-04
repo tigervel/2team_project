@@ -5,7 +5,7 @@ import static com.giproject.security.jwt.JwtClaimKeys.*;
 
 import com.giproject.entity.account.UserIndex;
 import com.giproject.entity.oauth.SocialAccount;
-import com.giproject.repository.account.UserIndexRepo;          // ✅ 추가
+import com.giproject.repository.account.UserIndexRepository;
 import com.giproject.repository.oauth.SocialAccountRepo;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -30,7 +30,7 @@ public class CustomOAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHa
 
     private final JwtService jwtService;
     private final SocialAccountRepo socialAccountRepo;
-    private final UserIndexRepo userIndexRepo;                      // ✅ 추가
+    private final UserIndexRepository userIndexRepo;                      // ✅ 추가
 
     @Value("${frontend.base-url:http://localhost:3000}")
     private String frontendBaseUrl;

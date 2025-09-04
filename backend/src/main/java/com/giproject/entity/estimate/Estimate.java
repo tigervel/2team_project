@@ -60,7 +60,7 @@ public class Estimate {
 	private boolean isTemp;//true 면 임시저장
 	
 	@ManyToOne
-	@JoinColumn(name = "memId")
+	@JoinColumn(name = "mem_id")
 	private Member member;
 	
 	public void changeStartAddress(String startAddress) {

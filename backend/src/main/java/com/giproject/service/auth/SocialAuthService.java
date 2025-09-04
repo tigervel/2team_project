@@ -21,7 +21,7 @@ import com.giproject.entity.cargo.CargoOwner;
 import com.giproject.entity.member.Member;
 import com.giproject.entity.oauth.SocialAccount;
 import com.giproject.entity.oauth.SocialAccount.Provider;
-import com.giproject.repository.account.UserIndexRepo;
+import com.giproject.repository.account.UserIndexRepository;
 import com.giproject.repository.cargo.CargoOwnerRepository;
 import com.giproject.repository.member.MemberRepository;
 import com.giproject.repository.oauth.SocialAccountRepo;
@@ -31,7 +31,7 @@ import com.giproject.repository.oauth.SocialAccountRepo;
 public class SocialAuthService {
 
     private final SocialAccountRepo socialAccountRepo;
-    private final UserIndexRepo userIndexRepo;
+    private final UserIndexRepository userIndexRepo;
     private final MemberRepository memberRepo;
     private final CargoOwnerRepository cargoRepo;
     private final PasswordEncoder encoder;
