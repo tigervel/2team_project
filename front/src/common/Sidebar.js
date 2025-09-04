@@ -1,46 +1,49 @@
-import React, { useEffect, useState } from 'react';
+// src/common/Sidebar.js
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   Drawer, List, ListItemIcon, ListItemText, ListItemButton,
-  Typography, Avatar, Divider, Box, Skeleton
+  Typography, Avatar, Divider, Box
 } from '@mui/material';
 import { NavLink } from 'react-router-dom';
 import HomeIcon from '@mui/icons-material/Home';
 import DescriptionIcon from '@mui/icons-material/Description';
 import PersonIcon from '@mui/icons-material/Person';
 import BuildIcon from '@mui/icons-material/Build';
+import { useSelector } from 'react-redux';
 import axios from 'axios';
 
 const drawerWidth = 240;
 const APPBAR_HEIGHT_MOBILE = 56;
 const APPBAR_HEIGHT_DESKTOP = 100;
-
-const DEBUG_SIDEBAR = false;
-
-// === API 베이스 ===
+const DEFAULT_AVATAR = '/image/placeholders/avatar.svg';
+const pickCargoId = (obj) => {
+  if (!obj || typeof obj !== 'object') return null;
+  return (
+    obj.cargoId ??
+    obj.cargo_id ??
+    obj.ownerId ??
+    obj.cargoOwnerId ??
+    obj.loginId ??             // ★ 콘솔 payload/응답에 loginId 있었음
+    obj?.user?.cargoId ??
+    null
+  );
+};
+// ✅ API 베이스 (앱 전반과 동일 규칙)
 const API_BASE =
-  import.meta?.env?.VITE_API_BASE ||
-  process.env.REACT_APP_API_BASE ||
+  (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE) ||
+  (typeof process !== 'undefined' && process.env?.REACT_APP_API_BASE) ||
   'http://localhost:8080';
 
-// 절대 실패 안 하는 인라인 폴백(회색만 남는 문제 방지)
-const DEFAULT_AVATAR =
-  'data:image/svg+xml;utf8,' +
-  encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80">
-    <defs><linearGradient id="g" x1="0" x2="1"><stop offset="0" stop-color="#e0e0e0"/><stop offset="1" stop-color="#cfcfcf"/></linearGradient></defs>
-    <circle cx="40" cy="40" r="40" fill="url(#g)"/>
-    <circle cx="40" cy="32" r="14" fill="#fff" fill-opacity=".7"/>
-    <path d="M10 70c6-12 18-20 30-20s24 8 30 20" fill="#fff" fill-opacity=".7"/>
-  </svg>`);
-
-const normalizeProfileUrl = (v) => {
-  if (!v) return null;
-  const s = String(v).trim();
-  if (!s) return null;
-  if (s.startsWith('http://') || s.startsWith('https://')) return s;
-  if (s.startsWith('/g2i4/uploads/')) return `${API_BASE}${s}`;
-  const fname = encodeURIComponent(s.replace(/^\/+/, ''));
-  return `${API_BASE}/g2i4/uploads/user_profile/${fname}`;
-};
+const api = axios.create({ baseURL: API_BASE });
+api.interceptors.request.use((config) => {
+  const token =
+    localStorage.getItem('accessToken') ||
+    sessionStorage.getItem('accessToken') ||
+    localStorage.getItem('ACCESS_TOKEN') ||
+    sessionStorage.getItem('ACCESS_TOKEN');
+  if (token) config.headers.Authorization = `Bearer ${token}`;
+  return config;
+});
 
 const pickToken = () =>
   localStorage.getItem('accessToken') ||
@@ -49,122 +52,116 @@ const pickToken = () =>
   sessionStorage.getItem('ACCESS_TOKEN') ||
   null;
 
-// === 사이드바 전용 캐시 키 ===
-const CACHE_KEY = 'sidebar.userinfo.cache';
+function decodeJwt(token) {
+  try {
+    const base64Url = token.split('.')[1];
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    const json = decodeURIComponent(
+      atob(base64)
+        .split('')
+        .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+        .join('')
+    );
+    return JSON.parse(json);
+  } catch {
+    return null;
+  }
+}
 
-// === 중복 호출 방지(단일 비행)용 모듈 스코프 프라미스 ===
-let inflight = null;
+function normalizeRoles(raw) {
+  if (!raw) return [];
+  const arr = Array.isArray(raw) ? raw : [raw];
+  return arr
+    .flatMap((r) => {
+      if (!r) return [];
+      if (typeof r === 'string') return [r];
+      if (r.authority) return [r.authority];
+      if (r.role) return [r.role];
+      if (r.roleName) return [r.roleName];
+      if (r.name) return [r.name];
+      return [String(r)];
+    })
+    .map((s) => s.toUpperCase());
+}
 
 const Sidebar = () => {
-  const [avatarUrl, setAvatarUrl] = useState(null);
-  const [cargoId, setCargoId] = useState(null);
-  const [isOwner, setIsOwner] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const loginState = useSelector((state) => state?.login) || {};
+  const token = typeof window !== 'undefined' ? pickToken() : null;
+  const payload = token ? decodeJwt(token) : null;
 
-  // 1) 즉시: 로컬 캐시를 읽어 화면을 채움(0ms)
+  const [fetchedUserType, setFetchedUserType] = useState(null); // 'MEMBER' | 'CARGO_OWNER'
+  const [fetchedCargoId, setFetchedCargoId] = useState(null);
+  const [ready, setReady] = useState(false);
+  // 🔎 백엔드에서 최종 확정(토큰에 권한 없을 수 있으니)
   useEffect(() => {
-    const cached = (() => {
+    let cancelled = false;
+    (async () => {
       try {
-        const raw = localStorage.getItem(CACHE_KEY);
-        return raw ? JSON.parse(raw) : null;
-      } catch {
-        return null;
+        const { data } = await api.get('/g2i4/user/info');
+        const t =
+          data?.userType || data?.data?.userType || data?.type || data?.role || data?.loginType || null;
+
+        // ★ 여기서 넓게 줍기: top-level → data → user 순
+        let cid =
+          pickCargoId(data) ||
+          pickCargoId(data?.data) ||
+          pickCargoId(data?.user) ||
+          null;
+
+        // ★ 추가 보정: 차주인데 아직 못 찾았으면 loginId/payload.loginId로 보정
+        if (!cid && (t === 'CARGO_OWNER')) {
+          // 토큰 payload도 이미 계산돼 있음
+          cid = data?.loginId || data?.data?.loginId || payload?.loginId || null;
+        }
+
+        if (!cancelled) {
+          if (t) setFetchedUserType(t);
+          if (cid) setFetchedCargoId(cid);
+        }
+      } finally {
+        if (!cancelled) setReady(true);
       }
     })();
-
-    if (cached) {
-      const urlBase = normalizeProfileUrl(cached.profileImage || cached.webPath);
-      const bust = cached.updatedAt ? `?v=${encodeURIComponent(cached.updatedAt)}` : '';
-      const url = urlBase ? urlBase + bust : null;
-      setAvatarUrl(url);
-      setCargoId(cached.cargoId ?? null);
-      setIsOwner(cached.userType === 'CARGO_OWNER');
-      setLoading(false); // 캐시로 바로 화면 보이기
-    }
+    return () => { cancelled = true; };
   }, []);
+  const avatarUrl = loginState?.profileImage || DEFAULT_AVATAR;
 
-  // 2) 백그라운드 최신화(SWR) + 단일비행 + 취소 + 살짝 지연(메인 페인트 먼저)
-  useEffect(() => {
-    const token = pickToken();
-    if (!token) {
-      setLoading(false);
-      return;
-    }
+  // ✅ Redux/토큰 역할
+  const roles = useMemo(() => {
+    const fromRedux = normalizeRoles(loginState?.roles || loginState?.rolenames);
+    const fromToken = normalizeRoles(payload?.roles || payload?.rolenames || payload?.authorities);
+    return [...fromRedux, ...fromToken];
+  }, [loginState, payload]);
 
-    const controller = new AbortController();
+  // ✅ 토큰/리덕스 기반 차주 판정
+  const isOwnerFromTokenOrRedux = useMemo(
+    () => roles.some((r) => r.endsWith('CARGO_OWNER')),
+    [roles]
+  );
 
-    const run = async () => {
-      // 이미 같은 요청이 돌고 있으면 합류
-      if (!inflight) {
-        inflight = (async () => {
-          // 150ms 지연: 초기 페인트 방해 줄이기
-          await new Promise((r) => setTimeout(r, 150));
-          const res = await fetch(`${API_BASE}/g2i4/user/info`, {
-            headers: { Authorization: `Bearer ${token}` },
-            signal: controller.signal,
-          });
-          if (!res.ok) throw new Error(`userinfo ${res.status}`);
-          return res.json();
-        })().finally(() => {
-          // 완료/실패 후 다음 호출을 허용
-          inflight = null;
-        });
-      }
+  // ✅ 백엔드 기반 차주 판정
+  const isOwnerFromAPI = fetchedUserType === 'CARGO_OWNER';
 
-      let raw;
-      try {
-        raw = await inflight;
-      } catch (e) {
-        if (DEBUG_SIDEBAR) console.warn('[Sidebar] userinfo fetch fail', e);
-        setLoading(false);
-        return;
-      }
+  // ✅ 최종 차주 판정: 둘 중 하나라도 true면 차주로 본다
+  const isOwner = isOwnerFromTokenOrRedux || isOwnerFromAPI;
 
-      const data =
-        raw?.data || raw?.user || raw?.payload || raw?.profile || raw?.account || raw?.result || {};
-      const nameOrWebPath =
-        data.webPath ||
-        data.profileImage ||
-        data.mem_profile_image ||
-        data.cargo_profile_image ||
-        data.profile ||
-        '';
-
-      const urlBase = normalizeProfileUrl(nameOrWebPath);
-      const updatedAt = data.updatedAt || Date.now();
-      const url = urlBase ? `${urlBase}?v=${encodeURIComponent(updatedAt)}` : null;
-
-      const userType = data.userType || data.type || raw?.userType || raw?.type || null;
-      const cid =
-        data.cargoId ?? data.ownerId ?? raw?.cargoId ?? raw?.ownerId ?? null;
-
-      // 화면 갱신
-      setAvatarUrl(url);
-      setIsOwner(userType === 'CARGO_OWNER');
-      setCargoId(cid);
-      setLoading(false);
-
-      // 로컬 캐시 저장(SWR용)
-      try {
-        localStorage.setItem(
-          CACHE_KEY,
-          JSON.stringify({
-            profileImage: nameOrWebPath,
-            webPath: data.webPath,
-            userType,
-            cargoId: cid,
-            updatedAt,
-          })
-        );
-      } catch {}
-    };
-
-    run();
-    return () => controller.abort();
-  }, []);
+  // ✅ cargoId: Redux/토큰/백엔드 다 뒤져보기
+  const cargoId =
+    loginState?.cargoId ??
+    loginState?.user?.cargoId ??
+    payload?.cargoId ??
+    payload?.user?.cargoId ??
+    fetchedCargoId ??              // ← 위에서 세팅
+    payload?.loginId ??            // ★ 마지막 보정
+    null;
+  // 버튼은 차주면 무조건 노출(UX 이득). 링크는 cargoId 있으면 개인 경로, 없으면 기본 경로
+  const vehicleHref = `/mypage/vehicle/${cargoId}`;
 
   const navStyle = { textDecoration: 'none', color: 'inherit' };
   const activeStyle = { backgroundColor: '#e0e0e0' };
+
+  // 👉 꼭 한 번 확인해보세요 (임시 디버깅 UI)
+  // console.log('[Sidebar] isOwner?', { roles, isOwnerFromTokenOrRedux, fetchedUserType, isOwner, cargoId });
 
   return (
     <Drawer
@@ -180,33 +177,25 @@ const Sidebar = () => {
           alignSelf: 'flex-start',
         },
       }}
-
     >
       <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', p: 2 }}>
         <Typography variant="h6" fontWeight="bold" gutterBottom>
           마이페이지
         </Typography>
 
-        {loading ? (
-          <Skeleton variant="circular" width={56} height={56} />
-        ) : (
-          <Avatar
-            sx={{ width: 56, height: 56, bgcolor: 'grey.200', color: 'grey.500' }}
-            src={avatarUrl || DEFAULT_AVATAR}
-            imgProps={{
-              referrerPolicy: 'no-referrer',
-              crossOrigin: 'anonymous',
-              loading: 'lazy',
-              onError: (e) => {
-                if (DEBUG_SIDEBAR) console.warn('[Sidebar] avatar load error → fallback', e?.currentTarget?.src);
-                e.currentTarget.src = DEFAULT_AVATAR;
-              },
-            }}
-            alt="프로필"
-          >
-            <PersonIcon />
-          </Avatar>
-        )}
+        <Avatar
+          sx={{ width: 56, height: 56, bgcolor: 'grey.200', color: 'grey.500' }}
+          src={avatarUrl}
+          imgProps={{
+            referrerPolicy: 'no-referrer',
+            crossOrigin: 'anonymous',
+            loading: 'lazy',
+            onError: (e) => { e.currentTarget.src = DEFAULT_AVATAR; },
+          }}
+          alt="프로필"
+        >
+          <PersonIcon />
+        </Avatar>
       </Box>
 
       <Divider />
@@ -230,6 +219,7 @@ const Sidebar = () => {
           )}
         </NavLink>
 
+
         <NavLink to="/mypage/edit" style={navStyle}>
           {({ isActive }) => (
             <ListItemButton sx={isActive ? activeStyle : null}>
@@ -238,9 +228,8 @@ const Sidebar = () => {
             </ListItemButton>
           )}
         </NavLink>
-
         {isOwner && cargoId && (
-          <NavLink to={`/mypage/vehicle/${cargoId}`} style={navStyle}>
+          <NavLink to={`vehicle/${cargoId}`} style={navStyle}>
             {({ isActive }) => (
               <ListItemButton sx={isActive ? activeStyle : null}>
                 <ListItemIcon><BuildIcon /></ListItemIcon>
@@ -250,7 +239,10 @@ const Sidebar = () => {
           </NavLink>
         )}
       </List>
-    </Drawer >
+
+
+
+    </Drawer>
   );
 };
 
