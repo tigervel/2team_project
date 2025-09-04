@@ -119,10 +119,10 @@ public class QABoardController {
     }
 
     /**
-     * 게시글 작성
+     * 게시글 작성 (로그인 없이도 가능)
      * 
      * @param createRequest 게시글 작성 요청 데이터
-     * @param request HTTP 요청 객체 (JWT 토큰 추출용)
+     * @param request HTTP 요청 객체 (JWT 토큰 추출용, 선택적)
      * @return 생성된 게시글 정보
      */
     @PostMapping("/posts")
@@ -136,25 +136,24 @@ public class QABoardController {
             String authHeader = request.getHeader("Authorization");
             log.info("Authorization 헤더: {}", authHeader != null ? "Bearer " + authHeader.substring(0, Math.min(20, authHeader.length())) + "..." : "없음");
             
-            // JWT 토큰에서 사용자 정보 추출
+            // JWT 토큰에서 사용자 정보 추출 (로그인 선택적)
             JwtTokenUtils.UserInfo userInfo = jwtTokenUtils.getUserInfoFromRequest(request);
             
-            if (userInfo == null) {
-                log.error("JWT 토큰에서 사용자 정보를 추출할 수 없습니다.");
-                throw new RuntimeException("로그인이 필요합니다. JWT 토큰이 유효하지 않습니다.");
+            String authorId;
+            String authorName;
+            
+            if (userInfo == null || userInfo.getAuthorId() == null || userInfo.getAuthorId().trim().isEmpty()) {
+                // 비로그인 사용자의 경우 익명으로 처리
+                authorId = "anonymous";
+                authorName = "익명";
+                log.info("비로그인 사용자의 문의 작성 - 익명으로 처리");
+            } else {
+                // 로그인 사용자의 경우 JWT에서 정보 추출
+                authorId = userInfo.getAuthorId();
+                authorName = authorId; // 실제로는 사용자 서비스에서 조회해야 함
+                log.info("로그인 사용자의 문의 작성 - authorId: {}, authorName: {}, isAdmin: {}", 
+                         authorId, authorName, userInfo.isAdmin());
             }
-            
-            String authorId = userInfo.getAuthorId();
-            if (authorId == null || authorId.trim().isEmpty()) {
-                log.error("JWT 토큰에서 authorId가 없습니다.");
-                throw new RuntimeException("사용자 ID를 확인할 수 없습니다.");
-            }
-            
-            // authorName은 현재 authorId를 사용 (실제로는 사용자 서비스에서 조회해야 함)
-            String authorName = authorId;
-            
-            log.info("JWT에서 추출된 작성자 정보 - authorId: {}, authorName: {}, isAdmin: {}", 
-                     authorId, authorName, userInfo.isAdmin());
             
             QAPostDTO response = qaBoardService.createPost(createRequest, authorId, authorName);
             return ResponseEntity.ok(response);
