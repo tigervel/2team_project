@@ -1,4 +1,4 @@
-// com.giproject.entity.cargo.CargoOwner
+// src/main/java/com/giproject/entity/cargo/CargoOwner.java
 package com.giproject.entity.cargo;
 
 import com.fasterxml.jackson.annotation.JsonManagedReference;
@@ -29,8 +29,12 @@ public class CargoOwner {
 
     /** user_index.login_id 와 읽기 전용 연결 */
     @OneToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "cargo_id", referencedColumnName = "login_id",
-            insertable = false, updatable = false)
+    @JoinColumn(
+        name = "cargo_id",
+        referencedColumnName = "login_id",
+        insertable = false,
+        updatable = false
+    )
     private UserIndex userIndex;
 
     /** 반드시 해시 저장(BCrypt) */
@@ -56,20 +60,36 @@ public class CargoOwner {
     @Column(name = "profile_image", length = 255)
     private String profileImage;
 
-    /** 소셜 가입 여부 캐시(옵션) — 화면 빠른 표시용 */
-    @Column(name = "social")
-    private boolean social;
+    /**
+     * 소셜 가입 여부 캐시(옵션) — 화면 빠른 표시용
+     * - primitive(boolean) → 래퍼(Boolean)로 변경
+     * - nullable=false로 신규 NULL 방지
+     * - Builder 기본값 보존을 위해 @Builder.Default 사용
+     */
+    @Builder.Default
+    @Column(name = "social", nullable = false)
+    private Boolean social = Boolean.FALSE;
 
     @OneToMany(mappedBy = "cargoOwner", cascade = CascadeType.ALL, orphanRemoval = true)
     @JsonManagedReference
     @Builder.Default
     private List<Cargo> cargoList = new ArrayList<>();
 
-    // ===== 생성시각 자동 세팅 =====
+    // ===== 생성/업데이트 시 기본값 방어 =====
     @PrePersist
     protected void onCreate() {
         if (cargoCreatedDateTime == null) {
             cargoCreatedDateTime = LocalDateTime.now();
+        }
+        if (social == null) {
+            social = Boolean.FALSE;
+        }
+    }
+
+    @PreUpdate
+    protected void onUpdate() {
+        if (social == null) {
+            social = Boolean.FALSE;
         }
     }
 }
