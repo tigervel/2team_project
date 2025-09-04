@@ -30,8 +30,8 @@ const MemberAll = () => {
   const [loading, setLoading] = useState(false);
   const [keyword, setKeyword] = useState("");
   const [error, setError] = useState("");
-  const [openModal, setOpenModal] = useState(false); // Added modal state
-  const [selectedUserForModal, setSelectedUserForModal] = useState(null); // Added selected user for modal
+  const [openModal, setOpenModal] = useState(false);
+  const [selectedUserForModal, setSelectedUserForModal] = useState(null);
 
   const navigate = useNavigate();
   const location = useLocation();
@@ -75,6 +75,7 @@ const MemberAll = () => {
           page: page - 1,
           size,
           keyword,
+          searchType: "name",
         });
         setRows(data.content ?? []);
         setTotalPages(data.totalPages || 1);
@@ -107,7 +108,7 @@ const MemberAll = () => {
         </Box>
         <TextField
           variant="outlined"
-          placeholder="Search"
+          placeholder="회원 이름 검색"
           size="small"
           value={keyword}
           onChange={(e) => {

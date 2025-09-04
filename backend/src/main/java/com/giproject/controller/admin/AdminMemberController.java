@@ -23,12 +23,13 @@ public class AdminMemberController {
 	public ResponseEntity<Page<AdminMemberDTO>> list(
 			@RequestParam(name = "type", required = false, defaultValue = "ALL") String type,
 			@RequestParam(name = "keyword", required = false) String keyword,
+			@RequestParam(name = "searchType", required = false) String searchType,
 			@PageableDefault(size = 10, sort = "memCreateidDateTime", direction = Sort.Direction.DESC) Pageable pageable) {
-		log.info("[/g2i4/admin/members] IN type={}, keyword={}, page={}, size={}, sort={}", type, keyword,
+		log.info("[/g2i4/admin/members] IN type={}, keyword={}, searchType={}, page={}, size={}, sort={}", type, keyword, searchType,
 				pageable.getPageNumber(), pageable.getPageSize(), pageable.getSort());
 
 		try {
-			Page<AdminMemberDTO> result = adminMemberService.list(type, keyword, pageable);
+			Page<AdminMemberDTO> result = adminMemberService.list(type, keyword, searchType, pageable);
 			log.info("[/g2i4/admin/members] OUT totalElements={}, totalPages={}", result.getTotalElements(),
 					result.getTotalPages());
 			return ResponseEntity.ok(result);

@@ -28,4 +28,6 @@ public interface CargoOwnerRepository extends JpaRepository<CargoOwner, String> 
 
     // 필요하면 조회 메서드도 함께
     Optional<CargoOwner> findByCargoEmail(String cargoEmail);
+
+    List<CargoOwner> findByCargoNameContainingIgnoreCase(String cargoName);
 }
