@@ -1,4 +1,3 @@
-// Sidebar.js
 import React, { useEffect, useState } from 'react';
 import {
   Drawer, List, ListItemIcon, ListItemText, ListItemButton,
@@ -181,6 +180,7 @@ const Sidebar = () => {
           alignSelf: 'flex-start',
         },
       }}
+
     >
       <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', p: 2 }}>
         <Typography variant="h6" fontWeight="bold" gutterBottom>
@@ -250,7 +250,7 @@ const Sidebar = () => {
           </NavLink>
         )}
       </List>
-    </Drawer>
+    </Drawer >
   );
 };
 

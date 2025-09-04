@@ -61,16 +61,24 @@ const HomePage = () => {
   };
 
 
-  const normalizeUrl = (p) => {
-    if (!p) return null;
-    if (p.startsWith("http")) return p;
-    if (p.startsWith("/g2i4/uploads/")) return `${API_SERVER_HOST}${p}`;
-    if (p.startsWith("/uploads/")) {
-      const fname = p.split("/").pop();
-      return `${API_SERVER_HOST}/g2i4/uploads${fname}`;
-    }
-    return `${API_SERVER_HOST}/g2i4/uploads${p}`;
-  }
+const normalizeUrl = (p) => {
+  if (!p) return null;
+  if (/^https?:\/\//i.test(p)) return p;
+
+  const base = API_SERVER_HOST.replace(/\/+$/, ""); // 끝 슬래시 제거
+  let path = String(p).trim().replace(/\\/g, "/");
+
+  // DB에 가장 흔한 케이스: "/g2i4/uploads/파일"
+  if (path.startsWith("/g2i4/uploads/")) return `${base}${path}`;
+  if (path.startsWith("g2i4/uploads/"))  return `${base}/${path}`;
+
+  // "/uploads/파일" 또는 "uploads/파일"로 온 경우 g2i4로 보정
+  if (path.startsWith("/uploads/")) return `${base}/g2i4${path}`;
+  if (path.startsWith("uploads/"))  return `${base}/g2i4/${path}`;
+
+  // 파일명만 들어온 경우
+  return `${base}/g2i4/uploads/${path.replace(/^\/+/, "")}`;
+};
 
 
 
