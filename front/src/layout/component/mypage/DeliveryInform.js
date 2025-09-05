@@ -165,6 +165,7 @@ const DeliveryInfoPage = () => {
     item?.member ??
     null;
   const navigate = useNavigate();
+ 
   const handleViewOrderSummary = (matchingNo) => {
     if (!matchingNo) return;
     navigate('/mypage/order-summary', { state: { matchingNo } });
@@ -535,7 +536,7 @@ const DeliveryInfoPage = () => {
           <TableCell align="center">{item.startAddress}</TableCell>
           <TableCell align="center">{item.endAddress}</TableCell>
           <TableCell align="center" style={{ whiteSpace: 'nowrap' }}>{formatDateHour(doneAt)}</TableCell>
-          <TableCell align="center"> {isOwner ? (item.memId || '-') : (item.driverName ?? '-')}</TableCell>
+          <TableCell align="center"> {isOwner ? (item.memName || '-') : (item.driverName ?? '-')}</TableCell>
 
           {isMember && (
             <TableCell align="center">
@@ -644,7 +645,7 @@ const DeliveryInfoPage = () => {
                   <TableCell align="center">출발지</TableCell>
                   <TableCell align="center">도착지</TableCell>
                   <TableCell align="center">{isMember ? '배송 완료일' : '완료일'}</TableCell>
-                  <TableCell align="center">{isOwner ? '의뢰자 ID' : '운전 기사'}</TableCell>
+                  <TableCell align="center">{isOwner ? '의뢰자 이름' : '운전 기사'}</TableCell>
                   {isMember && <TableCell align="center">신고</TableCell>}
                   <TableCell align="center">상태</TableCell>
                 </TableRow>

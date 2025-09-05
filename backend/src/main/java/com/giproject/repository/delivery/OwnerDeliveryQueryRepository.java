@@ -22,6 +22,7 @@ public interface OwnerDeliveryQueryRepository extends Repository<com.giproject.e
 			    e.endAddress,
 			    e.startTime,
 			    e.member.memId, 
+			    e.member.memName,
 			    co.cargoName,
 			    null,          
 			    m.matchingNo,
@@ -53,6 +54,8 @@ public interface OwnerDeliveryQueryRepository extends Repository<com.giproject.e
             e.endAddress,
             e.startTime,
             e.member.memId, 
+            
+			    e.member.memName,
             co.cargoName,
             case
                 when d.status is null then com.giproject.entity.delivery.DeliveryStatus.PENDING
@@ -84,6 +87,8 @@ public interface OwnerDeliveryQueryRepository extends Repository<com.giproject.e
             e.endAddress,
             e.startTime,
             e.member.memId, 
+            
+			    e.member.memName,
             co.cargoName,
             d.status,
             m.matchingNo,

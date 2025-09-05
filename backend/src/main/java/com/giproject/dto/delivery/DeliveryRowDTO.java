@@ -20,7 +20,9 @@ public class DeliveryRowDTO {
     private String endAddress;
     private LocalDateTime startTime;
 
-    private String memId;               // 🔹 의뢰자(ID)
+    private String memId;      
+
+	private String memName;// 🔹 의뢰자(ID)
     private String driverName;          // 차주명
     private DeliveryStatus deliveryStatus;
     private Long matchingNo;
@@ -33,7 +35,7 @@ public class DeliveryRowDTO {
     public DeliveryRowDTO(
         Long eno, String cargoType, String cargoWeight,
         String startAddress, String endAddress, LocalDateTime startTime,
-        String memId,                           // 🔹 추가
+        String memId, String memName,                   // 🔹 추가
         String driverName, DeliveryStatus deliveryStatus,
         Long matchingNo, Long paymentNo
     ) {
@@ -43,7 +45,8 @@ public class DeliveryRowDTO {
         this.startAddress = startAddress;
         this.endAddress = endAddress;
         this.startTime = startTime;
-        this.memId = memId;                     // 🔹 세팅
+        this.memId = memId;
+        this.memName = memName;// 🔹 세팅
         this.driverName = driverName;
         this.deliveryStatus = deliveryStatus;
         this.matchingNo = matchingNo;
@@ -54,12 +57,12 @@ public class DeliveryRowDTO {
     public DeliveryRowDTO(
         Long eno, String cargoType, String cargoWeight,
         String startAddress, String endAddress, LocalDateTime startTime,
-        String memId,
+        String memId, String memName,
         String driverName, DeliveryStatus deliveryStatus,
         Long matchingNo, LocalDateTime deliveryCompletedAt
     ) {
         this(eno, cargoType, cargoWeight, startAddress, endAddress, startTime,
-             memId, driverName, deliveryStatus, matchingNo,  (Long) null);
+             memId, memName, driverName, deliveryStatus, matchingNo,  (Long) null);
         this.deliveryCompletedAt = deliveryCompletedAt;
     }
 
@@ -67,13 +70,13 @@ public class DeliveryRowDTO {
     public DeliveryRowDTO(
         Long eno, String cargoType, String cargoWeight,
         String startAddress, String endAddress, LocalDateTime startTime,
-        String memId,
+        String memId, String memName,
         String driverName, DeliveryStatus deliveryStatus,
         Long matchingNo, Long paymentNo,
         Long deliveryNo, LocalDateTime deliveryCompletedAt
     ) {
         this(eno, cargoType, cargoWeight, startAddress, endAddress, startTime,
-             memId, driverName, deliveryStatus, matchingNo, paymentNo);
+             memId, memName, driverName, deliveryStatus, matchingNo, paymentNo);
         this.deliveryNo = deliveryNo;
         this.deliveryCompletedAt = deliveryCompletedAt;
     }
