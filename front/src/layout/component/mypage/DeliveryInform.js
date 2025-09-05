@@ -165,7 +165,7 @@ const DeliveryInfoPage = () => {
     item?.member ??
     null;
   const navigate = useNavigate();
- 
+
   const handleViewOrderSummary = (matchingNo) => {
     if (!matchingNo) return;
     navigate('/mypage/order-summary', { state: { matchingNo } });
@@ -338,19 +338,19 @@ const DeliveryInfoPage = () => {
   const movePage = (pageObj) => setPageParams((prev) => ({ ...prev, ...pageObj }));
   const movePaidPage = (pageObj) => setPaidPage((prev) => ({ ...prev, ...pageObj }));
   const moveCompletedPage = (pageObj) => setCompletedPage((prev) => ({ ...prev, ...pageObj }));
-
+  const unpaidColCount = isOwner ? 6 : 7;
   // 공용 colgroup (미결제/결제됨)
   const tableColgroup = useMemo(() => (
     <colgroup>
-      <col style={{ width: '10%' }} />
-      <col style={{ width: '5%' }} />
-      <col style={{ width: '15%' }} />
-      <col style={{ width: '15%' }} />
-      <col style={{ width: '12%' }} />
-      <col style={{ width: '8%' }} />
-      <col style={{ width: '8%' }} />
+      <col style={{ width: '10%' }} /> {/* 화물명 */}
+      <col style={{ width: '5%' }} />  {/* 무게 */}
+      <col style={{ width: '15%' }} /> {/* 출발지 */}
+      <col style={{ width: '15%' }} /> {/* 도착지 */}
+      <col style={{ width: '12%' }} /> {/* 배송 시작일 */}
+      {!isOwner && <col style={{ width: '10%' }} />} {/* 운전 기사(회원 전용) */}
+      <col style={{ width: '10%' }} /> {/* 상태/승인 */}
     </colgroup>
-  ), []);
+  ), [isOwner]);
 
   const paidColgroup = useMemo(() => (
     <colgroup>
@@ -385,7 +385,7 @@ const DeliveryInfoPage = () => {
     if (!list || list.length === 0) {
       return (
         <TableRow>
-          <TableCell colSpan={7} align="center">항목이 없습니다.</TableCell>
+          <TableCell colSpan={unpaidColCount} align="center">항목이 없습니다.</TableCell>
         </TableRow>
       );
     }
@@ -431,7 +431,9 @@ const DeliveryInfoPage = () => {
           <TableCell align="center">
             <span style={{ whiteSpace: 'nowrap' }}>{formatDateHour(item.startTime)}</span>
           </TableCell>
-          <TableCell align="center"> {isOwner ? (item.memId || '-') : (item.driverName ?? '-')}</TableCell>
+          {!isOwner && (
+            <TableCell align="center">{item.driverName ?? '-'}</TableCell>
+          )}
           <TableCell align="center">{rightCell}</TableCell>
         </TableRow>
       );
@@ -491,7 +493,7 @@ const DeliveryInfoPage = () => {
           <TableCell align="center">
             <span style={{ whiteSpace: 'nowrap' }}>{formatDateHour(item.startTime)}</span>
           </TableCell>
-          <TableCell align="center"> {isOwner ? (item.memId || '-') : (item.driverName ?? '-')}</TableCell>
+          <TableCell align="center"> {isOwner ? (item.memName || '-') : (item.driverName ?? '-')}</TableCell>
           <TableCell align="center">
             {mNo ? (
               <Button variant="outlined" size="small" onClick={() => handleViewOrderSummary(mNo)}>
@@ -502,8 +504,8 @@ const DeliveryInfoPage = () => {
             )}
           </TableCell>
           <TableCell align="center">
-             {isOwner ? ownerAction : (
-             
+            {isOwner ? ownerAction : (
+
               <Typography variant="body2" sx={{ color: s === 'IN_TRANSIT' ? 'info.main' : 'text.secondary' }}>
                 {statusKo(s)}
               </Typography>
@@ -587,7 +589,7 @@ const DeliveryInfoPage = () => {
                   <TableCell align="center">출발지</TableCell>
                   <TableCell align="center">도착지</TableCell>
                   <TableCell align="center">배송 시작일</TableCell>
-                  <TableCell align="center">{isOwner ? '의뢰자 ID' : '운전 기사'}</TableCell>
+                  {!isOwner && (<TableCell align="center">운전 기사</TableCell>)}
 
                   <TableCell align="center">{isOwner ? '상태' : '승인 여부'}</TableCell>
                 </TableRow>
@@ -616,7 +618,7 @@ const DeliveryInfoPage = () => {
                   <TableCell align="center">출발지</TableCell>
                   <TableCell align="center">도착지</TableCell>
                   <TableCell align="center">배송 시작일</TableCell>
-                  <TableCell align="center">{isOwner ? '의뢰자 ID' : '운전 기사'}</TableCell>
+                  <TableCell align="center">{isOwner ? '의뢰자 이름' : '운전 기사'}</TableCell>
                   <TableCell align="center">{isOwner ? '처리' : '상태'}</TableCell>
                   <TableCell align="center">{isOwner ? '상태' : '승인 여부'}</TableCell>
                 </TableRow>
