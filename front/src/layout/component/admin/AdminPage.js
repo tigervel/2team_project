@@ -119,7 +119,7 @@ const AdminPage = () => {
             { label: "사용자수", value: dashboardData.totalUsers },
             { label: "이번달 매출", value: dashboardData.monthlyRevenue },
             { label: "신규회원", value: dashboardData.newMembers },
-            { label: "총 배송건", value: dashboardData.totalDeliveries },
+            { label: "총 접수건", value: dashboardData.totalDeliveries },
           ].map((item, idx) => (
             <Paper
               key={idx}
