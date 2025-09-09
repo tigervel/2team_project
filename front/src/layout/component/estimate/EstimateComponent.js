@@ -148,6 +148,12 @@ const EstimateComponent = () => {
   };
 
   const handleClickAdd = () => {
+
+    if (!estimate.startTime || isInvalidHour(estimate.startTime)) {
+      alert('예약 시간은 오전 9시부터 오후 4시(16:59)까지만 가능합니다.');
+      setOpenEstimateSend(false); // 모달 닫기
+      return;
+    }
     if ((estimate.distanceKm !== '')) {
       if (estimate.cargoType !== '') {
         if (estimate.cargoWeight !== '') {
