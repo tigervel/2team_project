@@ -137,7 +137,7 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
         // 필요시 도메인 추가
-        config.setAllowedOrigins(List.of("http://localhost:3000", "http://localhost:3002"));
+        config.setAllowedOrigins(List.of("http://localhost:3000", "http://localhost:3002", "http://10.0.2.2:3000"));
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
         config.setAllowCredentials(true);
