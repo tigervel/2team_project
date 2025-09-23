@@ -10,7 +10,7 @@ import { useSearchParams } from 'react-router-dom';
 const API_BASE =
     (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE) ||
     process.env.REACT_APP_API_BASE ||
-    'http://localhost:8080';
+    'http://10.0.2.2:8080';
 
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 

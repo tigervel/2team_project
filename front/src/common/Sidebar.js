@@ -32,7 +32,7 @@ const pickCargoId = (obj) => {
 const API_BASE =
   (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE) ||
   (typeof process !== 'undefined' && process.env?.REACT_APP_API_BASE) ||
-  'http://localhost:8080';
+  'http://10.0.2.2:8080';
 
 const api = axios.create({ baseURL: API_BASE });
 api.interceptors.request.use((config) => {

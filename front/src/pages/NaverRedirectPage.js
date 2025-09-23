@@ -4,7 +4,7 @@ import { useEffect } from "react";
 const API_BASE =
     (typeof import.meta !== "undefined" && import.meta.env?.VITE_API_BASE) ||
     process.env.REACT_APP_API_BASE ||
-    "http://localhost:8080";
+    "http://10.0.2.2:8080";
 
 /**
  * 네이버 OAuth 콜백 프런트 엔드포인트

@@ -7,7 +7,7 @@ import root from './router/root';
 
 function App() {
   // useEffect(() => {
-  //   fetch("http://localhost:8080/api/test", {
+  //   fetch("http://10.0.2.2:8080/api/test", {
   //     method: "GET",
   //     credentials: "include"  // 쿠키나 인증정보 보내는 경우 필요
   //   })
