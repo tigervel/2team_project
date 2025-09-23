@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8" />
+  <title>Kakao Map</title>
+  <style>
+    html,
+    body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+    }
+
+    #map {
+      width: 100%;
+      height: 100%;
+    }
+  </style>
+  <script type="text/javascript"
+    src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=22fd27773f246f076c58497f30faf48f"></script>
+  <script>
+  let map;
+  let polyline = null;
+  let markers = [];
+
+  function initMap() {
+    const container = document.getElementById("map");
+    map = new kakao.maps.Map(container, {
+      center: new kakao.maps.LatLng(37.5665, 126.9780),
+      level: 7,
+    });
+  }
+
+  // 모든 오버레이 제거
+  function clearOverlays() {
+    if (polyline) { polyline.setMap(null); polyline = null; }
+    markers.forEach(m => m.setMap(null));
+    markers = [];
+  }
+
+  // ▶ 간편조회 때마다 호출됨
+  function drawRoute(path) {
+    // 1) 이전 것들 제거
+    clearOverlays();
+
+    // (선택) 맵 자체 리셋: 완전 초기화 원하면 주석 해제
+    // initMap();
+
+    // 2) [x,y]=[lng,lat] -> LatLng(lat,lng)
+    const linePath = path.map(p => new kakao.maps.LatLng(p[1], p[0]));
+
+    // 3) 경로 선
+    polyline = new kakao.maps.Polyline({
+      map,
+      path: linePath,
+      strokeWeight: 5,
+      strokeColor: '#FF0000',
+      strokeOpacity: 0.9,
+      strokeStyle: 'solid'
+    });
+
+    // 4) 출발/도착 마커만 추가
+    const startMarker = new kakao.maps.Marker({ map, position: linePath[0], title: "출발지" });
+    const endMarker   = new kakao.maps.Marker({ map, position: linePath.at(-1), title: "도착지" });
+    markers.push(startMarker, endMarker);
+
+    // 5) 화면 맞추기
+    const bounds = new kakao.maps.LatLngBounds();
+    linePath.forEach(ll => bounds.extend(ll));
+    map.setBounds(bounds);
+  }
+
+  // 최초 1번 맵 생성
+  window.onload = initMap;
+</script>
+
+
+</head>
+
+<body onload="initMap()">
+  <div id="map">쉬바</div>
+  <h1 style="position:absolute;top:10px;left:10px;color:red;">HELLO MAP</h1>
+</body>
+
+</html>
