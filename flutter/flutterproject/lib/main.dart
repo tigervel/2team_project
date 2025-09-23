@@ -18,7 +18,7 @@ class HemoScreen extends StatelessWidget{
   HemoScreen({super.key}){
     _webViewController = WebViewController()
       ..setJavaScriptMode(JavaScriptMode.unrestricted)//자바스크립트 활성화
-      ..loadRequest(Uri.parse('http://10.0.2.2:3000'));
+      ..loadRequest(Uri.parse('http://localhost:3000'));
   
   }
   

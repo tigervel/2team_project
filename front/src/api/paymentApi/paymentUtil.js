@@ -15,6 +15,7 @@ export const requestPayment = async (orderData) => {
             phoneNumber: orderData.customerPhone,
             email: orderData.customerEmail,
         },
+        redirectUrl: "http://localhost:3000/payment/callback",
         
     };
 

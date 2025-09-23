@@ -7,7 +7,7 @@ import { login as loginAction } from '../slice/loginSlice';
 const API_BASE =
     import.meta?.env?.VITE_API_BASE ||
     process.env.REACT_APP_API_BASE ||
-    'http://10.0.2.2:8080';
+    'http://localhost:8080';
 
 export default function useAuth() {
     const navigate = useNavigate();

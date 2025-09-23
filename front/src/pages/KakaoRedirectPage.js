@@ -3,7 +3,7 @@ import { useEffect } from "react";
 const API_BASE =
     (typeof import.meta !== "undefined" && import.meta.env?.VITE_API_BASE) ||
     process.env.REACT_APP_API_BASE ||
-    "http://10.0.2.2:8080";
+    "http://localhost:8080";
 
 /**
  * 카카오 OAuth 콜백 (프론트)
