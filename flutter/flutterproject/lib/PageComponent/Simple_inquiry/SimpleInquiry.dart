@@ -133,14 +133,14 @@ class _SimpleinquiryState extends State<Simpleinquiry> {
           child: Column(
             children: [
               // 상단 바
-              Container(
-                height: height * 0.06,
-                width: double.infinity,
-                color: const Color(0xFFBFAFA9),
-                alignment: Alignment.centerRight,
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                child: const Text("로그인 / 회원가입"),
-              ),
+              // Container(
+              //   height: height * 0.06,
+              //   width: double.infinity,
+              //   color: const Color(0xFFBFAFA9),
+              //   alignment: Alignment.centerRight,
+              //   padding: const EdgeInsets.symmetric(horizontal: 12),
+              //   child: const Text("로그인 / 회원가입"),
+              // ),
 
               SizedBox(height: height * 0.02),
               const Text("간편 조회",
