@@ -51,10 +51,13 @@ class _MainpageexState extends State<Mainpageex> {
                 child: Text('로그아웃'),
               )
             : TextButton(
-                onPressed: () {
-                  setState(() {
-                    _isLoggedIn = true; // 로그인 처리 (임시)
-                  });
+                onPressed: () async{
+                  final result = await Navigator.pushNamed(context, '/login');
+                  if(result==true && mounted){
+                    setState(() {
+                      _isLoggedIn=true;
+                    });
+                  }
                 },
                 child: Text('로그인/회원가입'),
               ),
