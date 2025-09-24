@@ -40,4 +40,8 @@ public class OrderFormDTO {
     private String orderTime; 
     // 기타
     private Long matchingNo; // 주문 생성 시 매칭번호 필요
+    
+    private String cargoOwnerName;
+    private String cargoOwnerPhone;
+    
 }

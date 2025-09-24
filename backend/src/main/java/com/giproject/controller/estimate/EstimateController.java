@@ -79,7 +79,7 @@ public class EstimateController {
 		String token = authHeader.replace("Bearer ","");
 		String cargoId = jwtService.getUsername(token);
 		CargoOwner cargoOwner = cargoOwnerRepository.findById(cargoId).get();
-		System.out.println(cargoId+"--------------------------------------------------");
+		System.out.println(cargoId+estimateNo+"--------------------------------------------------");
 		Long mcno=matchingService.acceptMatching(estimateNo, cargoOwner);
 		mailService.acceptedMail(mcno);
 		return ResponseEntity.ok().body(Map.of("result", "accepted"));

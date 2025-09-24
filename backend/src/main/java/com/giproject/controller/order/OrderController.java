@@ -23,7 +23,7 @@ public class OrderController {
 	@PostMapping("/")
 	public ResponseEntity<OrderFormDTO> viewOrder(@RequestBody  Map<String, Long> requestNo) {
 		OrderFormDTO dto = orderService.loadOrderForm(requestNo.get("mcNo"));
-		
+		System.out.println(dto);
 		return ResponseEntity.ok(dto);
 		
 	}

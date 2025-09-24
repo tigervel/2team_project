@@ -4,6 +4,8 @@ import org.springframework.stereotype.Service;
 
 import com.giproject.dto.order.OrderFormDTO;
 import com.giproject.dto.order.OrderSheetDTO;
+import com.giproject.entity.cargo.Cargo;
+import com.giproject.entity.cargo.CargoOwner;
 import com.giproject.entity.estimate.Estimate;
 import com.giproject.entity.matching.Matching;
 import com.giproject.entity.member.Member;
@@ -23,6 +25,7 @@ public class OrderServiceImpl implements OrderService{
 	@Override
 	public OrderFormDTO loadOrderForm(Long matchingNo) {
 		Matching matching =matchingRepository.findById(matchingNo).orElseThrow();
+		CargoOwner cargoOwner = matching.getCargoOwner();
 		Estimate estimate = matching.getEstimate();
 		Member member = estimate.getMember();
 		  var orderOpt = orderRepository.findTopByMatching_MatchingNoOrderByOrderNoDesc(matchingNo);
@@ -54,6 +57,9 @@ public class OrderServiceImpl implements OrderService{
 			      .orderTime(orderOpt.map(os -> String.valueOf(os.getOrderTime())).orElse(null))
 
 			      .matchingNo(matchingNo)
+			      
+			      .cargoOwnerName(cargoOwner.getCargoName())
+			      .cargoOwnerPhone(cargoOwner.getCargoPhone())
 			      .build();
 				
 	}

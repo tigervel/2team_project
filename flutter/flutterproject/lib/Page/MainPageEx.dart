@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:flutterproject/PageComponent/Simple_inquiry/SimpleInquiry.dart';
+import 'package:flutterproject/Screen/EstimateReqstListView/EstimateReqstListView.dart';
+import 'package:flutterproject/Screen/OrderDetailCard/OrderDetailHardcodedView.dart';
+import 'package:flutterproject/Screen/Simple_inquiry/SimpleInquiry.dart';
 
 // 화면의 상태를 관리하기 위한 Enum
 enum MainPageView {
@@ -71,9 +73,9 @@ class _MainpageexState extends State<Mainpageex> {
       case MainPageView.myPage:
         return Center(child: Text('마이페이지 화면')); // 임시
       case MainPageView.contact:
-        return Center(child: Text('문의하기 화면')); // 임시
+        return const EstimateRequestListView(); // 임시
       case MainPageView.orderList:
-        return Center(child: Text('주문리스트 화면')); // 임시
+        return const OrderDetailHardcodedView(); // 임시
     }
   }
 
