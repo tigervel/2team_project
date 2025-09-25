@@ -38,7 +38,7 @@ public interface MatchingService {
 				.cargoWeight(e.getCargoWeight())
 				.distanceKm(e.getDistanceKm()+"KM")
 				.cargoType(e.getCargoType())
-				.startTime(e.getStartTime().toLocalDate().toString())
+				.startTime(e.getStartTime().toString())
 				.totalCost(String.format("%,d원", e.getTotalCost()))
 				.build();
 		

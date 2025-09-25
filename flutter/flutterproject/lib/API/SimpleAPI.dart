@@ -1,10 +1,11 @@
 import 'package:dio/dio.dart';
+import 'package:flutterproject/API/ApiConfig.dart';
 import 'package:flutterproject/DTO/FeesDTO.dart';
 import 'package:flutterproject/Model/FeesModel.dart';
 
 class SimpleAPI {
   final Dio  _dio = Dio(BaseOptions(
-    baseUrl: "http://10.0.2.2:8080",
+    baseUrl: Apiconfig.baseUrl,
     headers: {"Content-Type": "application/json"},
   ));
 

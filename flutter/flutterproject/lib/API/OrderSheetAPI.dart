@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import 'package:flutterproject/API/ApiConfig.dart';
 import 'package:flutterproject/DTO/OrderSheetDTO.dart';
 import 'package:flutterproject/Model/OrderSheetModel.dart';
 
@@ -10,7 +11,7 @@ class OrderSheetApi {
       : _dio = Dio(BaseOptions(
           // PostMapping("/")에 맞추기 위해 Controller의 기본 경로를 baseUrl에 포함해야 할 수 있습니다.
           // 예: http://10.0.2.2:8080/api/orders
-          baseUrl: "http://10.0.2.2:8080", 
+          baseUrl: Apiconfig.baseUrl, 
           connectTimeout: const Duration(seconds: 5),
           receiveTimeout: const Duration(seconds: 3),
         ));

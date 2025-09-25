@@ -59,8 +59,10 @@ public class MatchingServiceImpl implements MatchingService{
 		Page<Matching> result = matchingRepository.findValidMatchingList(owner,now,pageable);
 		System.out.println(result);
 		List<MatchingDTO> dtoList = result.getContent().stream().map(this::entityToDTO).collect(Collectors.toList());
-		System.out.println(dtoList);
 		
+		for(MatchingDTO dto : dtoList) {
+			System.out.println(dto.getStartTime());
+		}
 		long totalCount = result.getTotalElements();
 		return PageResponseDTO.<MatchingDTO>withAll()
 				.dtoList(dtoList)
