@@ -7,7 +7,7 @@ import 'package:flutterproject/DTO/PageResponseDTO.dart';
 import 'package:intl/intl.dart';
 
 const String bearerToken =
-    'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ6enoxMjM0NSIsImxvZ2luSWQiOiJ6enoxMjM0NSIsImVtYWlsIjoicGtuNDY5M0BuYXZlci5jb20iLCJyb2xlcyI6WyJST0xFX0RSSVZFUiIsIlJPTEVfVVNFUiJdLCJpc3MiOiJnaXByb2plY3QiLCJpYXQiOjE3NTg3NjUwMzMsImV4cCI6MTc1ODc2NjgzM30._EucfCMW6QrjCVtR4n07YOXSHn09ObyWbgFkufvqE-c';
+    'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ6enoxMjM0NSIsImxvZ2luSWQiOiJ6enoxMjM0NSIsImVtYWlsIjoicGtuNDY5M0BuYXZlci5jb20iLCJyb2xlcyI6WyJST0xFX0RSSVZFUiIsIlJPTEVfVVNFUiJdLCJpc3MiOiJnaXByb2plY3QiLCJpYXQiOjE3NTg3ODE0NzYsImV4cCI6MTc1ODc4MzI3Nn0.51UKe9Ho3gOdR7zq3ftPKrFOLQMVvOZmzl_W2se6aHk';
 
 class EstimateRequestListView extends StatefulWidget {
   // ✅ 상위에서 전달
