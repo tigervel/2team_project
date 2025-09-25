@@ -33,6 +33,8 @@ dependencies:
   webview_flutter: ^4.13.0
   dio: ^5.9.0
   kpostal: ^1.1.0
+  http: ^1.2.2
+  shared_preferences: ^2.2.1
  
 
 
@@ -64,6 +66,9 @@ flutter:
   uses-material-design: true
   assets:
     - assets/kakao_map.html
+    - assets/kakao-icon.png
+    - assets/naver-icon.png
+    - assets/google-icon.png
 
 
   # To add assets to your application, add an assets section, like this:

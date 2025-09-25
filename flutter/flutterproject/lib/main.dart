@@ -4,21 +4,30 @@ import 'package:flutterproject/Page/MainPageEx.dart';
 import 'package:flutterproject/Screen/Simple_inquiry/SimpleInquiry.dart';
 import 'package:flutterproject/component_jh/login.dart';
 import 'package:flutterproject/component_jh/signup.dart';
-import 'package:webview_flutter/webview_flutter.dart';
 
 void main() {
+  runApp(const MyApp());
+}
 
- 
-  runApp(MaterialApp(
-          title: 'Flutter Project',
-    
-    debugShowCheckedModeBanner: false,
-    home: Mainpageex(),
-    routes: {
-      '/estimate':(context) => Simpleinquiry(),
-      '/login': (_) => const LoginPage(),
-      '/signup': (_) => const SignUpPage(),
-    },));
+class MyApp extends StatelessWidget {
+  const MyApp({super.key});
 
-
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'Flutter Project',
+      debugShowCheckedModeBanner: false,
+      theme: ThemeData(primarySwatch: Colors.blue),
+      // 앱 시작 화면을 MainPageEx로 설정
+      home: Mainpageex(),
+      routes: {
+        '/main': (context) => Mainpageex(),
+        '/estimate': (context) => Simpleinquiry(),
+        '/login': (context) => const LoginPage(),
+        '/signup': (context) => const SignUpPage(),
+        // '/social-signup': (context) =>
+        //     const SocialSignupPage(signupTicket: "VALID_TICKET"),
+      },
+    );
+  }
 }
