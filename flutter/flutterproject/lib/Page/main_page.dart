@@ -45,7 +45,7 @@ class _MainPageState extends State<MainPage> {
                 if (_isLoggedIn) {
                   Navigator.pushNamed(context, '/mypage'); // 로그인 o → 마이페이지
                 } else {
-                  Navigator.pushNamed(context, '/signup'); // 로그인 x → 회원가입
+                  Navigator.pushNamed(context, '/login'); // 로그인 x → 로그인페이지
                 }
                 break;
             }
