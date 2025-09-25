@@ -17,6 +17,7 @@ class MainPage extends StatefulWidget {
 class _MainPageState extends State<MainPage> {
   bool _isLoggedIn = false; // 로그인 상태
   MainPageView _currentView = MainPageView.home; // 화면 뷰
+  int _selectedIndex = -1;
 
   @override
   Widget build(BuildContext context) {
@@ -26,8 +27,16 @@ class _MainPageState extends State<MainPage> {
 
       bottomNavigationBar: BottomNavigationBar(
         type: BottomNavigationBarType.fixed,
-        currentIndex: _getCurrentIndex(),
+        currentIndex: _currentView == MainPageView.home
+            ? 0
+            : _getCurrentIndex(),
         backgroundColor: Colors.indigo,
+        showSelectedLabels: true,
+        showUnselectedLabels: true,
+        selectedItemColor: _currentView == MainPageView.home
+            ? Colors.white
+            : Colors.white70,
+        unselectedItemColor: Colors.white,
         onTap: (index) {
           setState(() {
             switch (index) {
@@ -72,7 +81,7 @@ class _MainPageState extends State<MainPage> {
       case MainPageView.myPage:
         return 3;
       case MainPageView.home:
-        return 0;
+        return 999;
     }
   }
 
@@ -95,9 +104,10 @@ class _MainPageState extends State<MainPage> {
             _currentView = MainPageView.home; // 제목 누르면 홈으로 이동
           });
         },
-        child: const Text(
-          '메인페이지',
-          style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
+        child: Image.asset(
+          'assets/images/g2i4_logo.png',
+          height: 60,
+          fit: BoxFit.contain,
         ),
       ),
       centerTitle: true,
@@ -144,7 +154,7 @@ class HomeView extends StatelessWidget {
               return Builder(
                 builder: (BuildContext context) {
                   return ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(0),
                     child: Image.asset(
                       item,
                       fit: BoxFit.cover,
@@ -155,7 +165,21 @@ class HomeView extends StatelessWidget {
               );
             }).toList(),
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 10),
+          QuickActionButton(
+            label: "> > >  빠른 간편 조회  < < <",
+            onTap: () {
+              final mainPageState = context
+                  .findAncestorStateOfType<_MainPageState>();
+              if (mainPageState != null) {
+                mainPageState.setState(() {
+                  mainPageState._currentView = MainPageView.simpleInquiry;
+                });
+              }
+            },
+          ),
+
+          const SizedBox(height: 10),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16.0),
             child: Column(
@@ -223,6 +247,43 @@ class Footer extends StatelessWidget {
             style: TextStyle(fontSize: 12, color: Colors.grey),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class QuickActionButton extends StatelessWidget {
+  final String label;
+  final VoidCallback onTap;
+
+  const QuickActionButton({
+    super.key,
+    required this.label,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        margin: const EdgeInsets.symmetric(horizontal: 16),
+        decoration: BoxDecoration(
+          color: Colors.indigo,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Center(
+          child: Text(
+            label,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ),
       ),
     );
   }
