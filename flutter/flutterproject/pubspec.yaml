@@ -33,6 +33,7 @@ dependencies:
   webview_flutter: ^4.13.0
   dio: ^5.9.0
   kpostal: ^1.1.0
+  carousel_slider: ^5.1.1
  
 
 
@@ -64,6 +65,8 @@ flutter:
   uses-material-design: true
   assets:
     - assets/kakao_map.html
+    - assets/images/banner1.png
+    - assets/images/banner2.png
 
 
   # To add assets to your application, add an assets section, like this:
