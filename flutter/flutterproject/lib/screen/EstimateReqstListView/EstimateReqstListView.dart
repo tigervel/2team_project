@@ -4,9 +4,10 @@ import 'package:flutterproject/API/MatchingAPI.dart';
 import 'package:flutterproject/DTO/MatchingDTO.dart';
 import 'package:flutterproject/DTO/PageRequestDTO.dart';
 import 'package:flutterproject/DTO/PageResponseDTO.dart';
+import 'package:intl/intl.dart';
 
 const String bearerToken =
-    'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ6enoxMjM0NSIsImxvZ2luSWQiOiJ6enoxMjM0NSIsImVtYWlsIjoicGtuNDY5M0BuYXZlci5jb20iLCJyb2xlcyI6WyJST0xFX0RSSVZFUiIsIlJPTEVfVVNFUiJdLCJpc3MiOiJnaXByb2plY3QiLCJpYXQiOjE3NTg3MDMzMTEsImV4cCI6MTc1ODcwNTExMX0.5kKE8idCd3CXeipHJYqhIpxpzHiaesV4ESemkNW_hRs';
+    'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ6enoxMjM0NSIsImxvZ2luSWQiOiJ6enoxMjM0NSIsImVtYWlsIjoicGtuNDY5M0BuYXZlci5jb20iLCJyb2xlcyI6WyJST0xFX0RSSVZFUiIsIlJPTEVfVVNFUiJdLCJpc3MiOiJnaXByb2plY3QiLCJpYXQiOjE3NTg3ODE0NzYsImV4cCI6MTc1ODc4MzI3Nn0.51UKe9Ho3gOdR7zq3ftPKrFOLQMVvOZmzl_W2se6aHk';
 
 class EstimateRequestListView extends StatefulWidget {
   // ✅ 상위에서 전달
@@ -90,7 +91,7 @@ class _EstimateRequestListViewState extends State<EstimateRequestListView> {
                           style: TextStyle(fontWeight: FontWeight.w700),
                         ),
                       ),
-                      Text('금액', style: TextStyle(fontWeight: FontWeight.w700)),
+                      Text('상세보기', style: TextStyle(fontWeight: FontWeight.w700)),
                       SizedBox(width: 12),
                     ],
                   ),
@@ -186,7 +187,7 @@ class _EstimateRequestListViewState extends State<EstimateRequestListView> {
                 _kv('거리(KM)', item.distanceKm),
                 _kv('무게', item.cargoWeight),
                 _kv('화물 종류', item.cargoType),
-                _kv('출발 시간', item.startTime),
+                _kv('출발 시간', _formatKoreanDateTime(item.startTime)),
                 _kv('수락 여부', item.isAccepted ? '예' : '아니오'),
                 if (item.acceptedTime != null && item.acceptedTime!.isNotEmpty)
                   _kv('수락 시각', item.acceptedTime!),
@@ -349,21 +350,36 @@ class _EstimateRequestListViewState extends State<EstimateRequestListView> {
     );
   }
 
-  // utils
-  String _money(int n) {
-    final s = n.toString();
-    final buf = StringBuffer();
-    for (int i = 0; i < s.length; i++) {
-      if (i > 0 && (s.length - i) % 3 == 0) buf.write(',');
-      buf.write(s[i]);
-    }
-    return buf.toString();
-  }
 
-  String _fmtDate(DateTime dt) {
-    final ampm = dt.hour < 12 ? 'AM' : 'PM';
-    final h12 = dt.hour == 0 ? 12 : (dt.hour > 12 ? dt.hour - 12 : dt.hour);
-    final mm = dt.minute.toString().padLeft(2, '0');
-    return '${dt.year}년 ${dt.month}월 ${dt.day}일 $ampm $h12:$mm';
+  DateTime? _parseServerDateTime(String raw) {
+  try {
+    // ISO 형태면 먼저 시도: '2025-09-24T10:30:00' 또는 '2025-09-24 10:30:00'
+    final normalized = raw.contains('T') ? raw : raw.replaceFirst(' ', 'T');
+    final dt = DateTime.tryParse(normalized);
+    if (dt != null) return dt.toLocal();
+  } catch (_) {}
+
+  // 커스텀 포맷들 시도 (서버 포맷에 맞춰 추가/수정)
+  const patterns = [
+    "yyyy-MM-dd HH:mm:ss",
+    "yyyy-MM-dd'T'HH:mm:ss",
+    "yyyy-MM-dd HH:mm",
+    "yyyy-MM-dd'T'HH:mm",
+    "yyyy-MM-dd", // 날짜만 오는 경우
+  ];
+  for (final p in patterns) {
+    try {
+      final dt = DateFormat(p).parseStrict(raw);
+      return dt.toLocal();
+    } catch (_) {}
   }
+  return null; // 실패 시
+}
+
+  String _formatKoreanDateTime(String raw) {
+  final dt = _parseServerDateTime(raw);
+  if (dt == null) return raw; // 파싱 실패 시 원문 출력
+  // dayjs: 'YYYY년 MM월 DD일 A hh:mm' → intl: 'yyyy년 MM월 dd일 a hh:mm'
+  return DateFormat('yyyy년 MM월 dd일 a hh:mm', 'ko_KR').format(dt);
+}
 }
