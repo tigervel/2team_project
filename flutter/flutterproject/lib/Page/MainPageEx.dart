@@ -4,13 +4,7 @@ import 'package:flutterproject/Screen/OrderDetailCard/OrderDetailHardcodedView.d
 import 'package:flutterproject/Screen/Simple_inquiry/SimpleInquiry.dart';
 
 // 화면의 상태를 관리하기 위한 Enum
-enum MainPageView {
-  home,
-  simpleInquiry,
-  myPage,
-  contact,
-  orderList,
-}
+enum MainPageView { home, simpleInquiry, myPage, contact, orderList }
 
 class Mainpageex extends StatefulWidget {
   const Mainpageex({super.key});
@@ -51,11 +45,11 @@ class _MainpageexState extends State<Mainpageex> {
                 child: Text('로그아웃'),
               )
             : TextButton(
-                onPressed: () async{
+                onPressed: () async {
                   final result = await Navigator.pushNamed(context, '/login');
-                  if(result==true && mounted){
+                  if (result == true && mounted) {
                     setState(() {
-                      _isLoggedIn=true;
+                      _isLoggedIn = true;
                     });
                   }
                 },
@@ -74,7 +68,11 @@ class _MainpageexState extends State<Mainpageex> {
       case MainPageView.simpleInquiry:
         return Simpleinquiry();
       case MainPageView.myPage:
-        return Center(child: Text('마이페이지 화면')); // 임시
+        // Navigator.push로 GIProjectApp 실행
+        Future.microtask(() {
+          Navigator.pushNamed(context, '/mypage');
+        });
+        return const SizedBox();
       case MainPageView.contact:
         return const EstimateRequestListView(); // 임시
       case MainPageView.orderList:
@@ -130,9 +128,6 @@ class _MainpageexState extends State<Mainpageex> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: _buildAppBar(),
-      body: _buildBody(),
-    );
+    return Scaffold(appBar: _buildAppBar(), body: _buildBody());
   }
 }
