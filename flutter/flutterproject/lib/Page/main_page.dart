@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutterproject/API/ApiConfig.dart';
 import 'package:flutterproject/Screen/EstimateReqstListView/EstimateReqstListView.dart';
 import 'package:flutterproject/Screen/OrderDetailCard/OrderDetailHardcodedView.dart';
 import 'package:flutterproject/Screen/Simple_inquiry/SimpleInquiry.dart';
 import 'package:carousel_slider/carousel_slider.dart';
+import 'package:flutterproject/screen/Notice/noticeEx.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 
 // 화면 상태 Enum
 enum MainPageView { home, simpleInquiry, myPage, contact, orderList }
@@ -18,6 +22,30 @@ class _MainPageState extends State<MainPage> {
   bool _isLoggedIn = false; // 로그인 상태
   MainPageView _currentView = MainPageView.home; // 화면 뷰
   int _selectedIndex = -1;
+  late Future<List<Notice>> _noticesFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _noticesFuture = getNotices();
+  }
+
+  Future<List<Notice>> getNotices() async {
+    final String baseUrl = Apiconfig.baseUrl;
+    final response = await http.get(
+      Uri.parse('$baseUrl/api/notices?size=3&sort=createdAt,desc'),
+    );
+
+    if (response.statusCode == 200) {
+      final String responseBody = utf8.decode(response.bodyBytes);
+      final Map<String, dynamic> body = json.decode(responseBody);
+      final List<dynamic> noticeList = body['content'];
+
+      return noticeList.map((json) => Notice.fromJson(json)).toList();
+    } else {
+      throw Exception('공지사항 불러오기 실패');
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -117,7 +145,7 @@ class _MainPageState extends State<MainPage> {
   Widget _buildBody() {
     switch (_currentView) {
       case MainPageView.home:
-        return const HomeView();
+        return HomeView(noticesFuture: _noticesFuture);
       case MainPageView.simpleInquiry:
         return Simpleinquiry(); // 간편조회
       case MainPageView.myPage:
@@ -131,7 +159,9 @@ class _MainPageState extends State<MainPage> {
 }
 
 class HomeView extends StatelessWidget {
-  const HomeView({super.key});
+  final Future<List<Notice>> noticesFuture;
+
+  const HomeView({super.key, required this.noticesFuture});
 
   @override
   Widget build(BuildContext context) {
@@ -167,7 +197,7 @@ class HomeView extends StatelessWidget {
           ),
           const SizedBox(height: 10),
           QuickActionButton(
-            label: "> > >  빠른 간편 조회  < < <",
+            label: ">> >  빠른 간편 조회  < < <",
             onTap: () {
               final mainPageState = context
                   .findAncestorStateOfType<_MainPageState>();
@@ -178,35 +208,54 @@ class HomeView extends StatelessWidget {
               }
             },
           ),
-
           const SizedBox(height: 10),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16.0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
+                const Text(
                   "📢 공지사항",
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
-                SizedBox(height: 10),
-                Card(
-                  child: ListTile(
-                    title: Text("공지사항 제목 1"),
-                    subtitle: Text("공지사항 내용 미리보기"),
-                  ),
-                ),
-                Card(
-                  child: ListTile(
-                    title: Text("공지사항 제목 2"),
-                    subtitle: Text("공지사항 내용 미리보기"),
-                  ),
-                ),
-                Card(
-                  child: ListTile(
-                    title: Text("공지사항 제목 3"),
-                    subtitle: Text("공지사항 내용 미리보기"),
-                  ),
+                const SizedBox(height: 10),
+                FutureBuilder<List<Notice>>(
+                  future: noticesFuture,
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
+                    if (snapshot.hasError) {
+                      return Center(child: Text("오류: ${snapshot.error}"));
+                    }
+                    if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                      return const Center(child: Text("등록된 공지사항이 없습니다."));
+                    }
+                    final notices = snapshot.data!;
+                    return ListView.builder(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: notices.length,
+                      itemBuilder: (context, index) {
+                        final notice = notices[index];
+                        return Card(
+                          child: ListTile(
+                            title: Text(
+                              notice.title,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            subtitle: Text(
+                              '작성일: ${notice.createdAt.substring(0, 10)}',
+                            ),
+                            onTap: () {
+                              print("Tapped on notice: ${notice.title}");
+                            },
+                          ),
+                        );
+                      },
+                    );
+                  },
                 ),
               ],
             ),
@@ -228,7 +277,7 @@ class Footer extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       child: Column(
         children: [
-          const Text("g2i4", style: TextStyle(fontWeight: FontWeight.bold)),
+          const Text("G2I4로직스", style: TextStyle(fontWeight: FontWeight.bold)),
           const SizedBox(height: 4),
           const Text("서울시 강남구 테헤란로 123"),
           const Text("고객센터: 02-1234-5678 | yez@example.com"),
@@ -236,16 +285,6 @@ class Footer extends StatelessWidget {
           Row(mainAxisAlignment: MainAxisAlignment.center),
 
           const SizedBox(height: 12),
-
-          // 저작권 및 버전
-          const Text(
-            "© 2025 YEZ Corp. All Rights Reserved.",
-            style: TextStyle(fontSize: 12, color: Colors.grey),
-          ),
-          const Text(
-            "App Version 1.0.0",
-            style: TextStyle(fontSize: 12, color: Colors.grey),
-          ),
         ],
       ),
     );
