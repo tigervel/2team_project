@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutterproject/Screen/Estimate/Estimate.dart';
 import 'package:flutterproject/Screen/EstimateReqstListView/EstimateReqstListView.dart';
 import 'package:flutterproject/Screen/OrderDetailCard/OrderDetailHardcodedView.dart';
 import 'package:flutterproject/Screen/Simple_inquiry/SimpleInquiry.dart';
 import 'package:carousel_slider/carousel_slider.dart';
 
 // 화면 상태 Enum
-enum MainPageView { home, simpleInquiry, myPage, contact, orderList }
+enum MainPageView { home, simpleInquiry, myPage, contact, orderList ,estimate}
 
 class MainPage extends StatefulWidget {
   const MainPage({super.key});
@@ -44,7 +45,7 @@ class _MainPageState extends State<MainPage> {
                 _currentView = MainPageView.orderList; // 주문현황
                 break;
               case 1:
-                _currentView = MainPageView.simpleInquiry; // 간편조회
+                _currentView = MainPageView.estimate; // 견적조회
                 break;
               case 2:
                 _currentView = MainPageView.contact; // 문의사항
@@ -57,12 +58,13 @@ class _MainPageState extends State<MainPage> {
                   Navigator.pushNamed(context, '/login'); // 로그인 x → 로그인페이지
                 }
                 break;
+              
             }
           });
         },
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.list_alt), label: "주문현황"),
-          BottomNavigationBarItem(icon: Icon(Icons.search), label: "간편조회"),
+          BottomNavigationBarItem(icon: Icon(Icons.search), label: "견적서 작성"),
           BottomNavigationBarItem(icon: Icon(Icons.chat), label: "문의사항"),
           BottomNavigationBarItem(icon: Icon(Icons.person), label: "마이페이지"),
         ],
@@ -80,6 +82,8 @@ class _MainPageState extends State<MainPage> {
         return 2;
       case MainPageView.myPage:
         return 3;
+      case MainPageView.estimate:
+        return 1;
       case MainPageView.home:
         return 999;
     }
@@ -118,8 +122,14 @@ class _MainPageState extends State<MainPage> {
     switch (_currentView) {
       case MainPageView.home:
         return const HomeView();
+      case MainPageView.estimate:
+        return Estimate(onSubmitted: () {
+          setState(() {
+            _currentView = MainPageView.home;
+          });
+        },); // 견적조회
       case MainPageView.simpleInquiry:
-        return Simpleinquiry(); // 간편조회
+        return Simpleinquiry(); //간편조회
       case MainPageView.myPage:
         return const Center(child: Text("마이페이지"));
       case MainPageView.contact:

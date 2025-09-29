@@ -7,8 +7,7 @@ import 'package:flutterproject/DTO/PageResponseDTO.dart';
 import 'package:intl/intl.dart';
 
 const String bearerToken =
-    'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ6enoxMjM0NSIsImxvZ2luSWQiOiJ6enoxMjM0NSIsImVtYWlsIjoicGtuNDY5M0BuYXZlci5jb20iLCJyb2xlcyI6WyJST0xFX0RSSVZFUiIsIlJPTEVfVVNFUiJdLCJpc3MiOiJnaXByb2plY3QiLCJpYXQiOjE3NTg3ODE0NzYsImV4cCI6MTc1ODc4MzI3Nn0.51UKe9Ho3gOdR7zq3ftPKrFOLQMVvOZmzl_W2se6aHk';
-
+  'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ5eXkxMjM0NTEiLCJsb2dpbklkIjoieXl5MTIzNDUxIiwiZW1haWwiOiJwa240NjkzQG5hdmVyLmNvbSIsInJvbGVzIjpbIlJPTEVfRFJJVkVSIiwiUk9MRV9VU0VSIl0sImlzcyI6ImdpcHJvamVjdCIsImlhdCI6MTc1OTExNjcyNSwiZXhwIjoxNzU5MTE4NTI1fQ.qFo5rWs9tOm1-7ho4CAaW-asJdGbSE2e3yhqyy2egOw';
 class EstimateRequestListView extends StatefulWidget {
   // ✅ 상위에서 전달
   const EstimateRequestListView({super.key});
@@ -91,7 +90,10 @@ class _EstimateRequestListViewState extends State<EstimateRequestListView> {
                           style: TextStyle(fontWeight: FontWeight.w700),
                         ),
                       ),
-                      Text('상세보기', style: TextStyle(fontWeight: FontWeight.w700)),
+                      Text(
+                        '상세보기',
+                        style: TextStyle(fontWeight: FontWeight.w700),
+                      ),
                       SizedBox(width: 12),
                     ],
                   ),
@@ -200,7 +202,7 @@ class _EstimateRequestListViewState extends State<EstimateRequestListView> {
                       selected: decided == 'accept',
                       onTap: () async {
                         final estimateNo = item.eno;
-                   
+
                         if (estimateNo == null) {
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(content: Text('eno값이 없이는 처리불가')),
@@ -233,9 +235,34 @@ class _EstimateRequestListViewState extends State<EstimateRequestListView> {
                       label: '거절',
                       color: Colors.red,
                       selected: decided == 'reject',
-                      onTap: () {
-                        setState(() => _decision[item.matchNo] = 'reject');
-                        // TODO: 거절 API 호출
+                        onTap: () async {
+                        final estimateNo = item.eno;
+
+                        if (estimateNo == null) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('eno값이 없이는 처리불가')),
+                          );
+                          return;
+                        }
+                        try {
+                          await _api.rejectMatching(
+                            estimateNo: estimateNo,
+                            bearerToken: bearerToken,
+                          );
+                          if (!mounted) return;
+                          setState(
+                            () => _decision[item.matchNo] = 'reject',
+                          ); // UI 반영(선택)
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('거절되었습니다.')),
+                          );
+                          await _load();
+                        } catch (e) {
+                          if (!mounted) return;
+                          ScaffoldMessenger.of(
+                            context,
+                          ).showSnackBar(SnackBar(content: Text('거절 실패')));
+                        }
                       },
                     ),
                   ],
@@ -350,36 +377,35 @@ class _EstimateRequestListViewState extends State<EstimateRequestListView> {
     );
   }
 
-
   DateTime? _parseServerDateTime(String raw) {
-  try {
-    // ISO 형태면 먼저 시도: '2025-09-24T10:30:00' 또는 '2025-09-24 10:30:00'
-    final normalized = raw.contains('T') ? raw : raw.replaceFirst(' ', 'T');
-    final dt = DateTime.tryParse(normalized);
-    if (dt != null) return dt.toLocal();
-  } catch (_) {}
-
-  // 커스텀 포맷들 시도 (서버 포맷에 맞춰 추가/수정)
-  const patterns = [
-    "yyyy-MM-dd HH:mm:ss",
-    "yyyy-MM-dd'T'HH:mm:ss",
-    "yyyy-MM-dd HH:mm",
-    "yyyy-MM-dd'T'HH:mm",
-    "yyyy-MM-dd", // 날짜만 오는 경우
-  ];
-  for (final p in patterns) {
     try {
-      final dt = DateFormat(p).parseStrict(raw);
-      return dt.toLocal();
+      // ISO 형태면 먼저 시도: '2025-09-24T10:30:00' 또는 '2025-09-24 10:30:00'
+      final normalized = raw.contains('T') ? raw : raw.replaceFirst(' ', 'T');
+      final dt = DateTime.tryParse(normalized);
+      if (dt != null) return dt.toLocal();
     } catch (_) {}
+
+    // 커스텀 포맷들 시도 (서버 포맷에 맞춰 추가/수정)
+    const patterns = [
+      "yyyy-MM-dd HH:mm:ss",
+      "yyyy-MM-dd'T'HH:mm:ss",
+      "yyyy-MM-dd HH:mm",
+      "yyyy-MM-dd'T'HH:mm",
+      "yyyy-MM-dd", // 날짜만 오는 경우
+    ];
+    for (final p in patterns) {
+      try {
+        final dt = DateFormat(p).parseStrict(raw);
+        return dt.toLocal();
+      } catch (_) {}
+    }
+    return null; // 실패 시
   }
-  return null; // 실패 시
-}
 
   String _formatKoreanDateTime(String raw) {
-  final dt = _parseServerDateTime(raw);
-  if (dt == null) return raw; // 파싱 실패 시 원문 출력
-  // dayjs: 'YYYY년 MM월 DD일 A hh:mm' → intl: 'yyyy년 MM월 dd일 a hh:mm'
-  return DateFormat('yyyy년 MM월 dd일 a hh:mm', 'ko_KR').format(dt);
-}
+    final dt = _parseServerDateTime(raw);
+    if (dt == null) return raw; // 파싱 실패 시 원문 출력
+    // dayjs: 'YYYY년 MM월 DD일 A hh:mm' → intl: 'yyyy년 MM월 dd일 a hh:mm'
+    return DateFormat('yyyy년 MM월 dd일 a hh:mm', 'ko_KR').format(dt);
+  }
 }

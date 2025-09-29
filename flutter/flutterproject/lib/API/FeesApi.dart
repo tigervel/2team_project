@@ -20,6 +20,7 @@ class FeesApi {
   Future<List<FeesExtraModel>> fetchFeesExtra() async {
     final response = await _dio.post('/g2i4/estimate/subpath/searchfeesextra');
     final List<dynamic> data =response.data;
+    print(data);
     return data.map((e) => FeesExtraDTO.fromJson(e).toModel()).toList();
 
   }

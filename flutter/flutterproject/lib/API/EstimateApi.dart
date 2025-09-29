@@ -1,6 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:flutterproject/API/ApiConfig.dart';
-import 'package:flutterproject/Model/FeesModel.dart';
+
 
 // 리액트의 extraCharge 목록 대응용 간단 모델
 class ExtraFee {
@@ -16,8 +16,8 @@ class ExtraFee {
 
 class EstimateApi {
   final Dio _dio;
-
-  EstimateApi({String? bearerToken})
+  String bearerToken;
+  EstimateApi({required this.bearerToken})
       : _dio = Dio(BaseOptions(
           baseUrl: Apiconfig.baseUrl,
           headers: {'Content-Type': 'application/json'},
@@ -54,6 +54,8 @@ class EstimateApi {
 
   // --- 견적 제출 ---
   Future<void> submitEstimate(Map<String, dynamic> payload) async {
-    await _dio.post('/api/estimate/add', data: payload); // TODO: 서버 경로 맞추기
+    await _dio.post('/g2i4/estimate/',
+     data: payload
+     ,options: Options(headers: {'Authorization': 'Bearer $bearerToken'}) ); // TODO: 서버 경로 맞추기
   }
 }

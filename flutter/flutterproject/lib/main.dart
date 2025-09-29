@@ -6,7 +6,9 @@ import 'package:flutterproject/component_jh/login.dart';
 import 'package:flutterproject/component_jh/signup.dart';
 import 'package:intl/date_symbol_data_local.dart';
 
-void main() {
+void main() async{
+  WidgetsFlutterBinding.ensureInitialized();
+  await initializeDateFormatting('ko_Kr',null);
   runApp(
     MaterialApp(
       title: 'Flutter Project',
