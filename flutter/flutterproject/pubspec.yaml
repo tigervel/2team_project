@@ -35,9 +35,12 @@ dependencies:
   kpostal: ^1.1.0
   intl: ^0.20.2
   animated_splash_screen: ^1.3.0
-  shared_preferences: ^2.3.2
+  carousel_slider: ^5.1.1
+  http: ^1.2.2
+  shared_preferences: ^2.2.1
   image_picker: ^1.1.1
   fl_chart: ^0.69.0
+
  
 
 
@@ -70,6 +73,12 @@ flutter:
   uses-material-design: true
   assets:
     - assets/kakao_map.html
+    - assets/images/banner1.png
+    - assets/images/banner2.png
+    - assets/kakao-icon.png
+    - assets/naver-icon.png
+    - assets/google-icon.png
+    - assets/images/g2i4_logo.png
 
 
 
