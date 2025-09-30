@@ -43,7 +43,7 @@ class MyInformRepository {
   }
 
   Future<List<MonthlyPoint>> getOwnerMonthlyRevenue() async {
-    final r = await dio.get('/g2i4/owner/metrics/monthly-revenue');
+    final r = await dio.get('/g2i4/owner/revenue/monthly');
     final list = (r.data as List?) ?? [];
     return list.map((e) => MonthlyPoint.fromJson(e as Map<String, dynamic>)).toList();
   }

@@ -8,6 +8,8 @@ import 'package:carousel_slider/carousel_slider.dart';
 import 'package:flutterproject/screen/Notice/noticeEx.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:flutterproject/features/my_inform/my_inform_page.dart';
+import 'package:flutterproject/shell/carousel_shell.dart';
 
 // 화면 상태 Enum
 enum MainPageView { home, simpleInquiry, myPage, contact, orderList ,estimate}
@@ -20,7 +22,7 @@ class MainPage extends StatefulWidget {
 }
 
 class _MainPageState extends State<MainPage> {
-  bool _isLoggedIn = false; // 로그인 상태
+  bool _isLoggedIn = true; // 로그인 상태
   MainPageView _currentView = MainPageView.home; // 화면 뷰
   int _selectedIndex = -1;
   late Future<List<Notice>> _noticesFuture;
@@ -81,7 +83,6 @@ class _MainPageState extends State<MainPage> {
               case 3:
                 _currentView = MainPageView.myPage;
                 if (_isLoggedIn) {
-                  Navigator.pushNamed(context, '/mypage'); // 로그인 o → 마이페이지
                 } else {
                   Navigator.pushNamed(context, '/login'); // 로그인 x → 로그인페이지
                 }
@@ -159,7 +160,11 @@ class _MainPageState extends State<MainPage> {
       case MainPageView.simpleInquiry:
         return Simpleinquiry(); //간편조회
       case MainPageView.myPage:
-        return const Center(child: Text("마이페이지"));
+        return const DashboardCarouselShell(
+          showAppBar: false,
+          showBottomBar: false,
+          showIndicator: true, // ✅ 동그라미 표시
+        );
       case MainPageView.contact:
         return EstimateRequestListView(); // 문의하기
       case MainPageView.orderList:
