@@ -1,10 +1,14 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
+import 'package:flutterproject/API/ApiConfig.dart';
 import 'package:intl/intl.dart';
 import '../../core/api_client.dart';
 import 'models.dart';
 import 'repository.dart';
 import 'utils.dart';
+
+// 컴파일 타임 상수로만 읽는다 (비어있을 수 있음)
+const String _envApiBase = String.fromEnvironment('API_BASE', defaultValue: '');
 
 class MyInformPage extends StatefulWidget {
   const MyInformPage({super.key});
@@ -14,8 +18,8 @@ class MyInformPage extends StatefulWidget {
 }
 
 class _MyInformPageState extends State<MyInformPage> {
-  static const String apiBase =
-      String.fromEnvironment('API_BASE', defaultValue: 'http://10.0.2.2:8080');
+  // 최종 사용할 베이스 URL (런타임에 결정: env 우선, 없으면 ApiConfig)
+  late final String apiBase;
 
   late final MyInformRepository repo;
 
@@ -38,6 +42,8 @@ class _MyInformPageState extends State<MyInformPage> {
   @override
   void initState() {
     super.initState();
+    // 환경 변수 우선, 비어있으면 ApiConfig의 자동감지 사용
+    apiBase = _envApiBase.isNotEmpty ? _envApiBase : Apiconfig.baseUrl;
     _init();
   }
 
@@ -55,12 +61,10 @@ class _MyInformPageState extends State<MyInformPage> {
         final all = await repo.getMyAllEstimateList();
         final paid = await repo.getMyPaidEstimateList();
         final inTransit = paid
-            .where(
-                (it) => (it['deliveryStatus'] ?? it['status']) == 'IN_TRANSIT')
+            .where((it) => (it['deliveryStatus'] ?? it['status']) == 'IN_TRANSIT')
             .length;
         final completed = paid
-            .where(
-                (it) => (it['deliveryStatus'] ?? it['status']) == 'COMPLETED')
+            .where((it) => (it['deliveryStatus'] ?? it['status']) == 'COMPLETED')
             .length;
 
         final _b = makeLast6MonthBuckets()
@@ -70,8 +74,9 @@ class _MyInformPageState extends State<MyInformPage> {
           final d = extractEstimateDate(it);
           if (d == null) continue;
           final hit = _b.firstWhere(
-              (b) => b['y'] == d.year && b['m'] == d.month,
-              orElse: () => {});
+            (b) => b['y'] == d.year && b['m'] == d.month,
+            orElse: () => {},
+          );
           if (hit.isNotEmpty) hit['value'] = (hit['value'] as int) + 1;
         }
 
@@ -91,8 +96,7 @@ class _MyInformPageState extends State<MyInformPage> {
         final completed = await repo.getOwnerCompletedList();
         final revenue = await repo.getOwnerMonthlyRevenue();
         final inTransit = paid
-            .where(
-                (it) => (it['deliveryStatus'] ?? it['status']) == 'IN_TRANSIT')
+            .where((it) => (it['deliveryStatus'] ?? it['status']) == 'IN_TRANSIT')
             .length;
 
         final _b = makeLast6MonthBuckets()
@@ -100,8 +104,9 @@ class _MyInformPageState extends State<MyInformPage> {
             .toList();
         for (final r in revenue) {
           final hit = _b.firstWhere(
-              (b) => b['y'] == r.year && b['m'] == r.month,
-              orElse: () => {});
+            (b) => b['y'] == r.year && b['m'] == r.month,
+            orElse: () => {},
+          );
           if (hit.isNotEmpty) hit['value'] = r.value;
         }
 
@@ -176,24 +181,28 @@ class _MyInformPageState extends State<MyInformPage> {
                           padding: EdgeInsets.only(right: i < 2 ? 12 : 0),
                           child: Card(
                             shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12)),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
                             child: SizedBox(
                               height: 100,
                               child: Column(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  Text(label,
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .labelMedium
-                                          ?.copyWith(color: Colors.grey[700])),
+                                  Text(
+                                    label,
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .labelMedium
+                                        ?.copyWith(color: Colors.grey[700]),
+                                  ),
                                   const SizedBox(height: 6),
-                                  Text(value,
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .titleMedium
-                                          ?.copyWith(
-                                              fontWeight: FontWeight.bold)),
+                                  Text(
+                                    value,
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .titleMedium
+                                        ?.copyWith(fontWeight: FontWeight.bold),
+                                  ),
                                 ],
                               ),
                             ),
@@ -211,18 +220,18 @@ class _MyInformPageState extends State<MyInformPage> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Expanded(
-                            child: _ChartCard(
-                          title: isMember ? '월별 요청 수' : '월별 수익',
-                          legend: isMember ? '요청 수' : '수익',
-                          isOwner: !isMember,
-                          buckets: buckets,
-                        )),
+                          child: _ChartCard(
+                            title: isMember ? '월별 요청 수' : '월별 수익',
+                            legend: isMember ? '요청 수' : '수익',
+                            isOwner: !isMember,
+                            buckets: buckets,
+                          ),
+                        ),
                         const SizedBox(width: 16),
                         Expanded(child: _InquiryCard(inquiries: inquiries)),
                       ],
                     ),
                   ] else ...[
-                    // 세로 스택에서도 가로폭 동일하게
                     SizedBox(
                       width: double.infinity,
                       child: _ChartCard(
@@ -265,8 +274,7 @@ class _ChartCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final labels = buckets.map((b) => monthLabel(b['m'] as int)).toList();
     final values = buckets.map((b) => (b['value'] as num).toDouble()).toList();
-    final maxVal =
-        values.isEmpty ? 0.0 : (values.reduce((a, b) => a > b ? a : b));
+    final maxVal = values.isEmpty ? 0.0 : (values.reduce((a, b) => a > b ? a : b));
 
     return Card(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -277,40 +285,31 @@ class _ChartCard extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(title,
-                  style: Theme.of(context)
-                      .textTheme
-                      .labelLarge
-                      ?.copyWith(color: Colors.grey[700])),
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  Container(
-                      width: 10,
-                      height: 10,
-                      decoration: const BoxDecoration(
-                          color: Colors.purple, shape: BoxShape.circle)),
-                  const SizedBox(width: 6),
-                  Text(legend,
-                      style: Theme.of(context)
-                          .textTheme
-                          .labelSmall
-                          ?.copyWith(color: Colors.purple)),
-                ],
+              Text(
+                title,
+                style: Theme.of(context)
+                    .textTheme
+                    .labelLarge
+                    ?.copyWith(color: Colors.grey[700]),
               ),
+              const SizedBox(height: 8),
+             
               const SizedBox(height: 8),
               Expanded(
                 child: BarChart(
                   BarChartData(
                     barGroups: List.generate(values.length, (i) {
-                      return BarChartGroupData(x: i, barRods: [
-                        BarChartRodData(
-                          toY: values[i],
-                          width: 18,
-                          borderRadius: BorderRadius.circular(4),
-                          color: Colors.purple,
-                        ),
-                      ]);
+                      return BarChartGroupData(
+                        x: i,
+                        barRods: [
+                          BarChartRodData(
+                            toY: values[i],
+                            width: 18,
+                            borderRadius: BorderRadius.circular(4),
+                            color: Colors.purple,
+                          ),
+                        ],
+                      );
                     }),
                     gridData: FlGridData(show: true, drawVerticalLine: false),
                     borderData: FlBorderData(show: false),
@@ -318,14 +317,13 @@ class _ChartCard extends StatelessWidget {
                       leftTitles: AxisTitles(
                         sideTitles: SideTitles(
                           showTitles: true,
-                          reservedSize: 50,
+                          reservedSize: 70,
                           getTitlesWidget: (v, _) {
                             final num n = v;
                             final text = isOwner
                                 ? '${NumberFormat('#,###').format(n)}원'
                                 : '${n.toInt()}건';
-                            return Text(text,
-                                style: const TextStyle(fontSize: 10));
+                            return Text(text, style: const TextStyle(fontSize: 10));
                           },
                         ),
                       ),
@@ -346,9 +344,11 @@ class _ChartCard extends StatelessWidget {
                         ),
                       ),
                       topTitles: const AxisTitles(
-                          sideTitles: SideTitles(showTitles: false)),
+                        sideTitles: SideTitles(showTitles: false),
+                      ),
                       rightTitles: const AxisTitles(
-                          sideTitles: SideTitles(showTitles: false)),
+                        sideTitles: SideTitles(showTitles: false),
+                      ),
                     ),
                     maxY: (maxVal == 0)
                         ? 1
@@ -371,8 +371,8 @@ class _InquiryCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final rows = inquiries.isEmpty
-        ? [
-            const DataRow(cells: [
+        ? const [
+            DataRow(cells: [
               DataCell(Center(child: Text('최근 문의가 없습니다.'))),
               DataCell(SizedBox()),
               DataCell(SizedBox()),
@@ -395,19 +395,22 @@ class _InquiryCard extends StatelessWidget {
                   ),
                   onTap: clickable
                       ? () {
-                          // NOTE: Flutter Web이면 Navigator로 /qaboard로 이동 가능
+                          // Flutter Web이면 Navigator로 /qaboard 등으로 이동 가능
                           // Navigator.pushNamed(context, '/qaboard');
                         }
                       : null,
                 ),
                 DataCell(Center(child: Text(date))),
-                DataCell(Center(
-                  child: Text(
-                    status,
-                    style: TextStyle(
-                        color: i.answered ? Colors.green : Colors.red),
+                DataCell(
+                  Center(
+                    child: Text(
+                      status,
+                      style: TextStyle(
+                        color: i.answered ? Colors.green : Colors.red,
+                      ),
+                    ),
                   ),
-                )),
+                ),
               ],
             );
           }).toList();
@@ -420,19 +423,21 @@ class _InquiryCard extends StatelessWidget {
           height: 320,
           child: Column(
             children: [
-              Text('내 문의 내역',
-                  style: Theme.of(context)
-                      .textTheme
-                      .labelLarge
-                      ?.copyWith(color: Colors.grey[700])),
+              Text(
+                '내 문의 내역',
+                style: Theme.of(context)
+                    .textTheme
+                    .labelLarge
+                    ?.copyWith(color: Colors.grey[700]),
+              ),
               const SizedBox(height: 8),
               Expanded(
                 child: SingleChildScrollView(
                   scrollDirection: Axis.vertical,
                   child: DataTable(
                     headingRowHeight: 36,
-                    dataRowMinHeight: 40, // <= max보다 작거나 같게
-                    dataRowMaxHeight: 56, // 44 대신 56 정도 권장
+                    dataRowMinHeight: 40,
+                    dataRowMaxHeight: 56,
                     columns: const [
                       DataColumn(label: Center(child: Text('문의내용'))),
                       DataColumn(label: Center(child: Text('작성일'))),

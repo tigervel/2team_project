@@ -1,10 +1,10 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:flutterproject/API/FeesApi.dart';
-import 'package:flutterproject/API/MapApi.dart';
 import 'package:kpostal/kpostal.dart';
+import 'package:flutterproject/API/SimpleAPI.dart';
 import 'package:flutterproject/Model/FeesModel.dart';
 import 'package:webview_flutter/webview_flutter.dart';
+import 'package:dio/dio.dart';
 
 class Simpleinquiry extends StatefulWidget {
   const Simpleinquiry({super.key});
@@ -14,9 +14,7 @@ class Simpleinquiry extends StatefulWidget {
 }
 
 class _SimpleinquiryState extends State<Simpleinquiry> {
-  final FeesApi api = FeesApi();
-  final MapApi mapApi = MapApi(); // ✅ 지도/거리 전용 API
-
+  final SimpleAPI api = SimpleAPI();
   List<FeesModel> fees = [];
   FeesModel? selected;
 
@@ -24,6 +22,7 @@ class _SimpleinquiryState extends State<Simpleinquiry> {
   final TextEditingController _endCtl   = TextEditingController();
 
   late final WebViewController _webCtrl;
+  final Dio dio = Dio(BaseOptions(baseUrl: "http://10.0.2.2:8080"));
 
   @override
   void initState() {
@@ -62,62 +61,52 @@ class _SimpleinquiryState extends State<Simpleinquiry> {
   }
 
   Future<void> _onQuery() async {
-    final start = _startCtl.text.trim();
-    final end   = _endCtl.text.trim();
-    if (start.isEmpty || end.isEmpty || selected == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("출발지, 도착지, 화물 무게를 입력하세요.")),
-      );
-      return;
-    }
-
-    try {
-      // ✅ MapApi 사용: 거리/경로 가져오기
-      final dir = await mapApi.getDirections(
-        startAddress: start,
-        endAddress: end,
-      );
-
-      final distanceM = dir.distanceM; // m
-      final path = dir.path;           // [[lng, lat], ...]
-
-      // ✅ WebView에 경로 그리기
-      final js = "drawRoute(${jsonEncode(path)});";
-      await _webCtrl.runJavaScript(js);
-
-      // 🚚 요금 계산
-      final km = distanceM / 1000.0;
-      final total = selected!.baseCost.toInt()
-          + (km * selected!.ratePerKm.toInt()).round();
-
-      // 결과 모달
-      if (!mounted) return;
-      showDialog(
-        context: context,
-        builder: (_) => AlertDialog(
-          title: const Text("예상 견적"),
-          content: Text(
-            "거리: ${km.toStringAsFixed(1)} km\n"
-            "예상 요금: $total 원\n"
-            "본 금액은 예상 견적이며 물품에 따라 상세금액과 차이가 있을 수 있습니다",
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text("확인"),
-            ),
-          ],
-        ),
-      );
-    } catch (e) {
-      debugPrint("경로조회 실패: $e");
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('경로 조회에 실패했습니다.')),
-      );
-    }
+  final start = _startCtl.text.trim();
+  final end   = _endCtl.text.trim();
+  if (start.isEmpty || end.isEmpty || selected == null) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text("출발지, 도착지, 화물 무게를 입력하세요.")),
+    );
+    return;
   }
 
+  try {
+    // 🚀 백엔드 호출 (출발지/도착지 → 좌표/경로)
+    final res = await dio.get("/api/map/directions", queryParameters: {
+      "startAddress": start,
+      "endAddress": end,
+    });
+
+    final data = res.data;
+    final distance = data['distance']; // m 단위
+    final path = (data['path'] as List).cast<List>();
+
+    // 🚀 WebView에 JS 호출 → HTML 안의 drawRoute() 실행
+    final js = "drawRoute(${jsonEncode(path)});";
+    await _webCtrl.runJavaScript(js);
+
+    // 🚚 요금 계산
+    final km = distance / 1000.0;
+    final total = selected!.baseCost.toInt() + (km * selected!.ratePerKm.toInt()).round();
+
+    // 결과 모달
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text("예상 견적"),
+        content: Text("거리: ${km.toStringAsFixed(1)} km\n예상 요금: $total 원\n본 금액은 예상 견적이며 물품에 따라 상세금액과 차이가 있을 수 있습니다"),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("확인"),
+          ),
+        ],
+      ),
+    );
+  } catch (e) {
+    debugPrint("경로조회 실패: $e");
+  }
+}
   @override
   void dispose() {
     _startCtl.dispose();
@@ -143,11 +132,19 @@ class _SimpleinquiryState extends State<Simpleinquiry> {
           ),
           child: Column(
             children: [
+              // 상단 바
+              // Container(
+              //   height: height * 0.06,
+              //   width: double.infinity,
+              //   color: const Color(0xFFBFAFA9),
+              //   alignment: Alignment.centerRight,
+              //   padding: const EdgeInsets.symmetric(horizontal: 12),
+              //   child: const Text("로그인 / 회원가입"),
+              // ),
+
               SizedBox(height: height * 0.02),
-              const Text(
-                "간편 조회",
-                style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-              ),
+              const Text("간편 조회",
+                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
               SizedBox(height: height * 0.02),
 
               Icon(Icons.local_shipping, size: height * 0.1, color: Colors.white),
@@ -190,12 +187,10 @@ class _SimpleinquiryState extends State<Simpleinquiry> {
                       borderSide: const BorderSide(color: Colors.black, width: 2),
                     ),
                   ),
-                  items: fees
-                      .map((e) => DropdownMenuItem(
-                            value: e,
-                            child: Text('${e.weight} (기본요금 ${e.baseCost.toInt()}원)'),
-                          ))
-                      .toList(),
+                  items: fees.map((e) => DropdownMenuItem(
+                    value: e,
+                    child: Text('${e.weight} (기본요금 ${e.baseCost.toInt()}원)'),
+                  )).toList(),
                   onChanged: (v) => setState(() => selected = v),
                 ),
               ),
