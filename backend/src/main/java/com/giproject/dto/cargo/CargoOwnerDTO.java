@@ -17,7 +17,7 @@ import lombok.ToString;
 
 @Getter
 @Setter
-@ToString(exclude = "cargoPw") // 비밀번호 로그 노출 방지
+@ToString(exclude = "cargoPw")
 public class CargoOwnerDTO extends User {
 
     private static final long serialVersionUID = 1L;
@@ -33,8 +33,10 @@ public class CargoOwnerDTO extends User {
     private String cargoAddress;
     private LocalDateTime cargoCreatedDateTime;
 
-    /** 원본 롤 이름(접두어 없음): DRIVER + USER/ADMIN */
     private List<String> roleNames = new ArrayList<>();
+
+    private String accessToken;
+    private String refreshToken;
 
     public CargoOwnerDTO(String cargoId,
                          String cargoPw,
@@ -68,7 +70,6 @@ public class CargoOwnerDTO extends User {
         this.roleNames = (roleNames != null) ? new ArrayList<>(roleNames) : new ArrayList<>();
     }
 
-    /** 엔티티 -> DTO : 도메인=DRIVER, 플랫폼=(ADMIN|USER) */
     public static CargoOwnerDTO fromCargoOwner(CargoOwner c) {
         boolean isAdmin = false;
         try {
@@ -77,12 +78,12 @@ public class CargoOwnerDTO extends User {
         } catch (Exception ignore) {}
 
         List<String> roles = new ArrayList<>(2);
-        roles.add("DRIVER");                   // 도메인 축
-        roles.add(isAdmin ? "ADMIN" : "USER"); // 플랫폼 축
+        roles.add("DRIVER");
+        roles.add(isAdmin ? "ADMIN" : "USER");
 
         return new CargoOwnerDTO(
             c.getCargoId(),
-            c.getCargoPw(), // ⚠️ BCrypt 해시 전제
+            c.getCargoPw(),
             c.getCargoEmail(),
             c.getCargoName(),
             c.getCargoPhone(),
@@ -92,7 +93,12 @@ public class CargoOwnerDTO extends User {
         );
     }
 
-    /** JWT 등에 넣을 안전한 클레임(비밀번호 제외) */
+    public CargoOwnerDTO withTokens(String access, String refresh) {
+        this.accessToken = access;
+        this.refreshToken = refresh;
+        return this;
+    }
+
     public Map<String, Object> getClaims() {
         Map<String, Object> m = new HashMap<>();
         m.put("cargoId", cargoId);

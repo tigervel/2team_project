@@ -4,6 +4,7 @@ import static com.giproject.security.jwt.JwtClaimKeys.*;
 
 import com.giproject.dto.auth.SignupRequest;
 import com.giproject.dto.member.MemberDTO;
+import com.giproject.dto.cargo.CargoOwnerDTO;
 import com.giproject.entity.account.UserIndex;
 import com.giproject.entity.cargo.CargoOwner;
 import com.giproject.entity.member.Member;
@@ -11,8 +12,10 @@ import com.giproject.repository.account.UserIndexRepository;
 import com.giproject.repository.cargo.CargoOwnerRepository;
 import com.giproject.repository.member.MemberRepository;
 import com.giproject.security.JwtService;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -37,16 +40,15 @@ public class SimpleSignupService {
     }
 
     @Transactional
-    public MemberDTO signup(SignupRequest req) {
+    public Object signup(SignupRequest req) {
         final String loginId = safeTrim(req.getLoginId());
-        final String emailRaw = safeTrim(req.getEmail());
-        final String email = normalizeEmail(emailRaw);
+        final String email = normalizeEmail(safeTrim(req.getEmail()));
         final String rawPw = req.getPassword();
         final String roleStr = safeTrim(req.getRole());
 
         if (isBlank(loginId)) throw new IllegalArgumentException("LOGIN_ID_REQUIRED");
-        if (isBlank(rawPw))   throw new IllegalArgumentException("PASSWORD_REQUIRED");
-        if (isBlank(email))   throw new IllegalArgumentException("EMAIL_REQUIRED");
+        if (isBlank(rawPw)) throw new IllegalArgumentException("PASSWORD_REQUIRED");
+        if (isBlank(email)) throw new IllegalArgumentException("EMAIL_REQUIRED");
         if (isBlank(roleStr)) throw new IllegalArgumentException("ROLE_REQUIRED");
 
         final UserIndex.Role domainRole;
@@ -57,7 +59,7 @@ public class SimpleSignupService {
         }
 
         if (userIndexRepo.existsByLoginId(loginId)) throw new IllegalArgumentException("LOGIN_ID_TAKEN");
-        if (userIndexRepo.existsByEmail(email))     throw new IllegalArgumentException("EMAIL_TAKEN");
+        if (userIndexRepo.existsByEmail(email)) throw new IllegalArgumentException("EMAIL_TAKEN");
 
         final LocalDateTime now = LocalDateTime.now();
         userIndexRepo.save(UserIndex.builder()
@@ -75,6 +77,7 @@ public class SimpleSignupService {
         final String phone = req.getPhone();
         final String address = req.getAddress();
 
+        Object dto;
         switch (domainRole) {
             case SHIPPER, ADMIN -> {
                 Member m = Member.builder()
@@ -88,6 +91,7 @@ public class SimpleSignupService {
                         .memCreateIdDateTime(now)
                         .build();
                 memberRepository.save(m);
+                dto = MemberDTO.fromMember(m);
             }
             case DRIVER -> {
                 CargoOwner c = CargoOwner.builder()
@@ -101,7 +105,9 @@ public class SimpleSignupService {
                         .cargoCreatedDateTime(now)
                         .build();
                 cargoOwnerRepository.save(c);
+                dto = CargoOwnerDTO.fromCargoOwner(c);
             }
+            default -> throw new IllegalArgumentException("UNSUPPORTED_ROLE");
         }
 
         List<String> roles = new ArrayList<>();
@@ -119,7 +125,10 @@ public class SimpleSignupService {
         String access  = jwtService.createAccessToken(claims, loginId);
         String refresh = jwtService.createRefreshToken(Map.of(UID, loginId), loginId);
 
-        return MemberDTO.of(loginId, email, name, phone, address, now, roles, access, refresh);
+        if (dto instanceof CargoOwnerDTO cDto) cDto.withTokens(access, refresh);
+        else if (dto instanceof MemberDTO mDto) mDto.withTokens(access, refresh);
+
+        return dto;
     }
 
     private static String safeTrim(String s) { return s == null ? null : s.trim(); }

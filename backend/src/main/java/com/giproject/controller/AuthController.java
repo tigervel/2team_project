@@ -1,11 +1,12 @@
-// src/main/java/com/giproject/controller/AuthController.java
 package com.giproject.controller;
 
 import com.giproject.dto.auth.SignupRequest;
 import com.giproject.dto.member.MemberDTO;
+import com.giproject.dto.cargo.CargoOwnerDTO;
 import com.giproject.email.EmailVerificationService;
 import com.giproject.security.JwtService;
 import com.giproject.service.auth.SimpleSignupService;
+import com.giproject.service.auth.CustomUserDetailsService;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -14,6 +15,8 @@ import lombok.extern.log4j.Log4j2;
 import java.util.Map;
 
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 
@@ -26,11 +29,10 @@ public class AuthController {
     private final SimpleSignupService signupService;
     private final JwtService jwtService;
     private final EmailVerificationService emailVerificationService;
+    private final CustomUserDetailsService userDetailsService;
 
-    /** ⭐ 일반 회원가입 */
     @PostMapping("/signup")
     public ResponseEntity<?> signup(@Valid @RequestBody SignupRequest req, BindingResult br) {
-        // 1. DTO 유효성 검증
         if (br.hasErrors()) {
             var errors = br.getFieldErrors().stream()
                     .map(e -> e.getField() + ": " + e.getDefaultMessage())
@@ -41,7 +43,6 @@ public class AuthController {
             ));
         }
 
-        // 2. 이메일 인증 여부 확인
         if (!emailVerificationService.isVerified(req.getEmail())) {
             return ResponseEntity.badRequest().body(Map.of(
                     "error", "EMAIL_NOT_VERIFIED",
@@ -50,22 +51,31 @@ public class AuthController {
         }
 
         try {
-            // 3. 회원가입 실행
-            MemberDTO result = signupService.signup(req);
+            Object result = signupService.signup(req);
 
-            // 4. 응답에는 생성 시간(createdDateTime)도 포함됨
+            UserDetails userDetails = switch (result) {
+                case MemberDTO m -> userDetailsService.loadUserByUsername(m.getMemId());
+                case CargoOwnerDTO c -> userDetailsService.loadUserByUsername(c.getCargoId());
+                default -> throw new IllegalStateException("알 수 없는 회원 타입");
+            };
+
+            var auth = new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
+            String access  = jwtService.generateAccessToken(auth);
+            String refresh = jwtService.generateRefreshToken(auth);
+
+            if (result instanceof MemberDTO m) m.withTokens(access, refresh);
+            else if (result instanceof CargoOwnerDTO c) c.withTokens(access, refresh);
+
             return ResponseEntity.ok(Map.of(
                     "success", true,
                     "member", result
             ));
 
         } catch (IllegalArgumentException ex) {
-            // ex.getMessage() 예: LOGIN_ID_TAKEN, EMAIL_TAKEN
             return ResponseEntity.badRequest().body(Map.of(
                     "error", "VALIDATION_ERROR",
                     "message", ex.getMessage()
             ));
-
         } catch (Exception ex) {
             log.error("회원가입 실패", ex);
             return ResponseEntity.internalServerError().body(Map.of(
@@ -75,7 +85,6 @@ public class AuthController {
         }
     }
 
-    /** ⭐ ID 중복 + 형식 검증 */
     @GetMapping("/check-id")
     public ResponseEntity<?> checkId(@RequestParam("loginId") String loginId) {
         if (loginId == null || loginId.isBlank()) {
@@ -110,7 +119,6 @@ public class AuthController {
         ));
     }
 
-    /** 쿠키 우선, 없으면 Authorization: Bearer */
     private String extractToken(String cookieToken, String authHeader) {
         if (cookieToken != null && !cookieToken.isBlank()) return cookieToken;
         if (authHeader != null && authHeader.startsWith("Bearer ")) return authHeader.substring(7);
