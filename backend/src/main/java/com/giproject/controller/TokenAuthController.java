@@ -1,4 +1,3 @@
-// src/main/java/com/giproject/controller/TokenAuthController.java
 package com.giproject.controller;
 
 import static com.giproject.security.jwt.JwtClaimKeys.EMAIL;
@@ -105,7 +104,52 @@ public class TokenAuthController {
         private String password;
     }
 
-    /* ===== 1) 소셜 첫가입 컨텍스트 ===== */
+    /* ===== 1) 소셜 로그인 (/social/{provider}) ===== */
+    @PostMapping("/social/{provider}")
+    public ResponseEntity<?> socialLogin(
+            @PathVariable String provider,
+            @RequestBody Map<String, String> body) {
+
+        String providerUserId = body.get("providerId");
+        String email = body.get("email");
+        String name = body.get("name");
+
+        Optional<UserIndex> userOpt = userIndexRepo.findByProviderAndProviderId(provider.toUpperCase(), providerUserId);
+
+        if (userOpt.isPresent()) {
+            UserIndex ui = userOpt.get();
+            List<String> roles = new ArrayList<>();
+            roles.add("ROLE_" + ui.getRole().name());
+            roles.add(ui.getRole() == UserIndex.Role.ADMIN ? "ROLE_ADMIN" : "ROLE_USER");
+
+            Map<String,Object> claims = Map.of(
+                    EMAIL, ui.getEmail(),
+                    UID, ui.getLoginId(),
+                    ROLES, roles,
+                    PROVIDER, provider.toUpperCase(),
+                    PROVIDER_ID, providerUserId
+            );
+            String access = jwtService.createAccessToken(claims, ui.getLoginId());
+            String refresh = jwtService.createRefreshToken(Map.of(UID, ui.getLoginId()), ui.getLoginId());
+            return ResponseEntity.ok(Map.of("accessToken", access, "refreshToken", refresh));
+        } else {
+            Map<String,Object> claims = Map.of(
+                    "purpose", "signup",
+                    EMAIL, email,
+                    PROVIDER, provider.toUpperCase(),
+                    PROVIDER_ID, providerUserId,
+                    "name", name
+            );
+            String signupTicket = jwtService.createTempToken(claims, 5); // 5분 유효
+            return ResponseEntity.ok(Map.of(
+                    "signupRequired", true,
+                    "signupTicket", signupTicket,
+                    "email", email
+            ));
+        }
+    }
+
+    /* ===== 2) 소셜 첫가입 컨텍스트 ===== */
     @GetMapping("/social/signup-context")
     public ResponseEntity<?> signupContext(@RequestParam("ticket") String ticket) {
         if (ticket == null || ticket.isBlank()) {
@@ -114,7 +158,6 @@ public class TokenAuthController {
         try {
             Map<String, Object> claims = jwtService.parseTempToken(ticket);
 
-            // ✅ 최소 목적 검증
             if (!"signup".equalsIgnoreCase(String.valueOf(claims.getOrDefault("purpose", "")))) {
                 return ResponseEntity.status(404).body(new ApiError("TICKET_INVALID", "가입용 티켓이 아닙니다."));
             }
@@ -136,15 +179,14 @@ public class TokenAuthController {
     static class SignupContextDTO {
         private String email;
         private String provider;
-        private String name; // 프리필용(없을 수 있음)
+        private String name;
     }
 
-    /* ===== 2) 소셜 첫가입 완료 ===== */
+    /* ===== 3) 소셜 첫가입 완료 ===== */
     @Transactional
     @PostMapping("/social/complete-signup")
     public ResponseEntity<?> completeSignup(@RequestBody CompleteSignupReq req) {
 
-        // 2-0) 티켓 파싱
         if (req.getSignupTicket() == null || req.getSignupTicket().isBlank()) {
             return ResponseEntity.badRequest().body(new ApiError("NO_SIGNUP_TICKET", "가입 티켓이 없습니다."));
         }
@@ -160,11 +202,8 @@ public class TokenAuthController {
         }
 
         final String emailFromSocial = (String) stClaims.get(EMAIL);
-        final String providerStr     = (String) stClaims.get(PROVIDER);     // ex) GOOGLE / KAKAO / NAVER (대문자 기대)
-        final String providerId      = (String) stClaims.get(PROVIDER_ID);  // ex) sub 또는 id
-
-        log.info("[complete-signup] claims EMAIL={}, PROVIDER={}, PROVIDER_ID={}, rawClaims={}",
-                emailFromSocial, providerStr, providerId, stClaims);
+        final String providerStr     = (String) stClaims.get(PROVIDER);
+        final String providerId      = (String) stClaims.get(PROVIDER_ID);
 
         if (emailFromSocial == null || emailFromSocial.isBlank()) {
             return ResponseEntity.badRequest().body(new ApiError("EMAIL_REQUIRED", "이메일이 필요합니다."));
@@ -176,7 +215,6 @@ public class TokenAuthController {
             return ResponseEntity.badRequest().body(new ApiError("PROVIDER_ID_REQUIRED", "제공자 ID가 누락되었습니다."));
         }
 
-        // 2-1) 입력값 검증
         if (req.getLoginId() == null || req.getLoginId().isBlank()) {
             return ResponseEntity.badRequest().body(new ApiError("LOGIN_ID_REQUIRED", "아이디가 필요합니다."));
         }
@@ -184,7 +222,6 @@ public class TokenAuthController {
             return ResponseEntity.badRequest().body(new ApiError("ROLE_REQUIRED", "역할이 필요합니다."));
         }
 
-        // ✅ 사전 중복 체크 (아이디/이메일)
         if (userIndexRepo.existsByLoginId(req.getLoginId())) {
             return ResponseEntity.badRequest().body(new ApiError("LOGIN_ID_TAKEN", "이미 사용 중인 아이디입니다."));
         }
@@ -195,7 +232,7 @@ public class TokenAuthController {
 
         final UserIndex.Role domainRole;
         try {
-            domainRole = UserIndex.Role.valueOf(req.getRole().toUpperCase()); // SHIPPER / DRIVER / ADMIN
+            domainRole = UserIndex.Role.valueOf(req.getRole().toUpperCase());
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(new ApiError("INVALID_ROLE", "허용되지 않는 역할입니다."));
         }
@@ -203,11 +240,10 @@ public class TokenAuthController {
         final LocalDateTime now = LocalDateTime.now();
 
         try {
-            // 2-3) user_index 저장
             UserIndex ui = UserIndex.builder()
                     .loginId(req.getLoginId())
                     .email(emailFromSocial)
-                    .provider(providerStr.toUpperCase())   // ✅ 저장 규칙 통일(대문자)
+                    .provider(providerStr.toUpperCase())
                     .providerId(providerId)
                     .role(domainRole)
                     .createdAt(now)
@@ -215,7 +251,6 @@ public class TokenAuthController {
                     .build();
             userIndexRepo.save(ui);
 
-            // 2-4) 본 테이블 저장 (비밀번호 암호화)
             String encodedPw = passwordEncoder.encode(req.getPassword());
 
             switch (domainRole) {
@@ -257,7 +292,6 @@ public class TokenAuthController {
                 }
             }
 
-            // 2-5) social_account 업서트 (+ 반드시 FK 연결)
             SocialAccount.Provider providerEnum;
             try {
                 providerEnum = SocialAccount.Provider.valueOf(providerStr.toUpperCase());
@@ -272,15 +306,14 @@ public class TokenAuthController {
                             .providerUserId(providerId)
                             .build());
 
-            sa.setUser(ui);                    // ✅ FK 연결이 핵심! (다음 로그인에서 바로 토큰 발급 경로)
+            sa.setUser(ui);
             sa.setEmail(emailFromSocial);
-            sa.setLoginId(req.getLoginId());   // 보조 필드 유지 시
+            sa.setLoginId(req.getLoginId());
             sa.setLinkedAt(now);
             sa.setSignupTicket(null);
             sa.setSignupTicketExpireAt(null);
             socialAccountRepo.save(sa);
 
-            // 2-6) JWT 발급
             List<String> roles = new ArrayList<>();
             roles.add("ROLE_" + domainRole.name());
             roles.add(domainRole == UserIndex.Role.ADMIN ? "ROLE_ADMIN" : "ROLE_USER");
@@ -292,7 +325,7 @@ public class TokenAuthController {
             loginClaims.put(PROVIDER, providerEnum.name());
             loginClaims.put(PROVIDER_ID, providerId);
 
-            String subject = req.getLoginId(); // 내부 로그인키
+            String subject = req.getLoginId();
             String access  = jwtService.createAccessToken(loginClaims, subject);
             String refresh = jwtService.createRefreshToken(Map.of(UID, subject), subject);
 
@@ -309,16 +342,16 @@ public class TokenAuthController {
     @Data
     static class CompleteSignupReq {
         private String signupTicket;
-        private String role;      // SHIPPER / DRIVER / ADMIN
+        private String role;
         private String loginId;
         private String password;
         private String name;
-        private String email;     // (프런트 보낼 수 있으나 ticket 우선)
+        private String email;
         private String phone;
         private String address;
     }
 
-    /* ===== 3) 리프레시 → 액세스 재발급 ===== */
+    /* ===== 4) 리프레시 → 액세스 재발급 ===== */
     @PostMapping("/refresh")
     public ResponseEntity<?> refresh(@RequestBody RefreshReq req) {
         String refreshToken = req.getRefreshToken();
@@ -340,13 +373,13 @@ public class TokenAuthController {
         private String refreshToken;
     }
 
-    /* ===== 4) 로그아웃 ===== */
+    /* ===== 5) 로그아웃 ===== */
     @PostMapping("/logout")
     public ResponseEntity<?> logout() {
         return ResponseEntity.ok(Map.of("ok", true));
     }
 
-    /* ===== 5) 아이디 찾기 ===== */
+    /* ===== 6) 아이디 찾기 ===== */
     @GetMapping("/find-id")
     public ResponseEntity<?> findId(@RequestParam("email") String email) {
         var opt = memberRepository.findByMemEmail(email);

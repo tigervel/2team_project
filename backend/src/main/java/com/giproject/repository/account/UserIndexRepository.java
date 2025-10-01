@@ -18,6 +18,8 @@ public interface UserIndexRepository extends JpaRepository<UserIndex, String> {
     
     boolean existsByEmail(String email);
     boolean existsByEmailIgnoreCase(String email);
+    
+    Optional<UserIndex> findByProviderAndProviderId(String provider, String providerId);
 
     // 역할로 조회
     List<UserIndex> findByRole(Role role);

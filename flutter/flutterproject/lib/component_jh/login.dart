@@ -4,7 +4,6 @@ import 'package:flutterproject/component_jh/signup.dart';
 import 'package:flutterproject/provider/TokenProvider.dart';
 import 'package:provider/provider.dart';
 import '../services/auth_service.dart';
-import '../utils/storage.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -29,16 +28,18 @@ class _LoginPageState extends State<LoginPage> {
     });
 
     try {
-      final data = await authService.login(_idController.text.trim(), _pwController.text.trim());
+      final data = await authService.login(
+        _idController.text.trim(),
+        _pwController.text.trim(),
+      );
 
-      // 로그인 후 토큰 저장
       final token = data["accessToken"] as String?;
       if (token != null) {
         await context.read<Tokenprovider>().setToken(token);
 
-        // 프로필 호출
         final profile = await authService.getProfile();
         print("로그인 완료, 프로필: $profile");
+
         if (mounted) {
           Navigator.pushReplacement(
             context,
@@ -46,31 +47,28 @@ class _LoginPageState extends State<LoginPage> {
           );
         }
       } else {
-        setState(() {
-          errorMsg = "로그인 토큰이 없습니다.";
-        });
+        setState(() => errorMsg = "로그인 토큰이 없습니다.");
       }
     } catch (e) {
-      setState(() {
-        errorMsg = e.toString();
-      });
+      setState(() => errorMsg = e.toString());
     } finally {
       setState(() => loading = false);
     }
   }
 
   // -------------------- 소셜 로그인 --------------------
-  void _socialLogin(String provider) async {
+  Future<void> _socialLogin(String provider) async {
     setState(() {
       loading = true;
       errorMsg = null;
     });
 
     try {
+      // SDK 로그인 → 백엔드 교환
       final data = await authService.socialLogin(provider);
 
-      // 회원가입이 필요한 경우
       if (data.containsKey("signupTicket")) {
+        // 소셜 첫 가입 → 회원가입 페이지로 이동
         Navigator.push(
           context,
           MaterialPageRoute(
@@ -86,7 +84,6 @@ class _LoginPageState extends State<LoginPage> {
         final token = data["accessToken"] as String?;
         if (token != null) {
           await context.read<Tokenprovider>().setToken(token);
-          // await Storage.saveToken(token);
 
           final profile = await authService.getProfile();
           print("소셜 로그인 완료, 프로필: $profile");
@@ -98,15 +95,11 @@ class _LoginPageState extends State<LoginPage> {
             );
           }
         } else {
-          setState(() {
-            errorMsg = "로그인 토큰이 없습니다.";
-          });
+          setState(() => errorMsg = "로그인 토큰이 없습니다.");
         }
       }
     } catch (e) {
-      setState(() {
-        errorMsg = e.toString();
-      });
+      setState(() => errorMsg = e.toString());
     } finally {
       setState(() => loading = false);
     }
