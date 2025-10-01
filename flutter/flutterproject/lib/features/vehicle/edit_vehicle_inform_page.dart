@@ -303,15 +303,15 @@ class _EditVehicleInformPageState extends State<EditVehicleInformPage> {
     final target = _vehicles[index];
     final ok = await showDialog<bool>(
       context: context,
-      builder: (_) => AlertDialog(
+      builder: (dialogCtx) => AlertDialog(
         title: const Text('삭제 확인'),
         content: const Text('정말 삭제하시겠습니까?'),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(context, false),
+              onPressed: () => Navigator.pop(dialogCtx, false),
               child: const Text('취소')),
           ElevatedButton(
-              onPressed: () => Navigator.pop(context, true),
+              onPressed: () => Navigator.pop(dialogCtx, true),
               child: const Text('삭제')),
         ],
       ),
@@ -363,22 +363,20 @@ class _EditVehicleInformPageState extends State<EditVehicleInformPage> {
             final crossAxisCount =
                 c.maxWidth >= 1200 ? 3 : (c.maxWidth >= 800 ? 2 : 1);
 
-            return Column(
+            final grid = Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // 그리드
                 Expanded(
                   child: GridView.builder(
                     gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                       crossAxisCount: crossAxisCount,
                       mainAxisSpacing: 16,
                       crossAxisSpacing: 16,
-                      childAspectRatio: 1, // 1:1 카드
+                      childAspectRatio: 1,
                     ),
-                    itemCount: _vehicles.length + 1, // +1 = 신규 추가 카드
+                    itemCount: _vehicles.length + 1,
                     itemBuilder: (context, i) {
                       if (i == _vehicles.length) {
-                        // 추가 카드
                         return InkWell(
                           onTap: () => _openEditor(),
                           child: Card(
@@ -402,22 +400,58 @@ class _EditVehicleInformPageState extends State<EditVehicleInformPage> {
                     },
                   ),
                 ),
+              ],
+            );
 
-                // 편집 모달(바텀 시트 스타일)
-                if (_editorOpen)
-                  _EditorSheet(
-                    title: '차량 정보 입력',
-                    nameController: _nameCtrl,
-                    selectedWeight: _selectedWeight,
-                    weightOptions: _weightOptions,
-                    previewUrl: _previewUrl,
-                    localImage: _pickedImageFile,
-                    onPickImage: _pickImage,
-                    onWeightChanged: (w) =>
-                        setState(() => _selectedWeight = w ?? ''),
-                    onClose: _closeEditor,
-                    onSave: _saveVehicle,
+            final overlay = <Widget>[];
+            if (_editorOpen) {
+              overlay.add(
+                Positioned.fill(
+                  child: AnimatedOpacity(
+                    opacity: _editorOpen ? 1 : 0,
+                    duration: const Duration(milliseconds: 200),
+                    child: GestureDetector(
+                      onTap: _closeEditor,
+                      behavior: HitTestBehavior.translucent,
+                      child: Container(color: Colors.black45),
+                    ),
                   ),
+                ),
+              );
+              overlay.add(
+                Positioned.fill(
+                  child: IgnorePointer(
+                    ignoring: false,
+                    child: Align(
+                      alignment: Alignment.center,
+                      child: AnimatedScale(
+                        duration: const Duration(milliseconds: 200),
+                        scale: _editorOpen ? 1 : 0.95,
+                        child: _EditorSheet(
+                          title: '차량 정보 입력',
+                          nameController: _nameCtrl,
+                          selectedWeight: _selectedWeight,
+                          weightOptions: _weightOptions,
+                          previewUrl: _previewUrl,
+                          localImage: _pickedImageFile,
+                          onPickImage: _pickImage,
+                          onWeightChanged: (w) =>
+                              setState(() => _selectedWeight = w ?? ''),
+                          onClose: _closeEditor,
+                          onSave: _saveVehicle,
+                          asDialog: true,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            }
+
+            return Stack(
+              children: [
+                grid,
+                ...overlay,
               ],
             );
           },
@@ -522,6 +556,7 @@ class _EditorSheet extends StatelessWidget {
   final ValueChanged<String?> onWeightChanged;
   final VoidCallback onClose;
   final VoidCallback onSave;
+  final bool asDialog;
 
   const _EditorSheet({
     required this.title,
@@ -534,128 +569,167 @@ class _EditorSheet extends StatelessWidget {
     required this.onWeightChanged,
     required this.onClose,
     required this.onSave,
+    this.asDialog = false,
   });
 
   @override
   Widget build(BuildContext context) {
-    // 화면 아래에 고정되는 카드 느낌
-    return Align(
-      alignment: Alignment.bottomCenter,
-      child: Material(
-        elevation: 12,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-        child: Container(
-          width: double.infinity,
-          constraints: const BoxConstraints(maxWidth: 1000),
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+    Widget buildPreview({double? height}) {
+      final box = Container(
+        decoration: BoxDecoration(
+          color: const Color(0xFFE5E7EB),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Center(
+          child: localImage != null
+              ? Image.file(localImage!, fit: BoxFit.contain)
+              : (previewUrl != null
+                  ? Image.network(
+                      previewUrl!,
+                      fit: BoxFit.contain,
+                      errorBuilder: (_, __, ___) => const _NoImage(),
+                    )
+                  : const _NoImage()),
+        ),
+      );
+
+      return height != null ? SizedBox(height: height, child: box) : box;
+    }
+
+    Widget buildForm() {
+      return Column(
+        children: [
+          TextField(
+            controller: nameController,
+            decoration: const InputDecoration(
+              labelText: '차량 이름',
+              border: OutlineInputBorder(),
+            ),
           ),
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // 헤더
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(title,
-                        style: Theme.of(context).textTheme.titleMedium),
-                  ),
-                  IconButton(onPressed: onClose, icon: const Icon(Icons.close)),
-                ],
+          const SizedBox(height: 12),
+          InputDecorator(
+            decoration: const InputDecoration(
+              labelText: '적재 무게',
+              border: OutlineInputBorder(),
+            ),
+            child: DropdownButtonHideUnderline(
+              child: DropdownButton<String>(
+                isExpanded: true,
+                value: selectedWeight.isEmpty ? null : selectedWeight,
+                items: weightOptions
+                    .map((w) => DropdownMenuItem(value: w, child: Text(w)))
+                    .toList(),
+                onChanged: onWeightChanged,
+                hint: const Text('선택'),
               ),
-              const SizedBox(height: 8),
-              // 본문
-              LayoutBuilder(builder: (context, c) {
-                final vertical = c.maxWidth < 700;
-                return Flex(
-                  direction: vertical ? Axis.vertical : Axis.horizontal,
-                  crossAxisAlignment: vertical
-                      ? CrossAxisAlignment.stretch
-                      : CrossAxisAlignment.start,
+            ),
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            height: 44,
+            child: OutlinedButton(
+              onPressed: onPickImage,
+              child: const Text('이미지 업로드'),
+            ),
+          ),
+        ],
+      );
+    }
+
+    final media = MediaQuery.of(context);
+    final maxHeight = media.size.height * 0.85;
+
+    final borderRadius = asDialog
+        ? BorderRadius.circular(20)
+        : const BorderRadius.vertical(top: Radius.circular(16));
+
+    final outerPadding = EdgeInsets.symmetric(
+      horizontal: asDialog ? 24 : 12,
+      vertical: asDialog ? 24 : 8,
+    );
+
+    return SafeArea(
+      top: false,
+      child: Padding(
+        padding: outerPadding,
+        child: Center(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxWidth: asDialog ? 480 : 1000,
+              maxHeight: maxHeight,
+            ),
+            child: Material(
+              elevation: 16,
+              color: Colors.white,
+              borderRadius: borderRadius,
+              clipBehavior: Clip.antiAlias,
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    // 미리보기
-                    Expanded(
-                      child: AspectRatio(
-                        aspectRatio: 5 / 3,
-                        child: Container(
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFE5E7EB),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Center(
-                            child: localImage != null
-                                ? Image.file(localImage!, fit: BoxFit.contain)
-                                : (previewUrl != null
-                                    ? Image.network(
-                                        previewUrl!,
-                                        fit: BoxFit.contain,
-                                        errorBuilder: (_, __, ___) =>
-                                            const _NoImage(),
-                                      )
-                                    : const _NoImage()),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            title,
+                            style: Theme.of(context).textTheme.titleMedium,
                           ),
                         ),
-                      ),
+                        IconButton(
+                          onPressed: onClose,
+                          icon: const Icon(Icons.close),
+                        ),
+                      ],
                     ),
-                    const SizedBox(width: 16, height: 16),
-                    // 폼
-                    Expanded(
-                      child: Column(
-                        children: [
-                          TextField(
-                            controller: nameController,
-                            decoration: const InputDecoration(
-                              labelText: '차량 이름',
-                              border: OutlineInputBorder(),
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                          InputDecorator(
-                            decoration: const InputDecoration(
-                              labelText: '적재 무게',
-                              border: OutlineInputBorder(),
-                            ),
-                            child: DropdownButtonHideUnderline(
-                              child: DropdownButton<String>(
-                                isExpanded: true,
-                                value: selectedWeight.isEmpty
-                                    ? null
-                                    : selectedWeight,
-                                items: weightOptions
-                                    .map((w) => DropdownMenuItem(
-                                        value: w, child: Text(w)))
-                                    .toList(),
-                                onChanged: onWeightChanged,
-                                hint: const Text('선택'),
+                    const SizedBox(height: 8),
+                    LayoutBuilder(
+                      builder: (context, constraints) {
+                        final vertical = constraints.maxWidth < 560;
+                        if (vertical) {
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              buildPreview(height: 200),
+                              const SizedBox(height: 16),
+                              buildForm(),
+                            ],
+                          );
+                        }
+                        return Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(
+                              child: AspectRatio(
+                                aspectRatio: 5 / 3,
+                                child: buildPreview(),
                               ),
                             ),
-                          ),
-                          const SizedBox(height: 12),
-                          SizedBox(
-                            width: double.infinity,
-                            height: 44,
-                            child: OutlinedButton(
-                              onPressed: onPickImage,
-                              child: const Text('이미지 업로드'),
-                            ),
-                          ),
-                        ],
+                            const SizedBox(width: 16),
+                            Expanded(child: buildForm()),
+                          ],
+                        );
+                      },
+                    ),
+                    const SizedBox(height: 16),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 48,
+                      child: ElevatedButton(
+                        onPressed: onSave,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFFEEE6FF),
+                          foregroundColor: const Color(0xFF5B0EF2),
+                          textStyle: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        child: const Text('저장'),
                       ),
                     ),
                   ],
-                );
-              }),
-              const SizedBox(height: 16),
-              // 저장 버튼
-              SizedBox(
-                width: double.infinity,
-                height: 48,
-                child:
-                    ElevatedButton(onPressed: onSave, child: const Text('저장')),
+                ),
               ),
-            ],
+            ),
           ),
         ),
       ),
