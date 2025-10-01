@@ -1,13 +1,21 @@
-import 'package:flutter/material.dart';
-import 'package:kpostal/kpostal.dart';
-import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'package:flutter/material.dart';
+import 'package:flutterproject/Page/main_page.dart';
+import 'package:flutterproject/Utils/storage.dart';
+import 'package:flutterproject/services/auth_service.dart';
+import 'package:kpostal/kpostal.dart';
 
 class SignUpPage extends StatefulWidget {
-  final String? socialEmail; // 소셜 로그인으로 받은 이메일
+  final String? socialEmail; // 소셜 로그인 이메일
   final bool isSocial; // 소셜 회원가입 여부
+  final String? signupTicket; // 소셜 로그인 티켓 추가
 
-  const SignUpPage({super.key, this.socialEmail, this.isSocial = false});
+  const SignUpPage({
+    super.key,
+    this.socialEmail,
+    this.isSocial = false,
+    this.signupTicket, // optional
+  });
 
   @override
   State<SignUpPage> createState() => _SignUpPageState();
@@ -15,6 +23,7 @@ class SignUpPage extends StatefulWidget {
 
 class _SignUpPageState extends State<SignUpPage> {
   final _formKey = GlobalKey<FormState>();
+  final AuthService authService = AuthService();
 
   // Controllers
   final _idController = TextEditingController();
@@ -52,16 +61,16 @@ class _SignUpPageState extends State<SignUpPage> {
   bool verified = false;
   bool verifying = false;
 
-  // 예시 중복 아이디
-  final List<String> existingIds = ["test01", "user123"];
-
   @override
   void initState() {
     super.initState();
-
     _emailController = TextEditingController(
       text: widget.isSocial ? widget.socialEmail : "",
     );
+
+    if (widget.isSocial && widget.socialEmail != null) {
+      verified = true; // 소셜 로그인 시 이메일 인증 생략
+    }
 
     _idFocus.addListener(() {
       if (!_idFocus.hasFocus) setState(() => _idError = null);
@@ -103,19 +112,12 @@ class _SignUpPageState extends State<SignUpPage> {
   bool _isValidEmail(String email) =>
       RegExp(r'^[\w-]+(\.[\w-]+)*@([\w-]+\.)+[a-zA-Z]{2,7}$').hasMatch(email);
 
-  // 중복 확인
-  void _checkIdDuplicate() {
-    final id = _idController.text;
-    if (!_isValidId(id)) {
-      _showDialog("아이디 형식 오류", "아이디는 4~12자의 영어/숫자로 입력해야 합니다.");
-    } else if (existingIds.contains(id)) {
-      _showDialog("중복 아이디", "이미 사용 중인 아이디입니다.");
-    } else {
-      _showDialog("사용 가능", "사용 가능한 아이디입니다.");
-    }
+  String? _validateRequired(String? value, String fieldName) {
+    if (value == null || value.trim().isEmpty) return "$fieldName 입력은 필수입니다.";
+    return null;
   }
 
-  // 이메일 인증 코드 발송
+  // 이메일 인증 발송
   Future<void> _sendEmailCode() async {
     final email = _emailController.text.trim();
     if (!_isValidEmail(email)) {
@@ -123,27 +125,16 @@ class _SignUpPageState extends State<SignUpPage> {
       return;
     }
 
-    final url = Uri.parse("http://10.0.2.2:8080/api/email/send-code");
     try {
-      final res = await http.post(
-        url,
-        headers: {"Content-Type": "application/json"},
-        body: jsonEncode({"email": email}),
-      );
-
-      if (res.statusCode == 200) {
-        setState(() => codeSent = true);
-        _showDialog("인증코드 발송", "$email 로 인증코드를 발송했습니다.");
-      } else {
-        final body = jsonDecode(res.body);
-        _showDialog("오류", body["message"] ?? "메일 발송 실패");
-      }
+      await authService.sendEmailCode(email);
+      setState(() => codeSent = true);
+      _showDialog("인증코드 발송", "$email 로 인증코드를 발송했습니다.");
     } catch (e) {
       _showDialog("오류", e.toString());
     }
   }
 
-  // 인증 코드 확인
+  // 이메일 인증 확인
   Future<void> _verifyCode() async {
     setState(() => verifying = true);
     final email = _emailController.text.trim();
@@ -154,24 +145,13 @@ class _SignUpPageState extends State<SignUpPage> {
       return;
     }
 
-    final url = Uri.parse("http://10.0.2.2:8080/api/email/verify");
     try {
-      final res = await http.post(
-        url,
-        headers: {"Content-Type": "application/json"},
-        body: jsonEncode({"email": email, "code": code}),
-      );
-
-      if (res.statusCode == 200) {
-        final body = jsonDecode(res.body);
-        if (body["verified"] == true) {
-          setState(() => verified = true);
-          _showDialog("인증 완료", "이메일 인증이 완료되었습니다.");
-        } else {
-          _showDialog("실패", "코드가 틀렸거나 만료되었습니다.");
-        }
+      final result = await authService.verifyEmailCode(email, code);
+      if (result) {
+        setState(() => verified = true);
+        _showDialog("인증 완료", "이메일 인증이 완료되었습니다.");
       } else {
-        _showDialog("오류", "검증 실패");
+        _showDialog("실패", "코드가 틀렸거나 만료되었습니다.");
       }
     } catch (e) {
       _showDialog("오류", e.toString());
@@ -179,6 +159,133 @@ class _SignUpPageState extends State<SignUpPage> {
       setState(() => verifying = false);
     }
   }
+
+  // ID 중복 확인 (서버 연동)
+  Future<void> _checkIdDuplicate() async {
+    final id = _idController.text.trim();
+    if (!_isValidId(id)) {
+      _showDialog("아이디 형식 오류", "아이디는 4~12자의 영어/숫자로 입력해야 합니다.");
+      return;
+    }
+
+    try {
+      final available = await authService.checkIdDuplicate(id);
+      if (available) {
+        _showDialog("사용 가능", "사용 가능한 아이디입니다.");
+      } else {
+        _showDialog("사용 불가", "이미 존재하는 아이디입니다.");
+      }
+    } catch (e) {
+      _showDialog("오류", e.toString());
+    }
+  }
+
+  // 주소 검색
+  Future<void> _searchAddress() async {
+    final result = await Navigator.push<Kpostal>(
+      context,
+      MaterialPageRoute(
+        fullscreenDialog: true,
+        builder: (_) => Scaffold(
+          body: KpostalView(useLocalServer: true, localPort: 1024),
+        ),
+      ),
+    );
+
+    if (result != null) {
+      setState(() {
+        _addressController.text =
+            "${result.address}${result.buildingName != null && result.buildingName!.isNotEmpty ? " (${result.buildingName})" : ""}";
+      });
+    }
+  }
+
+  // 회원가입 처리
+  Future<void> _signUp() async {
+  if (!_formKey.currentState!.validate()) return;
+
+  setState(() {
+    _idError = _isValidId(_idController.text)
+        ? null
+        : "아이디는 4~12자의 영어/숫자여야 합니다.";
+    _passwordError = _isValidPassword(_passwordController.text)
+        ? null
+        : "비밀번호는 최소 8자, 숫자+영문+특수문자 포함해야 합니다.";
+    _confirmError =
+        _confirmPasswordController.text == _passwordController.text
+            ? null
+            : "비밀번호가 일치하지 않습니다.";
+    _emailError = _isValidEmail(_emailController.text)
+        ? null
+        : "올바른 이메일 형식이 아닙니다.";
+  });
+
+  if (_idError != null ||
+      _passwordError != null ||
+      _confirmError != null ||
+      _emailError != null)
+    return;
+
+  if (!widget.isSocial && !verified) {
+    _showDialog("인증 필요", "이메일 인증을 완료해주세요.");
+    return;
+  }
+
+  try {
+    Map<String, dynamic> res;
+
+    if (widget.isSocial) {
+      // 소셜 회원가입
+      final ticket = widget.signupTicket ?? "signupTicket_example";
+      res = await authService.completeSocialSignup(
+        signupTicket: ticket,
+        role: userType == "화주" ? "SHIPPER" : "DRIVER",
+        loginId: _idController.text.trim(),
+        password: _passwordController.text.trim(),
+        name: _nameController.text.trim(),
+        phone: _phoneController.text.trim(),
+        address: _addressController.text.trim(),
+        detailAddress: _detailAddressController.text.trim(),
+        carNumber: userType == "차주" ? _carNumberController.text.trim() : null,
+      );
+    } else {
+      // 일반 회원가입
+      res = await authService.register(
+        loginId: _idController.text.trim(),
+        password: _passwordController.text.trim(),
+        email: _emailController.text.trim(),
+        name: _nameController.text.trim(),
+        phone: _phoneController.text.trim(),
+        address: _addressController.text.trim(),
+        detailAddress: _detailAddressController.text.trim(),
+        carNumber: userType == "차주" ? _carNumberController.text.trim() : null,
+        userType: userType,
+      );
+    }
+
+    // accessToken 저장
+    final token = res["accessToken"] as String?;
+    if (token != null && token.isNotEmpty) {
+      await Storage.saveToken(token);
+
+      // 회원가입 후 프로필 조회
+      final profile = await authService.getProfile();
+      print("회원가입 완료, 프로필: $profile");
+
+      if (mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const MainPage()),
+        );
+      }
+    } else {
+      _showDialog("오류", "회원가입 성공했지만 토큰이 없습니다.");
+    }
+  } catch (e) {
+    _showDialog("오류", e.toString());
+  }
+}
+
 
   void _showDialog(String title, String msg) {
     showDialog(
@@ -196,70 +303,10 @@ class _SignUpPageState extends State<SignUpPage> {
     );
   }
 
-  Future<void> _searchAddress() async {
-    final result = await Navigator.push<Kpostal>(
-      context,
-      MaterialPageRoute(
-        fullscreenDialog: true,
-        builder: (_) => Scaffold(
-          appBar: AppBar(title: const Text("주소 검색")),
-          body: KpostalView(useLocalServer: true, localPort: 1024),
-        ),
-      ),
-    );
-
-    if (result != null) {
-      setState(() {
-        _addressController.text =
-            "${result.address}${result.buildingName != null && result.buildingName!.isNotEmpty ? " (${result.buildingName})" : ""}";
-      });
-    }
-  }
-
-  void _signUp() {
-    if (!_formKey.currentState!.validate()) return;
-
-    setState(() {
-      _idError = _isValidId(_idController.text)
-          ? null
-          : "아이디는 4~12자의 영어/숫자여야 합니다.";
-      _passwordError = _isValidPassword(_passwordController.text)
-          ? null
-          : "비밀번호는 최소 8자, 숫자+영문+특수문자 포함해야 합니다.";
-      _confirmError =
-          _confirmPasswordController.text == _passwordController.text
-          ? null
-          : "비밀번호가 일치하지 않습니다.";
-      _emailError = _isValidEmail(_emailController.text)
-          ? null
-          : "올바른 이메일 형식이 아닙니다.";
-    });
-
-    if (_idError != null ||
-        _passwordError != null ||
-        _confirmError != null ||
-        _emailError != null)
-      return;
-    if (!widget.isSocial && !verified) {
-      _showDialog("인증 필요", "이메일 인증을 완료해주세요.");
-      return;
-    }
-
-    _showDialog(
-      "가입 정보",
-      "회원구분: $userType\nID: ${_idController.text}\n이메일: ${_emailController.text}\n주소: ${_addressController.text} ${_detailAddressController.text}\n차량번호: ${userType == "차주" ? _carNumberController.text : "없음"}",
-    );
-  }
-
-  String? _validateRequired(String? value, String fieldName) {
-    if (value == null || value.trim().isEmpty) return "$fieldName 입력은 필수입니다.";
-    return null;
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("회원가입")),
+      appBar: AppBar(title: const Text("회원가입", style: TextStyle(color: Colors.white)), backgroundColor: Colors.indigo),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(16),
@@ -268,6 +315,7 @@ class _SignUpPageState extends State<SignUpPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                const SizedBox(height: 10),
                 // 사용자 유형
                 Center(
                   child: ToggleButtons(
@@ -419,7 +467,7 @@ class _SignUpPageState extends State<SignUpPage> {
                       child: TextFormField(
                         controller: _emailController,
                         focusNode: _emailFocus,
-                        readOnly: widget.isSocial || verified, // 인증 완료면 수정 불가
+                        readOnly: widget.isSocial || verified,
                         onChanged: (val) {
                           setState(() {
                             _emailError = _isValidEmail(val)
@@ -453,7 +501,6 @@ class _SignUpPageState extends State<SignUpPage> {
                   ],
                 ),
 
-                // 인증 코드 입력 칸과 확인 버튼 (인증 완료되면 안 보이게)
                 if (codeSent && !verified && !widget.isSocial)
                   Column(
                     children: [
@@ -568,7 +615,6 @@ class _SignUpPageState extends State<SignUpPage> {
                       ),
                     ),
                   ),
-                const SizedBox(height: 24),
 
                 // 회원가입 버튼
                 SizedBox(
