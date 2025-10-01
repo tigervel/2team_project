@@ -1,4 +1,3 @@
-// src/main/java/com/giproject/entity/cargo/CargoOwner.java
 package com.giproject.entity.cargo;
 
 import com.fasterxml.jackson.annotation.JsonManagedReference;
@@ -60,12 +59,7 @@ public class CargoOwner {
     @Column(name = "profile_image", length = 255)
     private String profileImage;
 
-    /**
-     * 소셜 가입 여부 캐시(옵션) — 화면 빠른 표시용
-     * - primitive(boolean) → 래퍼(Boolean)로 변경
-     * - nullable=false로 신규 NULL 방지
-     * - Builder 기본값 보존을 위해 @Builder.Default 사용
-     */
+    /** 소셜 가입 여부 캐시(옵션) */
     @Builder.Default
     @Column(name = "social", nullable = false)
     private Boolean social = Boolean.FALSE;

@@ -1,4 +1,3 @@
-// src/main/java/com/giproject/service/auth/SocialSignupService.java
 package com.giproject.service.auth;
 
 import com.giproject.dto.auth.SocialSignupCompleteRequest;
@@ -13,13 +12,11 @@ import com.giproject.repository.account.UserIndexRepository;
 import com.giproject.repository.cargo.CargoOwnerRepository;
 import com.giproject.repository.member.MemberRepository;
 import com.giproject.repository.oauth.SocialAccountRepo;
-
 import lombok.*;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
 import java.time.LocalDateTime;
 
 @Service
@@ -45,13 +42,12 @@ public class SocialSignupService {
             throw new IllegalStateException("이미 연결된 소셜 계정");
         }
 
-        // 2) 전역 유니크 검증 (loginId / email)
+        // 2) 전역 유니크 검증
         String loginId = cmd.getLoginId();
         if (userIndexRepo.existsByLoginId(loginId)) {
             throw new IllegalArgumentException("이미 사용 중인 ID");
         }
 
-        // 이메일은 요청값 우선, 없으면 소셜계정의 이메일 사용
         String email = (cmd.getEmail() != null && !cmd.getEmail().isBlank())
                 ? cmd.getEmail()
                 : acc.getEmail();
@@ -63,16 +59,18 @@ public class SocialSignupService {
         }
 
         // 3) user_index insert
-        String provider   = acc.getProvider() == null ? null : acc.getProvider().name(); // GOOGLE/KAKAO/NAVER
+        String provider   = acc.getProvider() == null ? null : acc.getProvider().name();
         String providerId = acc.getProviderUserId();
+        Role role = Role.valueOf(cmd.getRole());
 
-        Role role = Role.valueOf(cmd.getRole()); // "SHIPPER" or "DRIVER" or "ADMIN"
         userIndexRepo.save(UserIndex.builder()
                 .loginId(loginId)
                 .role(role)
                 .email(email)
                 .provider(provider)
                 .providerId(providerId)
+                .createdAt(LocalDateTime.now())
+                .updatedAt(LocalDateTime.now())
                 .build());
 
         // 4) 역할별 본 테이블 insert
@@ -85,6 +83,7 @@ public class SocialSignupService {
                         .memName(cmd.getName())
                         .memPhone(cmd.getPhone())
                         .memAddress(cmd.getAddress())
+                        .social(false)
                         .memCreateIdDateTime(LocalDateTime.now())
                         .build();
                 memberRepo.save(m);
@@ -97,6 +96,7 @@ public class SocialSignupService {
                         .cargoName(cmd.getName())
                         .cargoPhone(cmd.getPhone())
                         .cargoAddress(cmd.getAddress())
+                        .social(false)
                         .cargoCreatedDateTime(LocalDateTime.now())
                         .build();
                 cargoRepo.save(c);
@@ -110,15 +110,15 @@ public class SocialSignupService {
         acc.setSignupTicketExpireAt(null);
         socialAccountRepo.save(acc);
 
-        // 6) 최종 UserDetails 구성 (역할별 DTO 원형 유지)
+        // 6) UserDetails 구성
         if (role == Role.DRIVER) {
             CargoOwner saved = cargoRepo.findByCargoId(loginId)
                     .orElseThrow(() -> new IllegalStateException("가입 직후 CargoOwner 조회 실패"));
-            return CargoOwnerDTO.fromCargoOwner(saved); // 내부에서 roles 자동 추론
+            return CargoOwnerDTO.fromCargoOwner(saved);
         } else {
             Member saved = memberRepo.findByMemId(loginId)
                     .orElseThrow(() -> new IllegalStateException("가입 직후 Member 조회 실패"));
-            return MemberDTO.fromMember(saved); // 내부에서 roles 자동 추론
+            return MemberDTO.fromMember(saved);
         }
     }
 
@@ -136,14 +136,14 @@ public class SocialSignupService {
                 .build();
     }
 
-    // ===== Command 객체 (기본 생성자 포함) =====
+    // ===== Command 객체 =====
     @Getter @Setter
     @NoArgsConstructor
     @AllArgsConstructor
     @Builder
     public static class SocialSignupCommand {
         private String ticket;
-        private String role;     // "SHIPPER" or "DRIVER" or "ADMIN"
+        private String role;
         private String loginId;
         private String password;
         private String name;
