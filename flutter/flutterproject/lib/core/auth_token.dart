@@ -5,7 +5,9 @@ const String kFallbackAccessToken =
 
 Future<String> loadAccessToken() async {
   final prefs = await SharedPreferences.getInstance();
-  final token = prefs.getString('accessToken') ??
+  final token =
+      prefs.getString('token') ??
+      prefs.getString('accessToken') ??
       prefs.getString('ACCESS_TOKEN') ??
       prefs.getString('access_token');
   if (token != null && token.isNotEmpty) {
