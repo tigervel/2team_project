@@ -47,9 +47,9 @@ class SocialLoginService {
 
     final res = await dio.post("/social/login", data: {
       "provider": "NAVER",
-      "providerId": account.id,
-      "email": account.email,
-      "name": account.name,
+      //"providerId": account.id,
+      //"email": account.email,
+      //"name": account.name,
     });
     return res.data;
   }

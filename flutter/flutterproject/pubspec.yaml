@@ -45,7 +45,7 @@ dependencies:
   jwt_decoder: ^2.0.1
   google_sign_in: ^6.2.1
   kakao_flutter_sdk_user: ^1.8.0
-  flutter_naver_login: ^1.7.0
+  flutter_naver_login: ^2.1.1
 
  
 
