@@ -1,17 +1,41 @@
+import 'package:jwt_decoder/jwt_decoder.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-const String kFallbackAccessToken =
-    'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ6enoxMjM0NSIsImxvZ2luSWQiOiJ6enoxMjM0NSIsImVtYWlsIjoicGtuNDY5M0BuYXZlci5jb20iLCJyb2xlcyI6WyJST0xFX0RSSVZFUiIsIlJPTEVfVVNFUiJdLCJpc3MiOiJnaXByb2plY3QiLCJpYXQiOjE3NTkyMjE5MTksImV4cCI6MTc1OTIyMzcxOX0.SnLQXSGTDeTc0v3SBhNdB7qkdxHzeF0s1FqEDklZxeM';
+const List<String> _tokenPreferenceKeys = [
+  'token',
+  'accessToken',
+  'ACCESS_TOKEN',
+  'access_token',
+];
+
+String? _normalizeToken(String? token) {
+  final raw = token?.trim();
+  if (raw == null || raw.isEmpty) return null;
+  if (raw.length > 7 && raw.substring(0, 7).toLowerCase() == 'bearer ') {
+    return raw.substring(7).trimLeft();
+  }
+  return raw;
+}
+
+bool _isExpired(String token) {
+  try {
+    return JwtDecoder.isExpired(token);
+  } catch (_) {
+    return true;
+  }
+}
 
 Future<String> loadAccessToken() async {
   final prefs = await SharedPreferences.getInstance();
-  final token =
-      prefs.getString('token') ??
-      prefs.getString('accessToken') ??
-      prefs.getString('ACCESS_TOKEN') ??
-      prefs.getString('access_token');
-  if (token != null && token.isNotEmpty) {
-    return token;
+  for (final key in _tokenPreferenceKeys) {
+    final stored = prefs.getString(key);
+    final normalized = _normalizeToken(stored);
+    if (normalized == null) continue;
+    if (_isExpired(normalized)) {
+      await prefs.remove(key);
+      continue;
+    }
+    return normalized;
   }
-  return kFallbackAccessToken;
+  return '';
 }

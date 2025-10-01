@@ -1,5 +1,6 @@
 // lib/features/driver_delivery/driver_delivery_page.dart
 import 'dart:io' show Platform;
+import 'dart:math' as math;
 
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
@@ -41,6 +42,12 @@ class _DriverDeliveryPageState extends State<DriverDeliveryPage> {
   List<Map<String, dynamic>> inProgress = [];
   List<Map<String, dynamic>> completed = [];
   final Set<int> _pendingMatches = <int>{};
+  static const int _itemsPerPage = 5;
+  final Map<_DeliverySection, int> _pageBySection = {
+    _DeliverySection.unpaid: 0,
+    _DeliverySection.inProgress: 0,
+    _DeliverySection.completed: 0,
+  };
 
   @override
   void initState() {
@@ -94,6 +101,9 @@ class _DriverDeliveryPageState extends State<DriverDeliveryPage> {
         unpaid = unpaidRaw.map((row) => _normalizeRow(row, isOwner: isOwner)).toList();
         inProgress = inProgressRaw.map((row) => _normalizeRow(row, isOwner: isOwner)).toList();
         completed = completedRaw.map((row) => _normalizeRow(row, isOwner: isOwner)).toList();
+        _resetPageFor(_DeliverySection.unpaid, unpaid.length);
+        _resetPageFor(_DeliverySection.inProgress, inProgress.length);
+        _resetPageFor(_DeliverySection.completed, completed.length);
       });
     } catch (e) {
       if (mounted) {
@@ -292,6 +302,88 @@ class _DriverDeliveryPageState extends State<DriverDeliveryPage> {
     }
   }
 
+  Future<void> _promptCompleteDelivery(int? matchingNo) async {
+    if (matchingNo == null) return;
+    final controller = TextEditingController();
+    final confirmed = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) {
+        String? errorText;
+        return StatefulBuilder(
+          builder: (ctx, setState) => AlertDialog(
+            title: const Text('배송 완료 확인'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('배송 완료 상태로 변경하려면 "배송 완료"라고 입력하세요.'),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: controller,
+                  autofocus: true,
+                  decoration: InputDecoration(
+                    hintText: '배송 완료',
+                    errorText: errorText,
+                  ),
+                  onSubmitted: (_) {
+                    if (controller.text.trim() == '배송 완료') {
+                      Navigator.of(ctx).pop(true);
+                    } else {
+                      setState(() => errorText = '정확히 "배송 완료"를 입력하세요.');
+                    }
+                  },
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(false),
+                child: const Text('취소'),
+              ),
+              FilledButton(
+                onPressed: () {
+                  if (controller.text.trim() == '배송 완료') {
+                    Navigator.of(ctx).pop(true);
+                  } else {
+                    setState(() => errorText = '정확히 "배송 완료"를 입력하세요.');
+                  }
+                },
+                child: const Text('확인'),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+
+    if (confirmed == true) {
+      await _completeDelivery(matchingNo);
+    }
+  }
+
+  void _resetPageFor(_DeliverySection section, int itemCount) {
+    if (itemCount <= 0) {
+      _pageBySection[section] = 0;
+      return;
+    }
+    final maxPage = (itemCount - 1) ~/ _itemsPerPage;
+    final current = _pageBySection[section] ?? 0;
+    if (current > maxPage) {
+      _pageBySection[section] = maxPage;
+    }
+  }
+
+  void _changePage(_DeliverySection section, int delta, int totalPages) {
+    if (totalPages <= 1) return;
+    final current = _pageBySection[section] ?? 0;
+    final next = current + delta;
+    if (next < 0 || next >= totalPages) return;
+    setState(() {
+      _pageBySection[section] = next;
+    });
+  }
+
   void _showDetails(Map<String, dynamic> row) {
     showModalBottomSheet(
       context: context,
@@ -375,13 +467,22 @@ class _DriverDeliveryPageState extends State<DriverDeliveryPage> {
       );
     }
 
+    final totalItems = items.length;
+    final totalPages = (totalItems / _itemsPerPage).ceil();
+    var currentPage = _pageBySection[section] ?? 0;
+    if (currentPage < 0) currentPage = 0;
+    if (currentPage >= totalPages) currentPage = totalPages - 1;
+    final startIndex = currentPage * _itemsPerPage;
+    final endIndex = math.min(startIndex + _itemsPerPage, totalItems);
+    final pageItems = items.sublist(startIndex, endIndex);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
         const SizedBox(height: 8),
         Column(
-          children: items.map((row) {
+          children: pageItems.map((row) {
             final status = row['deliveryStatus'] as int? ?? 0;
             final matchingNo = row['matchingNo'] as int?;
             final busy = matchingNo != null && _pendingMatches.contains(matchingNo);
@@ -419,32 +520,11 @@ class _DriverDeliveryPageState extends State<DriverDeliveryPage> {
                                 spacing: 12,
                                 runSpacing: 4,
                                 children: [
-                                  Text('무게: ${_formatWeight(row['cargoWeight'] ?? '')}'),
                                   Text('출발: ${row['startAddress'] ?? '-'}'),
                                   Text('도착: ${row['endAddress'] ?? '-'}'),
                                   Text('예정일: ${_formatDate(row['startTime'])}'),
                                 ],
                               ),
-                              if ((row['driverName'] as String).isNotEmpty)
-                                Padding(
-                                  padding: const EdgeInsets.only(top: 4),
-                                  child: Text('운전 기사: ${row['driverName']}'),
-                                ),
-                              if ((row['memberName'] as String).isNotEmpty)
-                                Padding(
-                                  padding: const EdgeInsets.only(top: 4),
-                                  child: Text('의뢰자: ${row['memberName']}'),
-                                ),
-                              if (section == _DeliverySection.completed)
-                                Padding(
-                                  padding: const EdgeInsets.only(top: 4),
-                                  child: Text('완료 시간: ${_formatDateTime(row['deliveryCompletedAt'])}'),
-                                ),
-                              if (section == _DeliverySection.unpaid && row['paymentDueDate'] != null)
-                                Padding(
-                                  padding: const EdgeInsets.only(top: 4),
-                                  child: Text('결제 기한: ${_formatDate(row['paymentDueDate'])}', style: const TextStyle(color: Colors.orange)),
-                                ),
                             ],
                           ),
                         ),
@@ -468,7 +548,7 @@ class _DriverDeliveryPageState extends State<DriverDeliveryPage> {
                         if (isOwner && section == _DeliverySection.inProgress && status == 1)
                           FilledButton(
                             style: FilledButton.styleFrom(backgroundColor: Colors.green),
-                            onPressed: busy ? null : () => _completeDelivery(matchingNo),
+                            onPressed: busy ? null : () => _promptCompleteDelivery(matchingNo),
                             child: busy ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)) : const Text('배송 완료'),
                           ),
                       ],
@@ -479,6 +559,30 @@ class _DriverDeliveryPageState extends State<DriverDeliveryPage> {
             );
           }).toList(),
         ),
+        if (totalPages > 1) ...[
+          const SizedBox(height: 12),
+          Align(
+            alignment: Alignment.centerRight,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                IconButton(
+                  onPressed: currentPage == 0
+                      ? null
+                      : () => _changePage(section, -1, totalPages),
+                  icon: const Icon(Icons.chevron_left),
+                ),
+                Text('${currentPage + 1} / $totalPages'),
+                IconButton(
+                  onPressed: currentPage >= totalPages - 1
+                      ? null
+                      : () => _changePage(section, 1, totalPages),
+                  icon: const Icon(Icons.chevron_right),
+                ),
+              ],
+            ),
+          ),
+        ],
       ],
     );
   }
