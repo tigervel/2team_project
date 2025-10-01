@@ -357,66 +357,82 @@ class _EstimateRequestListViewState extends State<EstimateRequestListView> {
   }
 
   Widget _buildPagination() {
-    if (_page == null) return const SizedBox.shrink();
-    final totalPages = _page!.totalPage == 0
-        ? ((_page!.totalCount + _pageSize - 1) ~/ _pageSize)
-        : _page!.totalPage;
+  final p = _page;
+  if (p == null) return const SizedBox.shrink();
 
-    Widget pageBtn(int n) {
-      final selected = _currentPage == n;
-      return SizedBox(
-        width: 36,
-        height: 36,
-        child: OutlinedButton(
-          style: OutlinedButton.styleFrom(
-            backgroundColor: selected ? Colors.black : Colors.white,
-            foregroundColor: selected ? Colors.white : Colors.black,
-            side: const BorderSide(color: Colors.black),
-            padding: EdgeInsets.zero,
-          ),
-          onPressed: () {
-            setState(() => _currentPage = n);
-            _load();
-          },
-          child: Text('$n'),
+  // 1) 전체 페이지 수 계산 (totalPage 있으면 그걸 신뢰, 없으면 totalCount로 계산)
+  final totalPages = (p.totalPage > 0)
+      ? p.totalPage
+      : ((p.totalCount + _pageSize - 1) ~/ _pageSize);
+
+  // 2) 한 페이지 뿐이면 페이지네이션 자체를 숨김
+  if (totalPages <= 1) return const SizedBox.shrink();
+
+  // 3) 좌/우 이동 가능 여부를 현재 페이지로 직접 판단
+  final hasPrev = _currentPage > 1;
+  final hasNext = _currentPage < totalPages;
+
+  // 4) 표시할 페이지 목록 (서버가 주면 사용, 없으면 1..totalPages)
+  final pages = p.pageNumList.isNotEmpty
+      ? p.pageNumList
+      : List<int>.generate(totalPages, (i) => i + 1);
+
+  Widget pageBtn(int n) {
+    final selected = _currentPage == n;
+    return SizedBox(
+      width: 36,
+      height: 36,
+      child: OutlinedButton(
+        style: OutlinedButton.styleFrom(
+          backgroundColor: selected ? Colors.black : Colors.white,
+          foregroundColor: selected ? Colors.white : Colors.black,
+          side: const BorderSide(color: Colors.black),
+          padding: EdgeInsets.zero,
         ),
-      );
-    }
-
-    final pages = _page!.pageNumList.isNotEmpty
-        ? _page!.pageNumList
-        : List<int>.generate(totalPages, (i) => i + 1).take(5).toList();
-
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        for (int i = 0; i < pages.length; i++) ...[
-          if (i > 0) const SizedBox(width: 6),
-          pageBtn(pages[i]),
-        ],
-        const SizedBox(width: 6),
-        SizedBox(
-          height: 36,
-          child: OutlinedButton(
-            style: OutlinedButton.styleFrom(
-              side: const BorderSide(color: Colors.black),
-              backgroundColor: Colors.white,
-            ),
-            onPressed: _page!.next
-                ? () {
-                    setState(
-                      () => _currentPage = (_page!.nextPage == 0
-                          ? _currentPage + 1
-                          : _page!.nextPage),
-                    );
-                    _load();
-                  }
-                : null,
-            child: const Text('NEXT', style: TextStyle(color: Colors.black)),
-          ),
-        ),
-      ],
+        onPressed: () {
+          if (_currentPage == n) return;
+          setState(() => _currentPage = n);
+          _load();
+        },
+        child: Text('$n'),
+      ),
     );
+  }
+
+  return Row(
+    mainAxisAlignment: MainAxisAlignment.center,
+    children: [
+      // 이전
+      IconButton(
+        icon: const Icon(Icons.chevron_left),
+        onPressed: hasPrev
+            ? () {
+                setState(() => _currentPage--);
+                _load();
+              }
+            : null,
+      ),
+
+      // 페이지 버튼들 (너무 많으면 앞 5개 정도만 노출 — 원하면 윈도우링 로직으로 바꿔도 됨)
+      for (int i = 0; i < pages.take(5).length; i++) ...[
+        if (i > 0) const SizedBox(width: 6),
+        pageBtn(pages[i]),
+      ],
+
+      // 다음
+      IconButton(
+        icon: const Icon(Icons.chevron_right),
+        onPressed: hasNext
+            ? () {
+                setState(() => _currentPage++);
+                _load();
+              }
+            : null,
+      ),
+    ],
+  );
+
+
   }
 
   DateTime? _parseServerDateTime(String raw) {

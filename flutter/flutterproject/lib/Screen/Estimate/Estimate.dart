@@ -74,7 +74,7 @@ class _EstimateState extends State<Estimate> {
       final roles = getRolesFromToken(token);
       if (!roles.contains('ROLE_SHIPPER')) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('화주 권한(ROLE_SHIPPER)이 필요합니다.')),
+          const SnackBar(content: Text('일반 회원만 이용 가능 합니다.')),
         );
         Navigator.of(context).pushReplacementNamed('/');
         return;

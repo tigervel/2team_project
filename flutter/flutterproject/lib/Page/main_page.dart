@@ -6,16 +6,18 @@ import 'package:flutterproject/Screen/OrderDetailCard/OrderDetailHardcodedView.d
 import 'package:flutterproject/Screen/Simple_inquiry/SimpleInquiry.dart';
 import 'package:carousel_slider/carousel_slider.dart';
 import 'package:flutterproject/DTO/noticeDTOEx.dart';
+import 'package:flutterproject/Utils/util.dart';
 import 'package:flutterproject/provider/TokenProvider.dart';
 import 'package:flutterproject/screen/Notice/MainNoticeList.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:flutterproject/features/my_inform/my_inform_page.dart';
 import 'package:flutterproject/shell/carousel_shell.dart';
+import 'package:jwt_decoder/jwt_decoder.dart';
 import 'package:provider/provider.dart';
 
 // 화면 상태 Enum
-enum MainPageView { home, simpleInquiry, myPage, contact, orderList ,estimate}
+enum MainPageView { home, simpleInquiry, myPage, contact, orderList, estimate }
 
 class MainPage extends StatefulWidget {
   const MainPage({super.key});
@@ -28,6 +30,12 @@ class _MainPageState extends State<MainPage> {
   MainPageView _currentView = MainPageView.home; // 화면 뷰
   int _selectedIndex = -1;
   late Future<List<Notice>> _noticesFuture;
+
+  bool needAuthFor(MainPageView v) {
+    return v == MainPageView.orderList ||
+        v == MainPageView.estimate ||
+        v == MainPageView.myPage;
+  }
 
   @override
   void initState() {
@@ -56,7 +64,15 @@ class _MainPageState extends State<MainPage> {
   @override
   Widget build(BuildContext context) {
     final token = context.read<Tokenprovider>().gettoken;
+    final tokenProvider = context.read<Tokenprovider>();
     final loggedin = token != null && token.isNotEmpty;
+
+    bool needAuthFor(MainPageView v) {
+      return v == MainPageView.orderList ||
+          v == MainPageView.estimate ||
+          v == MainPageView.myPage; // 홈/문의사항 제외
+    }
+
     return Scaffold(
       appBar: _buildAppBar(context),
       body: _buildBody(),
@@ -73,30 +89,24 @@ class _MainPageState extends State<MainPage> {
             ? Colors.white
             : Colors.white70,
         unselectedItemColor: Colors.white,
-        onTap: (index) {
-          setState(() {
-            switch (index) {
-              case 0:
-                _currentView = MainPageView.orderList; // 주문현황
-                break;
-              case 1:
-                _currentView = MainPageView.estimate; // 견적조회
-                break;
-              case 2:
-                _currentView = MainPageView.contact; // 문의사항
-                break;
-              case 3:
-                
-                if (!loggedin) {
-                  Navigator.pushNamed(context, '/login'); // 로그인 x → 로그인페이지
-                } else {
-                  _currentView = MainPageView.myPage;
-                }
-                break;
-              
-            }
-          });
+        onTap: (index) async {
+          final target = switch (index) {
+            0 => MainPageView.orderList,
+            1 => MainPageView.estimate,
+            2 => MainPageView.contact, // 로그인 필요 없음
+            3 => MainPageView.myPage,
+            _ => MainPageView.home,
+          };
+
+          if (needAuthFor(target)) {
+            final ok = await ensureLoggedIn(context);
+            if (!ok) return; // 로그인 화면으로 이동했으니 더 진행 X
+          }
+
+          if (!mounted) return;
+          setState(() => _currentView = target);
         },
+
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.list_alt), label: "주문현황"),
           BottomNavigationBarItem(icon: Icon(Icons.search), label: "견적서 작성"),
@@ -156,13 +166,15 @@ class _MainPageState extends State<MainPage> {
   Widget _buildBody() {
     switch (_currentView) {
       case MainPageView.home:
-        return HomeView(noticesFuture: _noticesFuture,);
+        return HomeView(noticesFuture: _noticesFuture);
       case MainPageView.estimate:
-        return Estimate(onSubmitted: () {
-          setState(() {
-            _currentView = MainPageView.home;
-          });
-        },); // 견적조회
+        return Estimate(
+          onSubmitted: () {
+            setState(() {
+              _currentView = MainPageView.home;
+            });
+          },
+        ); // 견적조회
       case MainPageView.simpleInquiry:
         return Simpleinquiry(); //간편조회
       case MainPageView.myPage:
