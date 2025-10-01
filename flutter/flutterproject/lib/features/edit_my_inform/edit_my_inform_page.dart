@@ -1,15 +1,35 @@
 import 'dart:io';
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/auth_token.dart';
+import '../../API/ApiConfig.dart';
 
 // =================== 공통 상수/유틸 ===================
-const String kApiBase = String.fromEnvironment(
-  'API_BASE',
-  defaultValue: 'http://10.0.2.2:8080', // 에뮬레이터 기본
-);
+const String _envApiBase = String.fromEnvironment('API_BASE');
+const String _envLegacyBase = String.fromEnvironment('BASE_URL');
+
+String _resolveApiBase() {
+  if (_envApiBase.isNotEmpty) return _envApiBase;
+  if (_envLegacyBase.isNotEmpty) return _envLegacyBase;
+
+  if (kIsWeb) {
+    return 'http://localhost:8080';
+  }
+
+  if (Platform.isAndroid) {
+    return 'http://10.0.2.2:8080';
+  }
+
+  if (Platform.isIOS || Platform.isMacOS || Platform.isWindows || Platform.isLinux) {
+    return 'http://127.0.0.1:8080';
+  }
+
+  return Apiconfig.baseUrl;
+}
+
+String get kApiBase => _resolveApiBase();
 
 const String kDefaultAvatar =
     'assets/images/avatar_placeholder.png'; // 프로젝트 내 플레이스홀더(없으면 네트워크 이미지로 대체)

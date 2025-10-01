@@ -1,7 +1,29 @@
 // lib/features/driver_delivery/driver_delivery_page.dart
-import 'package:flutter/material.dart';
+import 'dart:io' show Platform;
+
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+
+import '../../API/ApiConfig.dart';
+import '../../core/auth_token.dart';
+
+const String _envApiBase = String.fromEnvironment('API_BASE');
+const String _envLegacyBase = String.fromEnvironment('BASE_URL');
+
+String _resolveApiBase() {
+  if (_envApiBase.isNotEmpty) return _envApiBase;
+  if (_envLegacyBase.isNotEmpty) return _envLegacyBase;
+  if (kIsWeb) return 'http://localhost:8080';
+  if (Platform.isAndroid) return 'http://10.0.2.2:8080';
+  if (Platform.isIOS || Platform.isMacOS || Platform.isWindows || Platform.isLinux) {
+    return 'http://127.0.0.1:8080';
+  }
+  return Apiconfig.baseUrl;
+}
+
+enum _DeliverySection { unpaid, inProgress, completed }
 
 class DriverDeliveryPage extends StatefulWidget {
   const DriverDeliveryPage({super.key});
@@ -11,79 +33,178 @@ class DriverDeliveryPage extends StatefulWidget {
 }
 
 class _DriverDeliveryPageState extends State<DriverDeliveryPage> {
-  final Dio dio = Dio(BaseOptions(baseUrl: 'http://10.0.2.2:8080'));
+  late final Dio dio;
 
-  bool loading = false;
-  List<Map<String, dynamic>> deliveries = [];
-
-  // 페이지네이션
-  int currentPage = 1;
-  int pageSize = 5;
+  bool loading = true;
+  String? userType; // 'MEMBER' | 'CARGO_OWNER'
+  List<Map<String, dynamic>> unpaid = [];
+  List<Map<String, dynamic>> inProgress = [];
+  List<Map<String, dynamic>> completed = [];
+  final Set<int> _pendingMatches = <int>{};
 
   @override
   void initState() {
     super.initState();
-    _fetchDeliveries();
+    dio = Dio(BaseOptions(
+      baseUrl: _resolveApiBase(),
+      connectTimeout: const Duration(seconds: 6),
+      receiveTimeout: const Duration(seconds: 10),
+      sendTimeout: const Duration(seconds: 6),
+    ));
+    dio.interceptors.add(InterceptorsWrapper(
+      onRequest: (options, handler) async {
+        final token = await loadAccessToken();
+        if (token.isNotEmpty) {
+          options.headers['Authorization'] = 'Bearer $token';
+        }
+        handler.next(options);
+      },
+    ));
+    _load();
   }
 
-  Future<void> _fetchDeliveries() async {
-    setState(() => loading = true);
+  Future<void> _load({bool showSpinner = true}) async {
+    if (showSpinner && mounted) {
+      setState(() => loading = true);
+    }
     try {
-      final res = await dio.get('/g2i4/driver/deliveries'); // ✅ API 경로 맞게 교체
-      final list = (res.data as List).cast<Map<String, dynamic>>();
+      final type = await _resolveUserType();
+      debugPrint('[driver_delivery] resolved userType: $type');
+      final isOwner = type == 'CARGO_OWNER';
+
+      final unpaidRaw = await _fetchList(
+        isOwner ? '/g2i4/owner/deliveries/unpaid' : '/g2i4/estimate/subpath/unpaidlist',
+      );
+
+      final paidRaw = await _fetchList(
+        isOwner ? '/g2i4/owner/deliveries/paid' : '/g2i4/estimate/subpath/paidlist',
+      );
+
+      final completedRaw = isOwner
+          ? await _fetchList('/g2i4/owner/deliveries/completed')
+          : paidRaw.where((row) => _statusFrom(row['deliveryStatus']) == 2).toList();
+
+      final inProgressRaw = isOwner
+          ? paidRaw
+          : paidRaw.where((row) => _statusFrom(row['deliveryStatus']) != 2).toList();
+
+      if (!mounted) return;
       setState(() {
-        deliveries = list
-            .map((d) => {
-                  ...d,
-                  "deliveryStatus":
-                      d["deliveryStatus"] is int ? d["deliveryStatus"] : 0,
-                })
-            .toList();
+        userType = type;
+        unpaid = unpaidRaw.map((row) => _normalizeRow(row, isOwner: isOwner)).toList();
+        inProgress = inProgressRaw.map((row) => _normalizeRow(row, isOwner: isOwner)).toList();
+        completed = completedRaw.map((row) => _normalizeRow(row, isOwner: isOwner)).toList();
       });
     } catch (e) {
-      debugPrint("배송 목록 로딩 실패: $e");
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('배송 정보를 불러오지 못했습니다: $e')),
+        );
+      }
     } finally {
-      setState(() => loading = false);
+      if (showSpinner && mounted) {
+        setState(() => loading = false);
+      }
     }
   }
 
-  Future<void> _updateDeliveryStatus(int matchingNo, int nextStatus) async {
+  Future<String> _resolveUserType() async {
     try {
-      await dio.post(
-        '/g2i4/driver/deliveries/$matchingNo/status',
-        data: {"status": nextStatus},
-      );
-    } catch (e) {
-      debugPrint("상태 업데이트 실패: $e");
+      final res = await dio.get('/g2i4/user/info');
+      final raw = res.data;
+      final direct = raw?['userType'] ?? raw?['type'] ?? raw?['role'] ?? raw?['loginType'];
+      if (direct == 'CARGO_OWNER') return 'CARGO_OWNER';
+      if (direct == 'MEMBER') return 'MEMBER';
+      final nested = raw?['data'] ?? raw?['user'] ?? raw?['payload'] ?? raw?['profile'] ?? raw?['account'] ?? raw?['result'];
+      final guess = nested?['userType'] ?? nested?['type'] ?? nested?['role'] ?? nested?['loginType'];
+      if (guess == 'CARGO_OWNER') return 'CARGO_OWNER';
+      if (guess == 'MEMBER') return 'MEMBER';
+    } catch (_) {
+      // ignore
+    }
+    return 'MEMBER';
+  }
+
+  Future<List<Map<String, dynamic>>> _fetchList(String path) async {
+    try {
+      final res = await dio.get(path, queryParameters: const {'page': 1, 'size': 50});
+      final list = _asList(res.data);
+      debugPrint('[driver_delivery] GET $path -> ${list.length} rows');
+      return list;
+    } catch (e, st) {
+      debugPrint('[driver_delivery] GET $path failed: $e');
+      debugPrintStack(stackTrace: st);
+      rethrow;
     }
   }
 
-  void _optimisticUpdate(int eno, int nextStatus) {
-    setState(() {
-      deliveries = deliveries
-          .map((row) =>
-              row["eno"] == eno ? {...row, "deliveryStatus": nextStatus} : row)
+  List<Map<String, dynamic>> _asList(dynamic data) {
+    if (data is List) {
+      return data.whereType<Map>().map((e) => Map<String, dynamic>.from(e)).toList();
+    }
+    if (data is Map && data['dtoList'] is List) {
+      return (data['dtoList'] as List)
+          .whereType<Map>()
+          .map((e) => Map<String, dynamic>.from(e))
           .toList();
-    });
+    }
+    return const [];
+  }
+
+  Map<String, dynamic> _normalizeRow(Map<String, dynamic> row, {required bool isOwner}) {
+    int? asInt(dynamic value) {
+      if (value is int) return value;
+      if (value is num) return value.toInt();
+      if (value is String) return int.tryParse(value.trim());
+      return null;
+    }
+
+    String stringOf(dynamic value) => value?.toString() ?? '';
+
+    final status = _statusFrom(row['deliveryStatus']);
+
+    return {
+      ...row,
+      'matchingNo': asInt(row['matchingNo']) ?? asInt(row['matching_no']),
+      'deliveryStatus': status,
+      'cargoType': stringOf(row['cargoType'] ?? row['cargo_name']),
+      'cargoWeight': stringOf(row['cargoWeight'] ?? row['cargo_weight']),
+      'startAddress': stringOf(row['startAddress'] ?? row['startAddressShort'] ?? row['start_address']),
+      'endAddress': stringOf(row['endAddress'] ?? row['endAddressShort'] ?? row['end_address']),
+      'driverName': stringOf(row['driverName'] ?? row['driver_name']),
+      'memberName': stringOf(row['memName'] ?? row['memberName'] ?? row['member_name']),
+      'paymentDueDate': row['paymentDueDate'] ?? row['dueDate'] ?? row['paymentDeadline'],
+      'deliveryCompletedAt': row['deliveryCompletedAt'] ?? row['deliveryEndTime'] ?? row['completedAt'],
+      'isOwner': isOwner,
+    };
+  }
+
+  int _statusFrom(dynamic value) {
+    if (value is int) {
+      if (value >= 2) return 2;
+      if (value == 1) return 1;
+      return 0;
+    }
+    final text = value?.toString().toUpperCase() ?? '';
+    if (text == 'IN_TRANSIT' || text == 'DELIVERING') return 1;
+    if (text == 'COMPLETED' || text == 'DONE') return 2;
+    if (text == '1' || text == '2') return _statusFrom(int.tryParse(text));
+    return 0;
   }
 
   String _statusLabel(int status) {
     switch (status) {
-      case 0:
-        return "대기";
       case 1:
-        return "배송 중";
+        return '배송 중';
       case 2:
-        return "완료";
+        return '배송 완료';
       default:
-        return "대기";
+        return '대기';
     }
   }
 
   Color _statusColor(int status) {
     switch (status) {
-      case 0:
-        return Colors.grey;
       case 1:
         return Colors.blue;
       case 2:
@@ -93,139 +214,270 @@ class _DriverDeliveryPageState extends State<DriverDeliveryPage> {
     }
   }
 
-  Widget _renderActionCell(Map<String, dynamic> row) {
-    final status = row["deliveryStatus"] as int;
-    final eno = row["eno"];
-    final matchingNo = row["matchingNo"];
+  String _formatWeight(String value) {
+    if (value.trim().isEmpty) return '-';
+    if (RegExp(r'[A-Za-z]').hasMatch(value)) return value;
+    return '$value kg';
+  }
 
-    if (status == 0) {
-      return Row(
-        mainAxisAlignment: MainAxisAlignment.center,
+  String _formatDate(dynamic value) {
+    if (value == null) return '-';
+    try {
+      DateTime? dt;
+      if (value is int) {
+        dt = DateTime.fromMillisecondsSinceEpoch(value);
+      } else if (value is String) {
+        dt = DateTime.tryParse(value) ?? DateTime.tryParse(value.replaceFirst(' ', 'T'));
+      }
+      dt ??= DateTime.tryParse(value.toString());
+      if (dt == null) return '-';
+      return DateFormat('yyyy-MM-dd').format(dt);
+    } catch (_) {
+      return '-';
+    }
+  }
+
+  String _formatDateTime(dynamic value) {
+    if (value == null) return '-';
+    try {
+      DateTime? dt;
+      if (value is int) {
+        dt = DateTime.fromMillisecondsSinceEpoch(value);
+      } else if (value is String) {
+        dt = DateTime.tryParse(value) ?? DateTime.tryParse(value.replaceFirst(' ', 'T'));
+      }
+      dt ??= DateTime.tryParse(value.toString());
+      if (dt == null) return '-';
+      return DateFormat('yyyy-MM-dd HH:mm').format(dt);
+    } catch (_) {
+      return '-';
+    }
+  }
+
+  Future<void> _startDelivery(int? matchingNo) async {
+    if (matchingNo == null || _pendingMatches.contains(matchingNo)) return;
+    setState(() => _pendingMatches.add(matchingNo));
+    try {
+      await dio.post('/g2i4/owner/deliveries/$matchingNo/in_transit');
+      await _load(showSpinner: false);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('배송 시작 실패: $e')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _pendingMatches.remove(matchingNo));
+      }
+    }
+  }
+
+  Future<void> _completeDelivery(int? matchingNo) async {
+    if (matchingNo == null || _pendingMatches.contains(matchingNo)) return;
+    setState(() => _pendingMatches.add(matchingNo));
+    try {
+      await dio.post('/g2i4/owner/deliveries/$matchingNo/complete');
+      await _load(showSpinner: false);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('배송 완료 처리 실패: $e')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _pendingMatches.remove(matchingNo));
+      }
+    }
+  }
+
+  void _showDetails(Map<String, dynamic> row) {
+    showModalBottomSheet(
+      context: context,
+      showDragHandle: true,
+      builder: (ctx) {
+        final status = row['deliveryStatus'] as int? ?? 0;
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                row['cargoType']?.toString().isEmpty == true ? '상세 정보' : row['cargoType'],
+                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 12),
+              _detailLine('화물 무게', _formatWeight(row['cargoWeight'] ?? '')),
+              _detailLine('출발지', row['startAddress'] ?? '-'),
+              _detailLine('도착지', row['endAddress'] ?? '-'),
+              _detailLine('배송 예정일', _formatDate(row['startTime'])),
+              if ((row['driverName'] ?? '').toString().isNotEmpty)
+                _detailLine('운전 기사', row['driverName']),
+              if ((row['memberName'] ?? '').toString().isNotEmpty)
+                _detailLine('의뢰자', row['memberName']),
+              if (status == 2)
+                _detailLine('완료 시각', _formatDateTime(row['deliveryCompletedAt'])),
+              const SizedBox(height: 16),
+              Align(
+                alignment: Alignment.centerRight,
+                child: FilledButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  child: const Text('닫기'),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _detailLine(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          OutlinedButton(
-            onPressed: () {
-              // TODO: 상세보기 라우트 연결
-            },
-            child: const Text("상세보기"),
+          SizedBox(
+            width: 96,
+            child: Text(label, style: const TextStyle(color: Colors.black54)),
           ),
-          const SizedBox(width: 8),
-          ElevatedButton(
-            onPressed: () {
-              final next = 1;
-              _optimisticUpdate(eno, next);
-              _updateDeliveryStatus(matchingNo, next);
-            },
-            child: const Text("배송 시작"),
-          ),
+          Expanded(child: Text(value, style: const TextStyle(fontWeight: FontWeight.w500))),
         ],
-      );
-    } else if (status == 1) {
-      return Row(
-        mainAxisAlignment: MainAxisAlignment.center,
+      ),
+    );
+  }
+
+  Widget _buildSection(
+    String title,
+    List<Map<String, dynamic>> items,
+    _DeliverySection section,
+  ) {
+    final isOwner = userType == 'CARGO_OWNER';
+    if (items.isEmpty) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          OutlinedButton(
-            onPressed: () {
-              // TODO: 상세보기 라우트 연결
-            },
-            child: const Text("상세보기"),
-          ),
-          const SizedBox(width: 8),
-          OutlinedButton(
-            style: OutlinedButton.styleFrom(foregroundColor: Colors.orange),
-            onPressed: () {
-              final next = 0;
-              _optimisticUpdate(eno, next);
-              _updateDeliveryStatus(matchingNo, next);
-            },
-            child: const Text("배송 취소"),
-          ),
-          const SizedBox(width: 8),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
-            onPressed: () {
-              final next = 2;
-              _optimisticUpdate(eno, next);
-              _updateDeliveryStatus(matchingNo, next);
-            },
-            child: const Text("배송 완료"),
-          ),
-        ],
-      );
-    } else {
-      return Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          OutlinedButton(
-            onPressed: () {
-              // TODO: 상세보기 라우트 연결
-            },
-            child: const Text("상세보기"),
-          ),
-          const SizedBox(width: 8),
-          Chip(
-            label: const Text("완료"),
-            backgroundColor: Colors.green.shade100,
-            labelStyle: const TextStyle(color: Colors.green),
+          Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+          const SizedBox(height: 8),
+          Card(
+            child: SizedBox(
+              width: double.infinity,
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Text('$title 항목이 없습니다.', textAlign: TextAlign.center, style: const TextStyle(color: Colors.black54)),
+              ),
+            ),
           ),
         ],
       );
     }
-  }
 
-  List<Map<String, dynamic>> _filterByStatus(int status) {
-    return deliveries.where((d) => d["deliveryStatus"] == status).toList();
-  }
-
-  Widget _renderTable(String title, int status) {
-    final list = _filterByStatus(status);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const SizedBox(height: 24),
-        Text(title,
-            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+        Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
         const SizedBox(height: 8),
-        Card(
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          child: DataTable(
-            headingRowColor:
-                MaterialStateColor.resolveWith((_) => Colors.grey.shade100),
-            columns: const [
-              DataColumn(label: Text("화물명")),
-              DataColumn(label: Text("무게")),
-              DataColumn(label: Text("출발지")),
-              DataColumn(label: Text("도착지")),
-              DataColumn(label: Text("배송 시작일")),
-              DataColumn(label: Text("상세/상태")),
-            ],
-            rows: list.isEmpty
-                ? [
-                    const DataRow(cells: [
-                      DataCell(Text("데이터가 없습니다.", textAlign: TextAlign.center)),
-                      DataCell(SizedBox()),
-                      DataCell(SizedBox()),
-                      DataCell(SizedBox()),
-                      DataCell(SizedBox()),
-                      DataCell(SizedBox()),
-                    ])
-                  ]
-                : list.map((row) {
-                    return DataRow(cells: [
-                      DataCell(Text(row["cargoType"] ?? "-")),
-                      DataCell(Text("${row["cargoWeight"] ?? '-'}kg")),
-                      DataCell(Text(row["startAddress"] ?? "-")),
-                      DataCell(Text(row["endAddress"] ?? "-")),
-                      DataCell(Text(
-                        row["startTime"] != null
-                            ? DateFormat("yyyy-MM-dd")
-                                .format(DateTime.parse(row["startTime"]))
-                            : "-",
-                      )),
-                      DataCell(_renderActionCell(row)),
-                    ]);
-                  }).toList(),
-          ),
+        Column(
+          children: items.map((row) {
+            final status = row['deliveryStatus'] as int? ?? 0;
+            final matchingNo = row['matchingNo'] as int?;
+            final busy = matchingNo != null && _pendingMatches.contains(matchingNo);
+
+            final badges = <Widget>[
+              Chip(
+                label: Text(_statusLabel(status)),
+                labelStyle: TextStyle(color: _statusColor(status)),
+                backgroundColor: _statusColor(status).withOpacity(0.12),
+                visualDensity: VisualDensity.compact,
+              ),
+            ];
+
+            return Card(
+              margin: const EdgeInsets.only(bottom: 12),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                (row['cargoType'] as String).isEmpty ? '화물 정보' : row['cargoType'],
+                                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                              ),
+                              const SizedBox(height: 6),
+                              Wrap(
+                                spacing: 12,
+                                runSpacing: 4,
+                                children: [
+                                  Text('무게: ${_formatWeight(row['cargoWeight'] ?? '')}'),
+                                  Text('출발: ${row['startAddress'] ?? '-'}'),
+                                  Text('도착: ${row['endAddress'] ?? '-'}'),
+                                  Text('예정일: ${_formatDate(row['startTime'])}'),
+                                ],
+                              ),
+                              if ((row['driverName'] as String).isNotEmpty)
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 4),
+                                  child: Text('운전 기사: ${row['driverName']}'),
+                                ),
+                              if ((row['memberName'] as String).isNotEmpty)
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 4),
+                                  child: Text('의뢰자: ${row['memberName']}'),
+                                ),
+                              if (section == _DeliverySection.completed)
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 4),
+                                  child: Text('완료 시간: ${_formatDateTime(row['deliveryCompletedAt'])}'),
+                                ),
+                              if (section == _DeliverySection.unpaid && row['paymentDueDate'] != null)
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 4),
+                                  child: Text('결제 기한: ${_formatDate(row['paymentDueDate'])}', style: const TextStyle(color: Colors.orange)),
+                                ),
+                            ],
+                          ),
+                        ),
+                        Wrap(spacing: 8, children: badges),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        OutlinedButton(
+                          onPressed: () => _showDetails(row),
+                          child: const Text('상세보기'),
+                        ),
+                        if (isOwner && section == _DeliverySection.inProgress && status == 0)
+                          FilledButton(
+                            onPressed: busy ? null : () => _startDelivery(matchingNo),
+                            child: busy ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)) : const Text('배송 시작'),
+                          ),
+                        if (isOwner && section == _DeliverySection.inProgress && status == 1)
+                          FilledButton(
+                            style: FilledButton.styleFrom(backgroundColor: Colors.green),
+                            onPressed: busy ? null : () => _completeDelivery(matchingNo),
+                            child: busy ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)) : const Text('배송 완료'),
+                          ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }).toList(),
         ),
       ],
     );
@@ -233,29 +485,38 @@ class _DriverDeliveryPageState extends State<DriverDeliveryPage> {
 
   @override
   Widget build(BuildContext context) {
+    if (loading) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    final isOwner = userType == 'CARGO_OWNER';
+
     return Scaffold(
-      backgroundColor: const Color(0xFFF7F9FC),
+      backgroundColor: const Color(0xFFF5F6FA),
       appBar: AppBar(
-        title: const Text("운전사 배송 관리"),
-        centerTitle: true,
+        title: Text(isOwner ? '운전사 배송 관리' : '나의 배송 관리'),
       ),
-      body: loading
-          ? const Center(child: CircularProgressIndicator())
-          : RefreshIndicator(
-              onRefresh: _fetchDeliveries,
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(16),
-                physics: const AlwaysScrollableScrollPhysics(),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    _renderTable("배송 대기", 0),
-                    _renderTable("배송 중", 1),
-                    _renderTable("배송 완료", 2),
-                  ],
-                ),
-              ),
+      body: RefreshIndicator(
+        onRefresh: () => _load(showSpinner: false),
+        child: ListView(
+          padding: const EdgeInsets.all(16),
+          physics: const AlwaysScrollableScrollPhysics(),
+          children: [
+            Text(
+              '로그인 유형: ${isOwner ? '화물(차량) 소유자' : '일반 회원'}',
+              style: const TextStyle(color: Colors.black54),
             ),
+            const SizedBox(height: 16),
+            _buildSection('미결제 · 대기', unpaid, _DeliverySection.unpaid),
+            const SizedBox(height: 32),
+            _buildSection('결제됨 · 진행 중', inProgress, _DeliverySection.inProgress),
+            const SizedBox(height: 32),
+            _buildSection('배송 완료', completed, _DeliverySection.completed),
+          ],
+        ),
+      ),
     );
   }
 }
