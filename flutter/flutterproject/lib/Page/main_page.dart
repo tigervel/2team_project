@@ -5,7 +5,8 @@ import 'package:flutterproject/API/ApiConfig.dart';
 import 'package:flutterproject/Screen/OrderDetailCard/OrderDetailHardcodedView.dart';
 import 'package:flutterproject/Screen/Simple_inquiry/SimpleInquiry.dart';
 import 'package:carousel_slider/carousel_slider.dart';
-import 'package:flutterproject/screen/Notice/noticeEx.dart';
+import 'package:flutterproject/DTO/noticeDTOEx.dart';
+import 'package:flutterproject/screen/Notice/MainNoticeList.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:flutterproject/features/my_inform/my_inform_page.dart';
@@ -225,55 +226,8 @@ class HomeView extends StatelessWidget {
           ),
           const SizedBox(height: 10),
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  "📢 공지사항",
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 10),
-                FutureBuilder<List<Notice>>(
-                  future: noticesFuture,
-                  builder: (context, snapshot) {
-                    if (snapshot.connectionState == ConnectionState.waiting) {
-                      return const Center(child: CircularProgressIndicator());
-                    }
-                    if (snapshot.hasError) {
-                      return Center(child: Text("오류: ${snapshot.error}"));
-                    }
-                    if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                      return const Center(child: Text("등록된 공지사항이 없습니다."));
-                    }
-                    final notices = snapshot.data!;
-                    return ListView.builder(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      itemCount: notices.length,
-                      itemBuilder: (context, index) {
-                        final notice = notices[index];
-                        return Card(
-                          child: ListTile(
-                            title: Text(
-                              notice.title,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            subtitle: Text(
-                              '작성일: ${notice.createdAt.substring(0, 10)}',
-                            ),
-                            onTap: () {
-                              print("Tapped on notice: ${notice.title}");
-                            },
-                          ),
-                        );
-                      },
-                    );
-                  },
-                ),
-              ],
-            ),
+            padding: EdgeInsets.symmetric(horizontal: 16.0),
+            child: MainNoticeList(),
           ),
           const Footer(),
         ],
@@ -295,7 +249,7 @@ class Footer extends StatelessWidget {
           const Text("G2I4로직스", style: TextStyle(fontWeight: FontWeight.bold)),
           const SizedBox(height: 4),
           const Text("서울시 강남구 테헤란로 123"),
-          const Text("고객센터: 02-1234-5678 | yez@example.com"),
+          const Text("고객센터: 02-1234-5678 | g2i4@example.com"),
 
           Row(mainAxisAlignment: MainAxisAlignment.center),
 
