@@ -5,12 +5,15 @@ import 'package:flutterproject/API/MapApi.dart';
 import 'package:flutterproject/API/EstimateApi.dart'; // ✅ 제출 API
 import 'package:flutterproject/Model/FeesExtraModel.dart';
 import 'package:flutterproject/Model/FeesModel.dart';
+import 'package:flutterproject/Utils/util.dart';
+import 'package:flutterproject/provider/TokenProvider.dart';
 import 'package:kpostal/kpostal.dart';
+import 'package:provider/provider.dart';
 import 'package:webview_flutter/webview_flutter.dart';
-const String bearerToken = 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ4eHgxMjM0NSIsImxvZ2luSWQiOiJ4eHgxMjM0NSIsImVtYWlsIjoicGtuNDY5M0BuYXZlci5jb20iLCJyb2xlcyI6WyJST0xFX1NISVBQRVIiLCJST0xFX1VTRVIiXSwiaXNzIjoiZ2lwcm9qZWN0IiwiaWF0IjoxNzU5MTE0MDgyLCJleHAiOjE3NTkxMTU4ODJ9.Zt7Pb-QY62Y66CzQph0A6gU6o88rIURKU-WJGiUU4xw';
+
 class Estimate extends StatefulWidget {
   final VoidCallback? onSubmitted;
-  const Estimate({super.key,this.onSubmitted});
+  const Estimate({super.key, this.onSubmitted});
 
   @override
   State<Estimate> createState() => _EstimateState();
@@ -20,7 +23,7 @@ class _EstimateState extends State<Estimate> {
   // ----- APIs
   final FeesApi _feesApi = FeesApi();
   final MapApi _mapApi = MapApi(); // ✅ 지도/거리
-  final EstimateApi _estimateApi = EstimateApi(bearerToken: bearerToken); // ✅ 제출
+  final EstimateApi _estimateApi = EstimateApi(); // ✅ 제출
 
   // ----- Data
   List<FeesModel> _fees = [];
@@ -59,7 +62,25 @@ class _EstimateState extends State<Estimate> {
   @override
   void initState() {
     super.initState();
-
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final token = context.read<Tokenprovider>().gettoken;
+      if (token == null || token.isEmpty) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('로그인이 필요합니다.')));
+        Navigator.of(context).pushReplacementNamed('/login');
+        return;
+      }
+      final roles = getRolesFromToken(token);
+      if (!roles.contains('ROLE_SHIPPER')) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('화주 권한(ROLE_SHIPPER)이 필요합니다.')),
+        );
+        Navigator.of(context).pushReplacementNamed('/');
+        return;
+      }
+      _estimateApi.setToken(token);
+    });
     // 내일 09:00 ~ 16:59
     final now = DateTime.now();
     final tmr = DateTime(
@@ -76,6 +97,7 @@ class _EstimateState extends State<Estimate> {
       ..loadFlutterAsset('assets/kakao_map.html'); // drawRoute(path) 필요
 
     // 데이터 로드
+    
     _loadFees();
     print('-----------------------------------------');
     _loadExtras();
@@ -313,11 +335,10 @@ class _EstimateState extends State<Estimate> {
           content: const Text('견적서 제출이 완료되었습니다.'),
           actions: [
             TextButton(
-              onPressed: ()  {
+              onPressed: () {
                 Navigator.pop(context);
                 widget.onSubmitted?.call();
-                
-                },
+              },
               child: const Text('확인'),
             ),
           ],

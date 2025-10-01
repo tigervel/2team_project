@@ -6,11 +6,13 @@ import 'package:flutterproject/Screen/OrderDetailCard/OrderDetailHardcodedView.d
 import 'package:flutterproject/Screen/Simple_inquiry/SimpleInquiry.dart';
 import 'package:carousel_slider/carousel_slider.dart';
 import 'package:flutterproject/DTO/noticeDTOEx.dart';
+import 'package:flutterproject/provider/TokenProvider.dart';
 import 'package:flutterproject/screen/Notice/MainNoticeList.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:flutterproject/features/my_inform/my_inform_page.dart';
 import 'package:flutterproject/shell/carousel_shell.dart';
+import 'package:provider/provider.dart';
 
 // 화면 상태 Enum
 enum MainPageView { home, simpleInquiry, myPage, contact, orderList ,estimate}
@@ -23,7 +25,6 @@ class MainPage extends StatefulWidget {
 }
 
 class _MainPageState extends State<MainPage> {
-  bool _isLoggedIn = true; // 로그인 상태
   MainPageView _currentView = MainPageView.home; // 화면 뷰
   int _selectedIndex = -1;
   late Future<List<Notice>> _noticesFuture;
@@ -31,6 +32,7 @@ class _MainPageState extends State<MainPage> {
   @override
   void initState() {
     super.initState();
+
     _noticesFuture = getNotices();
   }
 
@@ -53,6 +55,8 @@ class _MainPageState extends State<MainPage> {
 
   @override
   Widget build(BuildContext context) {
+    final token = context.read<Tokenprovider>().gettoken;
+    final loggedin = token != null && token.isNotEmpty;
     return Scaffold(
       appBar: _buildAppBar(context),
       body: _buildBody(),
@@ -82,10 +86,11 @@ class _MainPageState extends State<MainPage> {
                 _currentView = MainPageView.contact; // 문의사항
                 break;
               case 3:
-                _currentView = MainPageView.myPage;
-                if (_isLoggedIn) {
-                } else {
+                
+                if (!loggedin) {
                   Navigator.pushNamed(context, '/login'); // 로그인 x → 로그인페이지
+                } else {
+                  _currentView = MainPageView.myPage;
                 }
                 break;
               
@@ -167,9 +172,9 @@ class _MainPageState extends State<MainPage> {
           showIndicator: true, // ✅ 동그라미 표시
         );
       case MainPageView.contact:
-        return EstimateRequestListView(); // 문의하기
+        return Text('무니'); // 문의하기
       case MainPageView.orderList:
-        return OrderDetailHardcodedView(); // 주문현황
+        return EstimateRequestListView(); // 주문현황
     }
   }
 }

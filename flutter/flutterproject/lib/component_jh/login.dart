@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutterproject/Page/main_page.dart';
 import 'package:flutterproject/component_jh/signup.dart';
+import 'package:flutterproject/provider/TokenProvider.dart';
+import 'package:provider/provider.dart';
 import '../services/auth_service.dart';
 import '../utils/storage.dart';
 
@@ -32,12 +34,11 @@ class _LoginPageState extends State<LoginPage> {
       // 로그인 후 토큰 저장
       final token = data["accessToken"] as String?;
       if (token != null) {
-        await Storage.saveToken(token);
+        await context.read<Tokenprovider>().setToken(token);
 
         // 프로필 호출
         final profile = await authService.getProfile();
         print("로그인 완료, 프로필: $profile");
-
         if (mounted) {
           Navigator.pushReplacement(
             context,
@@ -84,7 +85,8 @@ class _LoginPageState extends State<LoginPage> {
         // 바로 로그인 처리
         final token = data["accessToken"] as String?;
         if (token != null) {
-          await Storage.saveToken(token);
+          await context.read<Tokenprovider>().setToken(token);
+          // await Storage.saveToken(token);
 
           final profile = await authService.getProfile();
           print("소셜 로그인 완료, 프로필: $profile");

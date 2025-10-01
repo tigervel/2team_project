@@ -4,12 +4,13 @@ import 'package:flutterproject/API/MatchingAPI.dart';
 import 'package:flutterproject/DTO/MatchingDTO.dart';
 import 'package:flutterproject/DTO/PageRequestDTO.dart';
 import 'package:flutterproject/DTO/PageResponseDTO.dart';
-import 'package:intl/intl.dart';
+import 'package:flutterproject/Utils/util.dart';
+import 'package:flutterproject/provider/TokenProvider.dart';
 
-const String bearerToken =
-  'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ5eXkxMjM0NTEiLCJsb2dpbklkIjoieXl5MTIzNDUxIiwiZW1haWwiOiJwa240NjkzQG5hdmVyLmNvbSIsInJvbGVzIjpbIlJPTEVfRFJJVkVSIiwiUk9MRV9VU0VSIl0sImlzcyI6ImdpcHJvamVjdCIsImlhdCI6MTc1OTExNjcyNSwiZXhwIjoxNzU5MTE4NTI1fQ.qFo5rWs9tOm1-7ho4CAaW-asJdGbSE2e3yhqyy2egOw';
+import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
+
 class EstimateRequestListView extends StatefulWidget {
-  
   // ✅ 상위에서 전달
   const EstimateRequestListView({super.key});
 
@@ -22,21 +23,47 @@ class _EstimateRequestListViewState extends State<EstimateRequestListView> {
   final _api = MatchingApi();
   int _currentPage = 1;
   static const int _pageSize = 5;
-
+  //final token = Storage.getToken();
   PageResponseDTO<MatchingDTO>? _page;
   bool _loading = true;
   int _expandedId = -1;
   final Map<int, String> _decision = {}; // id -> 'accept' | 'reject'
+  String? _readBearer() {
+    final t = context.read<Tokenprovider>().gettoken; // ✅ 타입/이름 수정
+    if (t == null || t.isEmpty) return null;
+    return t;
+  }
+
+  void _goHomeWithMsg(String msg) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+    Navigator.of(context).pushReplacementNamed('/'); // 홈 라우트로 이동
+  }
 
   @override
   void initState() {
     super.initState();
-    _load();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _load(); // ✅ 첫 프레임 이후 실행
+    });
   }
 
   Future<void> _load() async {
     setState(() => _loading = true);
     try {
+      final bearerToken = _readBearer();
+      print(bearerToken);
+
+      if (bearerToken == null) {
+        _goHomeWithMsg('로그인이 필요합니다.');
+        return;
+      }
+      final roles = getRolesFromToken(bearerToken);
+      print(roles);
+      if (!roles.contains('ROLE_DRIVER')) {
+        _goHomeWithMsg('차주 회원만 이용 가능합니다.');
+        return;
+      }
       final page = await _api.getEstimateList(
         request: PageRequestDTO(page: _currentPage, size: _pageSize),
         bearerToken: bearerToken,
@@ -210,10 +237,17 @@ class _EstimateRequestListViewState extends State<EstimateRequestListView> {
                           );
                           return;
                         }
+                        final bearer = _readBearer(); // ✅
+                        if (bearer == null) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('로그인이 필요합니다.')),
+                          );
+                          return;
+                        }
                         try {
                           await _api.acceptMatching(
                             estimateNo: estimateNo,
-                            bearerToken: bearerToken,
+                            bearerToken: bearer,
                           );
                           if (!mounted) return;
                           setState(
@@ -236,7 +270,7 @@ class _EstimateRequestListViewState extends State<EstimateRequestListView> {
                       label: '거절',
                       color: Colors.red,
                       selected: decided == 'reject',
-                        onTap: () async {
+                      onTap: () async {
                         final estimateNo = item.eno;
 
                         if (estimateNo == null) {
@@ -245,10 +279,17 @@ class _EstimateRequestListViewState extends State<EstimateRequestListView> {
                           );
                           return;
                         }
+                        final bearer = _readBearer(); // ✅
+                        if (bearer == null) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('로그인이 필요합니다.')),
+                          );
+                          return;
+                        }
                         try {
                           await _api.rejectMatching(
                             estimateNo: estimateNo,
-                            bearerToken: bearerToken,
+                            bearerToken: bearer,
                           );
                           if (!mounted) return;
                           setState(
