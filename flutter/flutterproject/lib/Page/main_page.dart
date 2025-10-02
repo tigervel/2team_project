@@ -30,6 +30,7 @@ class _MainPageState extends State<MainPage> {
   MainPageView _currentView = MainPageView.home; // 화면 뷰
   int _selectedIndex = -1;
   late Future<List<Notice>> _noticesFuture;
+  bool _isTokenLoaded = false;
 
   bool needAuthFor(MainPageView v) {
     return v == MainPageView.orderList ||
@@ -42,6 +43,15 @@ class _MainPageState extends State<MainPage> {
     super.initState();
 
     _noticesFuture = getNotices();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_isTokenLoaded) {
+      context.read<Tokenprovider>().loadToken();
+      _isTokenLoaded = true;
+    }
   }
 
   Future<List<Notice>> getNotices() async {
@@ -160,6 +170,36 @@ class _MainPageState extends State<MainPage> {
         ),
       ),
       centerTitle: true,
+      actions: [
+        Consumer<Tokenprovider>(
+          builder: (context, tokenProvider, child) {
+            final bool isLoggedIn =
+                tokenProvider.gettoken != null &&
+                tokenProvider.gettoken!.isNotEmpty;
+            return TextButton(
+              onPressed: () async {
+                if (isLoggedIn) {
+                  await tokenProvider.clearToken();
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('로그아웃되었습니다.'),
+                        duration: Duration(seconds: 2),
+                      ),
+                    );
+                  }
+                } else {
+                  await ensureLoggedIn(context);
+                }
+              },
+              child: Text(
+                isLoggedIn ? '로그아웃' : '로그인',
+                style: TextStyle(color: Colors.white),
+              ),
+            );
+          },
+        ),
+      ],
     );
   }
 
@@ -230,7 +270,7 @@ class HomeView extends StatelessWidget {
           ),
           const SizedBox(height: 10),
           QuickActionButton(
-            label: ">> >  빠른 간편 조회  < < <",
+            label: "> > >  빠른 간편 조회  < < <",
             onTap: () {
               final mainPageState = context
                   .findAncestorStateOfType<_MainPageState>();
