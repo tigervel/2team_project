@@ -6,7 +6,7 @@ import 'package:provider/provider.dart';
 import '../services/auth_service.dart';
 
 class LoginPage extends StatefulWidget {
-  const LoginPage({super.key});
+  LoginPage({super.key}); // const 제거
 
   @override
   State<LoginPage> createState() => _LoginPageState();
@@ -41,10 +41,7 @@ class _LoginPageState extends State<LoginPage> {
         print("로그인 완료, 프로필: $profile");
 
         if (mounted) {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (_) => const MainPage()),
-          );
+          Navigator.of(context).pop();
         }
       } else {
         setState(() => errorMsg = "로그인 토큰이 없습니다.");
@@ -64,7 +61,6 @@ class _LoginPageState extends State<LoginPage> {
     });
 
     try {
-      // SDK 로그인 → 백엔드 교환
       final data = await authService.socialLogin(provider);
 
       if (data.containsKey("signupTicket")) {
@@ -89,10 +85,7 @@ class _LoginPageState extends State<LoginPage> {
           print("소셜 로그인 완료, 프로필: $profile");
 
           if (mounted) {
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(builder: (_) => const MainPage()),
-            );
+            Navigator.of(context).pop();
           }
         } else {
           setState(() => errorMsg = "로그인 토큰이 없습니다.");
@@ -131,7 +124,8 @@ class _LoginPageState extends State<LoginPage> {
                     icon: Icon(
                       showPassword ? Icons.visibility_off : Icons.visibility,
                     ),
-                    onPressed: () => setState(() => showPassword = !showPassword),
+                    onPressed: () =>
+                        setState(() => showPassword = !showPassword),
                   ),
                 ),
               ),
@@ -146,7 +140,7 @@ class _LoginPageState extends State<LoginPage> {
               TextButton(
                 onPressed: () => Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => const SignUpPage()),
+                  MaterialPageRoute(builder: (_) => SignUpPage()), // const 제거
                 ),
                 child: const Text("회원가입", style: TextStyle(color: Colors.grey)),
               ),

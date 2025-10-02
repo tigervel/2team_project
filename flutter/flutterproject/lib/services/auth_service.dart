@@ -14,17 +14,20 @@ class AuthService {
       body: jsonEncode({"loginId": loginId, "password": password}),
     );
 
-    return _handleResponse(res, successCallback: (body) async {
-      final accessToken = body["accessToken"] as String?;
-      final refreshToken = body["refreshToken"] as String?;
+    return _handleResponse(
+      res,
+      successCallback: (body) async {
+        final accessToken = body["accessToken"] as String?;
+        final refreshToken = body["refreshToken"] as String?;
 
-      if (accessToken == null || accessToken.isEmpty) {
-        throw Exception("로그인은 성공했지만 accessToken이 없습니다.");
-      }
+        if (accessToken == null || accessToken.isEmpty) {
+          throw Exception("로그인은 성공했지만 accessToken이 없습니다.");
+        }
 
-      await Storage.saveToken(accessToken);
-      if (refreshToken != null) await Storage.saveRefreshToken(refreshToken);
-    });
+        await Storage.saveToken(accessToken);
+        if (refreshToken != null) await Storage.saveRefreshToken(refreshToken);
+      },
+    );
   }
 
   // -------------------- 회원가입 --------------------
@@ -57,17 +60,23 @@ class AuthService {
       }),
     );
 
-    return _handleResponse(res, successCallback: (body) async {
-      final accessToken = body["accessToken"] as String?;
-      final refreshToken = body["refreshToken"] as String?;
-      if (accessToken != null) await Storage.saveToken(accessToken);
-      if (refreshToken != null) await Storage.saveRefreshToken(refreshToken);
-    });
+    return _handleResponse(
+      res,
+      successCallback: (body) async {
+        final accessToken = body["accessToken"] as String?;
+        final refreshToken = body["refreshToken"] as String?;
+        if (accessToken != null) await Storage.saveToken(accessToken);
+        if (refreshToken != null) await Storage.saveRefreshToken(refreshToken);
+      },
+    );
   }
 
   // -------------------- 소셜 로그인 --------------------
   Future<Map<String, dynamic>> socialLogin(String provider) async {
-    final res = await http.get(Uri.parse("$baseUrl/auth/social/$provider"));
+    final res = await http.post(
+      Uri.parse("$baseUrl/auth/social/$provider"),
+      headers: {"Content-Type": "application/json"},
+    );
     return _handleResponse(res);
   }
 
@@ -99,12 +108,15 @@ class AuthService {
       }),
     );
 
-    return _handleResponse(res, successCallback: (body) async {
-      final accessToken = body["accessToken"] as String?;
-      final refreshToken = body["refreshToken"] as String?;
-      if (accessToken != null) await Storage.saveToken(accessToken);
-      if (refreshToken != null) await Storage.saveRefreshToken(refreshToken);
-    });
+    return _handleResponse(
+      res,
+      successCallback: (body) async {
+        final accessToken = body["accessToken"] as String?;
+        final refreshToken = body["refreshToken"] as String?;
+        if (accessToken != null) await Storage.saveToken(accessToken);
+        if (refreshToken != null) await Storage.saveRefreshToken(refreshToken);
+      },
+    );
   }
 
   // -------------------- 프로필 조회 --------------------
@@ -119,15 +131,20 @@ class AuthService {
       headers: {"Authorization": "Bearer $token"},
     );
 
-    return _handleResponse(res, unauthorizedCallback: () async {
-      await Storage.removeToken();
-      throw Exception("토큰이 만료되었거나 유효하지 않습니다.");
-    });
+    return _handleResponse(
+      res,
+      unauthorizedCallback: () async {
+        await Storage.removeToken();
+        throw Exception("토큰이 만료되었거나 유효하지 않습니다.");
+      },
+    );
   }
 
   // -------------------- ID 중복 확인 --------------------
   Future<bool> checkIdDuplicate(String loginId) async {
-    final res = await http.get(Uri.parse("$baseUrl/auth/check-id?loginId=$loginId"));
+    final res = await http.get(
+      Uri.parse("$baseUrl/auth/check-id?loginId=$loginId"),
+    );
     final body = jsonDecode(res.body);
     if (res.statusCode == 200) {
       return body["available"] as bool? ?? false;

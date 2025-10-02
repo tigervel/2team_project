@@ -24,8 +24,8 @@ void main() async{
         home: MainPage(),
         routes: {
           '/estimate': (context) => Simpleinquiry(),
-          '/login': (_) => const LoginPage(),
-          '/signup': (_) => const SignUpPage(),
+          '/login': (_) => LoginPage(),
+          '/signup': (_) => SignUpPage(),
           '/mypage': (_) => const MyInformPage(),
         },
       ),
