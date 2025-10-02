@@ -6,20 +6,22 @@ import 'package:flutterproject/component_jh/login.dart';
 import 'package:flutterproject/component_jh/signup.dart';
 import 'package:flutterproject/features/my_inform/my_inform_page.dart';
 import 'package:flutterproject/provider/TokenProvider.dart';
+import 'package:flutterproject/provider/UserProvider.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:provider/provider.dart';
 
-void main() async{
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await initializeDateFormatting('ko_Kr',null);
+  await initializeDateFormatting('ko_Kr', null);
   runApp(
     MultiProvider(
       providers: [
-        ChangeNotifierProvider(create: (_)=> Tokenprovider()..loadToken())
+        ChangeNotifierProvider(create: (_) => Tokenprovider()..loadToken()),
+        ChangeNotifierProvider(create: (_) => UserProvider()),
       ],
       child: MaterialApp(
         title: 'Flutter Project',
-      
+
         debugShowCheckedModeBanner: false,
         home: MainPage(),
         routes: {
