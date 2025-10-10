@@ -1,8 +1,17 @@
-import 'dart:io' show Platform;
 import 'package:dio/dio.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:flutterproject/API/ApiConfig.dart';
+
 import '../../core/auth_token.dart';
+
+const String _envApiBase = String.fromEnvironment('API_BASE', defaultValue: '');
+const String _envLegacyBase = String.fromEnvironment('BASE_URL', defaultValue: '');
+
+String _resolveApiBase() {
+  if (_envApiBase.isNotEmpty) return _envApiBase;
+  if (_envLegacyBase.isNotEmpty) return _envLegacyBase;
+  return Apiconfig.baseUrl;
+}
 
 class DeliveryInformPage extends StatefulWidget {
   const DeliveryInformPage({super.key});
@@ -12,9 +21,7 @@ class DeliveryInformPage extends StatefulWidget {
 }
 
 class _DeliveryInformPageState extends State<DeliveryInformPage> {
-  late final String apiBase = kIsWeb
-      ? 'http://localhost:8080'
-      : (Platform.isAndroid ? 'http://10.0.2.2:8080' : 'http://localhost:8080');
+  late final String apiBase;
 
   late final Dio dio;
 
@@ -28,11 +35,12 @@ class _DeliveryInformPageState extends State<DeliveryInformPage> {
   @override
   void initState() {
     super.initState();
+    apiBase = _resolveApiBase();
     dio = Dio(BaseOptions(
       baseUrl: apiBase,
-      connectTimeout: const Duration(seconds: 5),
-      receiveTimeout: const Duration(seconds: 8),
-      sendTimeout: const Duration(seconds: 5),
+      connectTimeout: const Duration(seconds: 6),
+      receiveTimeout: const Duration(seconds: 12),
+      sendTimeout: const Duration(seconds: 6),
     ))
       ..interceptors.add(LogInterceptor(
         request: true,
@@ -96,35 +104,41 @@ class _DeliveryInformPageState extends State<DeliveryInformPage> {
         userType = 'MEMBER';
       }
 
-      // 2) 수락일정
+      // 2) 수락일정 (미결제)
       try {
         final res = (userType == 'MEMBER')
-            ? await dio.get('/g2i4/member/estimates/unpaid', options: options)
-            : await dio.get('/g2i4/owner/deliveries/unpaid', options: options);
+            ? await dio.get('/g2i4/estimate/subpath/unpaidlist',
+                options: options)
+            : await dio.get('/g2i4/owner/deliveries/unpaid',
+                options: options);
         unpaidList = _extractList(res.data);
       } catch (_) {
         unpaidList = [];
       }
 
-      // 3) 거래현황
+      // 3) 거래현황 (결제됨) 및 완료 목록 분리
       try {
-        final res = (userType == 'MEMBER')
-            ? await dio.get('/g2i4/member/estimates/paid', options: options)
-            : await dio.get('/g2i4/owner/deliveries/paid', options: options);
-        paidList = _extractList(res.data);
+        if (userType == 'MEMBER') {
+          final res = await dio.get('/g2i4/estimate/subpath/paidlist',
+              options: options);
+          final allPaid = _extractList(res.data);
+          paidList = allPaid
+              .where((row) => _statusCode(row['deliveryStatus']) != 2)
+              .toList();
+          completedList = allPaid
+              .where((row) => _statusCode(row['deliveryStatus']) == 2)
+              .toList();
+        } else {
+          final paidRes =
+              await dio.get('/g2i4/owner/deliveries/paid', options: options);
+          paidList = _extractList(paidRes.data);
+
+          final completedRes = await dio.get('/g2i4/owner/deliveries/completed',
+              options: options);
+          completedList = _extractList(completedRes.data);
+        }
       } catch (_) {
         paidList = [];
-      }
-
-      // 4) 완료내역
-      try {
-        final res = (userType == 'MEMBER')
-            ? await dio.get('/g2i4/member/estimates/completed',
-                options: options)
-            : await dio.get('/g2i4/owner/deliveries/completed',
-                options: options);
-        completedList = _extractList(res.data);
-      } catch (_) {
         completedList = [];
       }
     } finally {
@@ -146,6 +160,20 @@ class _DeliveryInformPageState extends State<DeliveryInformPage> {
   }
 
   String _two(int n) => n < 10 ? '0$n' : '$n';
+
+  int _statusCode(dynamic value) {
+    if (value is int) {
+      if (value >= 2) return 2;
+      if (value == 1) return 1;
+      return 0;
+    }
+    final text = value?.toString().toUpperCase() ?? '';
+    if (text == 'IN_TRANSIT' || text == 'DELIVERING') return 1;
+    if (text == 'COMPLETED' || text == 'DONE') return 2;
+    if (text == '2') return 2;
+    if (text == '1') return 1;
+    return 0;
+  }
 
   void _showReportSheet(String matchingNo) {
     showModalBottomSheet(

@@ -156,7 +156,7 @@ public class EstimateController {
 		String memId = jwtService.getUsername(token);
 	       List<EstimateDTO> dtoList = estimateService.findMyPaidEstimates(memId);
 
-	       return ResponseEntity.ok(estimateService.findMyPaidEstimates(memId));
+	       return ResponseEntity.ok(dtoList);
 	   }
 	@PostMapping("/subpath/searchfeesbasic")
 	public ResponseEntity<List<FeesBasicDTO>> getFeesBasic(){

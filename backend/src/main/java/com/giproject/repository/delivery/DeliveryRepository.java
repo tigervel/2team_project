@@ -38,6 +38,14 @@ public interface DeliveryRepository extends JpaRepository<Delivery, Long> {
           "LEFT JOIN FETCH e.member m " +
           "LEFT JOIN FETCH mt.cargoOwner co")
    List<Delivery> findAllWithDetails();
+
+   @Query("""
+           select d
+           from Delivery d
+           join fetch d.payment p
+           where p.paymentNo in :paymentNos
+           """)
+   List<Delivery> findAllByPaymentNoIn(@Param("paymentNos") Iterable<Long> paymentNos);
    
    
    

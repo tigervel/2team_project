@@ -14,11 +14,20 @@ class Inquiry {
   factory Inquiry.fromJson(Map<String, dynamic> j) {
     final rawDate = j['createdAt'] ?? j['created_at'] ?? j['regDate'];
     final parsed = DateTime.tryParse('$rawDate'.replaceFirst(' ', 'T')) ?? DateTime.now();
+    final rawAnswered = j['answered'] ?? j['isAnswered'] ?? j['answerYn'];
+    final answered = switch (rawAnswered) {
+      bool b => b,
+      String s => s.toLowerCase() == 'y' || s.toLowerCase() == 'yes' || s.toLowerCase() == 'true',
+      num n => n != 0,
+      _ => false,
+    };
     return Inquiry(
-      title: j['title'] ?? '',
+      title: j['title'] ?? j['content'] ?? '',
       createdAt: parsed,
-      answered: j['answered'] == true,
-      postId: (j['postId'] is int) ? j['postId'] : null,
+      answered: answered,
+      postId: (j['postId'] is int)
+          ? j['postId'] as int
+          : int.tryParse('${j['postId'] ?? j['id'] ?? j['qnaId'] ?? ''}'),
     );
   }
 }

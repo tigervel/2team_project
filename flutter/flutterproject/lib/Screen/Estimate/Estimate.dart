@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutterproject/API/FeesApi.dart';
 import 'package:flutterproject/API/MapApi.dart';
@@ -53,8 +54,9 @@ class _EstimateState extends State<Estimate> {
   int get _totalCost => _baseCost + _distanceCost + _specialCost;
 
   // ----- Map
-  late final WebViewController _webCtrl;
+  WebViewController? _webCtrl;
   bool _showMap = false;
+  late final bool _webViewSupported;
 
   bool _loadingFees = true;
   bool _loadingExtras = true;
@@ -81,6 +83,9 @@ class _EstimateState extends State<Estimate> {
       }
       _estimateApi.setToken(token);
     });
+    _webViewSupported = !kIsWeb &&
+        (defaultTargetPlatform == TargetPlatform.android ||
+            defaultTargetPlatform == TargetPlatform.iOS);
     // 내일 09:00 ~ 16:59
     final now = DateTime.now();
     final tmr = DateTime(
@@ -91,10 +96,11 @@ class _EstimateState extends State<Estimate> {
     _minDateOnly = tmr;
     _startTime = DateTime(tmr.year, tmr.month, tmr.day, _startHour, 0);
 
-    // 웹뷰
-    _webCtrl = WebViewController()
-      ..setJavaScriptMode(JavaScriptMode.unrestricted)
-      ..loadFlutterAsset('assets/kakao_map.html'); // drawRoute(path) 필요
+    if (_webViewSupported) {
+      _webCtrl = WebViewController()
+        ..setJavaScriptMode(JavaScriptMode.unrestricted)
+        ..loadFlutterAsset('assets/kakao_map.html'); // drawRoute(path) 필요
+    }
 
     // 데이터 로드
     
@@ -180,11 +186,17 @@ class _EstimateState extends State<Estimate> {
         _distanceKm = dir.distanceM / 1000.0;
       });
 
-      // HTML의 drawRoute() 호출
-      final js = 'drawRoute(${jsonEncode(dir.path)});';
-      await _webCtrl.runJavaScript(js);
-
-      setState(() => _showMap = true);
+      if (_webViewSupported && _webCtrl != null) {
+        final js = 'drawRoute(${jsonEncode(dir.path)});';
+        await _webCtrl!.runJavaScript(js);
+        setState(() => _showMap = true);
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('이 플랫폼에서는 지도를 표시할 수 없습니다.')),
+          );
+        }
+      }
     } catch (e) {
       debugPrint('경로/거리 조회 실패: $e');
       if (!mounted) return;
@@ -482,7 +494,9 @@ class _EstimateState extends State<Estimate> {
                     const SizedBox(width: 8),
                     Expanded(
                       child: OutlinedButton(
-                        onPressed: () => setState(() => _showMap = true),
+                        onPressed: _webViewSupported
+                            ? () => setState(() => _showMap = true)
+                            : null,
                         style: OutlinedButton.styleFrom(
                           backgroundColor: _showMap
                               ? Colors.black
@@ -644,12 +658,25 @@ class _EstimateState extends State<Estimate> {
                           ),
                         ),
                         const SizedBox(height: 12),
-                      ] else ...[
-                        // 지도
+                      ] else if (_webViewSupported && _webCtrl != null) ...[
                         SizedBox(
                           width: double.infinity,
                           height: 260,
-                          child: WebViewWidget(controller: _webCtrl),
+                          child: WebViewWidget(controller: _webCtrl!),
+                        ),
+                        const SizedBox(height: 12),
+                      ] else ...[
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF1F1F1),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Text(
+                            '이 플랫폼에서는 지도를 지원하지 않습니다.',
+                            textAlign: TextAlign.center,
+                          ),
                         ),
                         const SizedBox(height: 12),
                       ],
