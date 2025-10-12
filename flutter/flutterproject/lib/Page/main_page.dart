@@ -9,6 +9,7 @@ import 'package:flutterproject/DTO/noticeDTOEx.dart';
 import 'package:flutterproject/Utils/util.dart';
 import 'package:flutterproject/provider/TokenProvider.dart';
 import 'package:flutterproject/screen/Notice/MainNoticeList.dart';
+import 'package:flutterproject/screen/Notice/NoticeListScreen.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:flutterproject/features/my_inform/my_inform_page.dart';
@@ -17,7 +18,7 @@ import 'package:jwt_decoder/jwt_decoder.dart';
 import 'package:provider/provider.dart';
 
 // 화면 상태 Enum
-enum MainPageView { home, simpleInquiry, myPage, contact, orderList, estimate }
+enum MainPageView { home, simpleInquiry, myPage, contact, orderList, estimate, notice }
 
 class MainPage extends StatefulWidget {
   const MainPage({super.key});
@@ -103,7 +104,7 @@ class _MainPageState extends State<MainPage> {
           final target = switch (index) {
             0 => MainPageView.orderList,
             1 => MainPageView.estimate,
-            2 => MainPageView.contact, // 로그인 필요 없음
+            2 => MainPageView.notice, // 공지사항 (로그인 필요 없음)
             3 => MainPageView.myPage,
             _ => MainPageView.home,
           };
@@ -120,7 +121,7 @@ class _MainPageState extends State<MainPage> {
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.list_alt), label: "주문현황"),
           BottomNavigationBarItem(icon: Icon(Icons.search), label: "견적서 작성"),
-          BottomNavigationBarItem(icon: Icon(Icons.chat), label: "문의사항"),
+          BottomNavigationBarItem(icon: Icon(Icons.chat), label: "공지사항"),
           BottomNavigationBarItem(icon: Icon(Icons.person), label: "마이페이지"),
         ],
       ),
@@ -133,6 +134,8 @@ class _MainPageState extends State<MainPage> {
         return 0;
       case MainPageView.simpleInquiry:
         return 1;
+      case MainPageView.notice:
+        return 2;
       case MainPageView.contact:
         return 2;
       case MainPageView.myPage:
@@ -223,6 +226,8 @@ class _MainPageState extends State<MainPage> {
           showBottomBar: false,
           showIndicator: true, // ✅ 동그라미 표시
         );
+      case MainPageView.notice:
+        return const NoticeListScreen(); // 공지사항
       case MainPageView.contact:
         return Text('무니'); // 문의하기
       case MainPageView.orderList:
