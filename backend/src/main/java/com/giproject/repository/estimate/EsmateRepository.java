@@ -3,6 +3,7 @@ package com.giproject.repository.estimate;
 import java.util.List;
 import java.util.Optional;
 
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -31,24 +32,36 @@ public interface EsmateRepository extends JpaRepository<Estimate, Long>{
 	
 	@Query("Select e From Estimate e where e.member.memId =:memberId ")
 	public List<Estimate> getMyEstimate(@Param("memberId") String memberId);
-	@Query("""
-		    select distinct e
-		    from Estimate e
-		    left join e.matchings m
-		    left join m.orderSheet os
-		    left join os.payment p
-		    where e.member.memId = :memberId
-		      and p is null
-		""")
-	public List<Estimate> findMyEstimatesWithoutPayment(@Param("memberId") String memberId);
-	
-	@Query("""
-		    select distinct e
-		    from Estimate e
-		      join e.matchings m
-		      join m.orderSheet os
-		      join os.payment p
-		    where e.member.memId = :memberId
-		""")
-	public List<Estimate> findMyPaidEstimates(@Param("memberId") String memberId);
+    @EntityGraph(attributePaths = {
+            "matchings",
+            "matchings.cargoOwner",
+            "matchings.orderSheet",
+            "matchings.orderSheet.payment"
+    })
+    @Query("""
+            select distinct e
+            from Estimate e
+            left join e.matchings m
+            left join m.orderSheet os
+            left join os.payment p
+            where e.member.memId = :memberId
+              and p is null
+            """)
+    public List<Estimate> findMyEstimatesWithoutPayment(@Param("memberId") String memberId);
+    
+    @EntityGraph(attributePaths = {
+            "matchings",
+            "matchings.cargoOwner",
+            "matchings.orderSheet",
+            "matchings.orderSheet.payment"
+    })
+    @Query("""
+            select distinct e
+            from Estimate e
+            join e.matchings m
+            join m.orderSheet os
+            join os.payment p
+            where e.member.memId = :memberId
+            """)
+    public List<Estimate> findMyPaidEstimates(@Param("memberId") String memberId);
 }

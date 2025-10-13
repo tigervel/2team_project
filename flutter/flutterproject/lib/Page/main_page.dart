@@ -250,7 +250,14 @@ class _MainPageState extends State<MainPage> {
               onPressed: () async {
                 if (isLoggedIn) {
                   await tokenProvider.clearToken();
-                  context.read<UserProvider>().clearUser();
+
+                  //context.read<UserProvider>().clearUser();
+
+                  if (!mounted) return;
+                  setState(() {
+                    _currentView = MainPageView.home;
+                  });
+
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
