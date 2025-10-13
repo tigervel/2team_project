@@ -181,6 +181,36 @@ class _DriverDeliveryPageState extends State<DriverDeliveryPage> {
       'cargoWeight': stringOf(row['cargoWeight'] ?? row['cargo_weight']),
       'startAddress': stringOf(row['startAddress'] ?? row['startAddressShort'] ?? row['start_address']),
       'endAddress': stringOf(row['endAddress'] ?? row['endAddressShort'] ?? row['end_address']),
+      'startRestAddress': stringOf(
+        row['startRestAddress'] ??
+            row['startRestAddr'] ??
+            row['startDetailAddress'] ??
+            row['startAddressDetail'] ??
+            row['start_rest_address'] ??
+            row['start_detail_address'],
+      ),
+      'endRestAddress': stringOf(
+        row['endRestAddress'] ??
+            row['endRestAddr'] ??
+            row['endDetailAddress'] ??
+            row['endAddressDetail'] ??
+            row['end_rest_address'] ??
+            row['end_detail_address'],
+      ),
+      'ordererPhone': stringOf(
+        row['ordererPhone'] ??
+            row['orderer_phone'] ??
+            row['ordererContact'] ??
+            row['senderPhone'] ??
+            row['sender_phone'],
+      ),
+      'receiverPhone': stringOf(
+        row['receiverPhone'] ??
+            row['receiver_phone'] ??
+            row['addresseePhone'] ??
+            row['destinationPhone'] ??
+            row['destination_phone'],
+      ),
       'driverName': stringOf(row['driverName'] ?? row['driver_name']),
       'memberName': stringOf(row['memName'] ?? row['memberName'] ?? row['member_name']),
       'paymentDueDate': row['paymentDueDate'] ?? row['dueDate'] ?? row['paymentDeadline'],
@@ -262,6 +292,54 @@ class _DriverDeliveryPageState extends State<DriverDeliveryPage> {
     } catch (_) {
       return '-';
     }
+  }
+
+  String _formatPhone(dynamic value) {
+    final raw = value?.toString().trim() ?? '';
+    if (raw.isEmpty) return '';
+    final digits = raw.replaceAll(RegExp(r'\D'), '');
+    if (digits.isEmpty) return raw;
+
+    List<String> parts;
+    if (digits.startsWith('02') && (digits.length == 9 || digits.length == 10)) {
+      parts = digits.length == 9
+          ? ['02', digits.substring(2, 5), digits.substring(5)]
+          : ['02', digits.substring(2, 6), digits.substring(6)];
+    } else if (digits.length == 11) {
+      parts = [digits.substring(0, 3), digits.substring(3, 7), digits.substring(7)];
+    } else if (digits.length == 10) {
+      parts = [digits.substring(0, 3), digits.substring(3, 6), digits.substring(6)];
+    } else if (digits.length > 4) {
+      final mid = digits.length - 4;
+      parts = [digits.substring(0, 3), digits.substring(3, mid), digits.substring(mid)];
+    } else {
+      parts = [digits];
+    }
+    return parts.join('-');
+  }
+
+  String _coalesceString(dynamic primary, dynamic fallback) {
+    final first = (primary?.toString() ?? '').trim();
+    if (first.isNotEmpty) return first;
+    final second = (fallback?.toString() ?? '').trim();
+    if (second.isNotEmpty) return second;
+    return '';
+  }
+
+  Future<Map<String, dynamic>?> _fetchOrderSummary(int matchingNo) async {
+    try {
+      final res = await dio.post('/g2i4/subpath/order/', data: {'mcNo': matchingNo});
+      final data = res.data;
+      if (data is Map) {
+        return Map<String, dynamic>.from(
+          data.map((key, value) => MapEntry(key.toString(), value)),
+        );
+      }
+    } catch (e, st) {
+      debugPrint('[driver_delivery] order summary fetch failed: $e');
+      debugPrintStack(stackTrace: st);
+    }
+    return null;
   }
 
   Future<void> _startDelivery(int? matchingNo) async {
@@ -385,42 +463,73 @@ class _DriverDeliveryPageState extends State<DriverDeliveryPage> {
   }
 
   void _showDetails(Map<String, dynamic> row) {
+    final matchingNo = row['matchingNo'] as int?;
+    final future = matchingNo == null ? null : _fetchOrderSummary(matchingNo);
     showModalBottomSheet(
       context: context,
       showDragHandle: true,
+      isScrollControlled: true,
       builder: (ctx) {
         final status = row['deliveryStatus'] as int? ?? 0;
-        return Padding(
-          padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                row['cargoType']?.toString().isEmpty == true ? '상세 정보' : row['cargoType'],
-                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 12),
-              _detailLine('화물 무게', _formatWeight(row['cargoWeight'] ?? '')),
-              _detailLine('출발지', row['startAddress'] ?? '-'),
-              _detailLine('도착지', row['endAddress'] ?? '-'),
-              _detailLine('배송 예정일', _formatDate(row['startTime'])),
-              if ((row['driverName'] ?? '').toString().isNotEmpty)
-                _detailLine('운전 기사', row['driverName']),
-              if ((row['memberName'] ?? '').toString().isNotEmpty)
-                _detailLine('의뢰자', row['memberName']),
-              if (status == 2)
-                _detailLine('완료 시각', _formatDateTime(row['deliveryCompletedAt'])),
-              const SizedBox(height: 16),
-              Align(
-                alignment: Alignment.centerRight,
-                child: FilledButton(
-                  onPressed: () => Navigator.pop(ctx),
-                  child: const Text('닫기'),
+        return FutureBuilder<Map<String, dynamic>?>(
+          future: future,
+          builder: (context, snapshot) {
+            final extra = snapshot.data;
+            final waiting = snapshot.connectionState == ConnectionState.waiting;
+
+            final startRest = _coalesceString(extra?['startRestAddress'], row['startRestAddress']);
+            final endRest = _coalesceString(extra?['endRestAddress'], row['endRestAddress']);
+            final ordererPhone = _coalesceString(extra?['ordererPhone'], row['ordererPhone']);
+            final receiverPhone = _coalesceString(extra?['receiverPhone'], row['receiverPhone']);
+
+            return SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        row['cargoType']?.toString().isEmpty == true ? '상세 정보' : row['cargoType'],
+                        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 12),
+                      if (waiting)
+                        const Padding(
+                          padding: EdgeInsets.only(bottom: 12),
+                          child: LinearProgressIndicator(),
+                        ),
+                      _detailLine('화물 무게', _formatWeight(row['cargoWeight'] ?? '')),
+                      _detailLine('출발지', row['startAddress'] ?? '-'),
+                      if (startRest.isNotEmpty) _detailLine('출발 상세 주소', startRest),
+                      _detailLine('도착지', row['endAddress'] ?? '-'),
+                      if (endRest.isNotEmpty) _detailLine('도착 상세 주소', endRest),
+                      if (ordererPhone.isNotEmpty)
+                        _detailLine('출발지 휴대전화', _formatPhone(ordererPhone)),
+                      if (receiverPhone.isNotEmpty)
+                        _detailLine('도착지 휴대전화', _formatPhone(receiverPhone)),
+                      _detailLine('배송 예정일', _formatDate(row['startTime'])),
+                      if ((row['driverName'] ?? '').toString().isNotEmpty)
+                        _detailLine('운전 기사', row['driverName']),
+                      if ((row['memberName'] ?? '').toString().isNotEmpty)
+                        _detailLine('의뢰자', row['memberName']),
+                      if (status == 2)
+                        _detailLine('완료 시각', _formatDateTime(row['deliveryCompletedAt'])),
+                      const SizedBox(height: 16),
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: FilledButton(
+                          onPressed: () => Navigator.pop(ctx),
+                          child: const Text('닫기'),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
-            ],
-          ),
+            );
+          },
         );
       },
     );
