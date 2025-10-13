@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutterproject/Page/main_page.dart';
 import 'package:flutterproject/component_jh/signup.dart';
 import 'package:flutterproject/provider/TokenProvider.dart';
+import 'package:flutterproject/provider/UserProvider.dart';
 import 'package:provider/provider.dart';
 import '../services/auth_service.dart';
 
@@ -38,6 +39,7 @@ class _LoginPageState extends State<LoginPage> {
         await context.read<Tokenprovider>().setToken(token);
 
         final profile = await authService.getProfile();
+        context.read<UserProvider>().setUser(profile);
         print("로그인 완료, 프로필: $profile");
 
         if (mounted) {
@@ -82,6 +84,7 @@ class _LoginPageState extends State<LoginPage> {
           await context.read<Tokenprovider>().setToken(token);
 
           final profile = await authService.getProfile();
+          context.read<UserProvider>().setUser(profile);
           print("소셜 로그인 완료, 프로필: $profile");
 
           if (mounted) {

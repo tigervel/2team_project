@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutterproject/Screen/Estimate/Estimate.dart';
 import 'package:flutterproject/Screen/EstimateRequestView/EstimateRequestListView.dart';
 import 'package:flutterproject/API/ApiConfig.dart';
-import 'package:flutterproject/Screen/OrderDetailCard/OrderDetailHardcodedView.dart';
 import 'package:flutterproject/Screen/Simple_inquiry/SimpleInquiry.dart';
 import 'package:carousel_slider/carousel_slider.dart';
 import 'package:flutterproject/DTO/noticeDTOEx.dart';
@@ -14,7 +13,8 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:flutterproject/features/my_inform/my_inform_page.dart';
 import 'package:flutterproject/shell/carousel_shell.dart';
-import 'package:jwt_decoder/jwt_decoder.dart';
+import 'package:flutterproject/provider/UserProvider.dart';
+import 'package:flutterproject/services/auth_service.dart';
 import 'package:provider/provider.dart';
 
 // 화면 상태 Enum
@@ -29,30 +29,56 @@ class MainPage extends StatefulWidget {
 
 class _MainPageState extends State<MainPage> {
   MainPageView _currentView = MainPageView.home; // 화면 뷰
-  int _selectedIndex = -1;
   late Future<List<Notice>> _noticesFuture;
-  bool _isTokenLoaded = false;
+  late final Tokenprovider _tokenProvider;
+
+  @override
+  void initState() {
+    super.initState();
+    _noticesFuture = getNotices();
+
+    _tokenProvider = context.read<Tokenprovider>();
+    _tokenProvider.addListener(_onTokenChanged);
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _onTokenChanged();
+    });
+  }
+
+  @override
+  void dispose() {
+    _tokenProvider.removeListener(_onTokenChanged);
+    super.dispose();
+  }
+
+  void _onTokenChanged() {
+    final token = _tokenProvider.gettoken;
+    if (token != null && token.isNotEmpty) {
+      if (context.read<UserProvider>().user == null) {
+        _loadUserProfile();
+      }
+    }
+  }
+
+  Future<void> _loadUserProfile() async {
+    try {
+      final authService = AuthService();
+      final profile = await authService.getProfile();
+      if (mounted) {
+        context.read<UserProvider>().setUser(profile);
+      }
+    } catch (e) {
+      print('Failed to load user profile on startup: $e');
+      if (mounted) {
+        await context.read<Tokenprovider>().clearToken();
+      }
+    }
+  }
 
   bool needAuthFor(MainPageView v) {
     return v == MainPageView.orderList ||
         v == MainPageView.estimate ||
         v == MainPageView.myPage;
-  }
-
-  @override
-  void initState() {
-    super.initState();
-
-    _noticesFuture = getNotices();
-  }
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    if (!_isTokenLoaded) {
-      context.read<Tokenprovider>().loadToken();
-      _isTokenLoaded = true;
-    }
   }
 
   Future<List<Notice>> getNotices() async {
@@ -74,56 +100,97 @@ class _MainPageState extends State<MainPage> {
 
   @override
   Widget build(BuildContext context) {
-    final token = context.read<Tokenprovider>().gettoken;
-    final tokenProvider = context.read<Tokenprovider>();
-    final loggedin = token != null && token.isNotEmpty;
-
-    bool needAuthFor(MainPageView v) {
-      return v == MainPageView.orderList ||
-          v == MainPageView.estimate ||
-          v == MainPageView.myPage; // 홈/문의사항 제외
-    }
-
     return Scaffold(
       appBar: _buildAppBar(context),
       body: _buildBody(),
+      bottomNavigationBar: Consumer<UserProvider>(
+        builder: (context, userProvider, child) {
+          final role = userProvider.role;
 
-      bottomNavigationBar: BottomNavigationBar(
-        type: BottomNavigationBarType.fixed,
-        currentIndex: _currentView == MainPageView.home
-            ? 0
-            : _getCurrentIndex(),
-        backgroundColor: Colors.indigo,
-        showSelectedLabels: true,
-        showUnselectedLabels: true,
-        selectedItemColor: _currentView == MainPageView.home
-            ? Colors.white
-            : Colors.white70,
-        unselectedItemColor: Colors.white,
-        onTap: (index) async {
-          final target = switch (index) {
-            0 => MainPageView.orderList,
-            1 => MainPageView.estimate,
-            2 => MainPageView.notice, // 공지사항 (로그인 필요 없음)
-            3 => MainPageView.myPage,
-            _ => MainPageView.home,
-          };
+          List<BottomNavigationBarItem> items;
+          List<MainPageView> targets;
 
-          if (needAuthFor(target)) {
-            final ok = await ensureLoggedIn(context);
-            if (!ok) return; // 로그인 화면으로 이동했으니 더 진행 X
+          if (role == 'CARGO_OWNER') {
+            // 차주 (운전자)
+            items = const [
+              BottomNavigationBarItem(
+                icon: Icon(Icons.list_alt),
+                label: "주문현황",
+              ),
+              BottomNavigationBarItem(icon: Icon(Icons.chat), label: "문의사항"),
+              BottomNavigationBarItem(icon: Icon(Icons.person), label: "마이페이지"),
+            ];
+            targets = [
+              MainPageView.orderList,
+              MainPageView.notice,
+              MainPageView.myPage,
+            ];
+          } else if (role == 'MEMBER') {
+            // 화주 (회원)
+            items = const [
+              BottomNavigationBarItem(
+                icon: Icon(Icons.search),
+                label: "견적서 작성",
+              ),
+              BottomNavigationBarItem(icon: Icon(Icons.chat), label: "문의사항"),
+              BottomNavigationBarItem(icon: Icon(Icons.person), label: "마이페이지"),
+            ];
+            targets = [
+              MainPageView.estimate,
+              MainPageView.notice,
+              MainPageView.myPage,
+            ];
+          } else {
+            items = const [
+              BottomNavigationBarItem(
+                icon: Icon(Icons.list_alt),
+                label: "주문현황",
+              ),
+              BottomNavigationBarItem(
+                icon: Icon(Icons.search),
+                label: "견적서 작성",
+              ),
+              BottomNavigationBarItem(icon: Icon(Icons.chat), label: "문의사항"),
+              BottomNavigationBarItem(icon: Icon(Icons.person), label: "마이페이지"),
+            ];
+            targets = [
+              MainPageView.orderList,
+              MainPageView.estimate,
+              MainPageView.contact,
+              MainPageView.myPage,
+            ];
           }
 
-          if (!mounted) return;
-          setState(() => _currentView = target);
-        },
+          int currentIndex = targets.indexOf(_currentView);
+          if (currentIndex == -1) {
+            currentIndex = 0;
+          }
 
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.list_alt), label: "주문현황"),
-          BottomNavigationBarItem(icon: Icon(Icons.search), label: "견적서 작성"),
-          BottomNavigationBarItem(icon: Icon(Icons.chat), label: "공지사항"),
-          BottomNavigationBarItem(icon: Icon(Icons.person), label: "마이페이지"),
-        ],
+          return BottomNavigationBar(
+            type: BottomNavigationBarType.fixed,
+            currentIndex: currentIndex,
+            backgroundColor: Colors.indigo,
+            showSelectedLabels: true,
+            showUnselectedLabels: true,
+            selectedItemColor: _currentView == MainPageView.home
+                ? Colors.white
+                : Colors.white70,
+            unselectedItemColor: Colors.white,
+            onTap: (index) async {
+              if (index < 0 || index >= targets.length) return;
+              final target = targets[index];
+
+              if (needAuthFor(target)) {
+                final ok = await ensureLoggedIn(context);
+                if (!ok) return;
+              }
+
+              if (!mounted) return;
+              setState(() => _currentView = target);
+            },
+            items: items,
+          );
+        },
       ),
     );
   }
@@ -183,6 +250,7 @@ class _MainPageState extends State<MainPage> {
               onPressed: () async {
                 if (isLoggedIn) {
                   await tokenProvider.clearToken();
+                  context.read<UserProvider>().clearUser();
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
@@ -190,6 +258,9 @@ class _MainPageState extends State<MainPage> {
                         duration: Duration(seconds: 2),
                       ),
                     );
+                    setState(() {
+                      _currentView = MainPageView.home;
+                    });
                   }
                 } else {
                   await ensureLoggedIn(context);
@@ -304,7 +375,6 @@ class Footer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      //color: Colors.grey[200],
       padding: const EdgeInsets.all(16),
       child: Column(
         children: [
@@ -312,9 +382,7 @@ class Footer extends StatelessWidget {
           const SizedBox(height: 4),
           const Text("서울시 강남구 테헤란로 123"),
           const Text("고객센터: 02-1234-5678 | g2i4@example.com"),
-
           Row(mainAxisAlignment: MainAxisAlignment.center),
-
           const SizedBox(height: 12),
         ],
       ),
