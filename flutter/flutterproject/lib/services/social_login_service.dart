@@ -1,56 +1,86 @@
+import 'package:flutterproject/API/ApiConfig.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:kakao_flutter_sdk_user/kakao_flutter_sdk_user.dart' as kakao;
 import 'package:flutter_naver_login/flutter_naver_login.dart';
 import 'package:dio/dio.dart';
 
 class SocialLoginService {
-  final Dio dio = Dio(BaseOptions(baseUrl: "http://localhost:8080/api/auth"));
+  final Dio dio = Dio(BaseOptions(baseUrl: "${Apiconfig.baseUrl}/api/auth"));
 
+  /// Google 로그인
   Future<Map<String, dynamic>> loginWithGoogle() async {
     final googleSignIn = GoogleSignIn(scopes: ['email', 'profile']);
     final account = await googleSignIn.signIn();
-    final auth = await account?.authentication;
 
-    final idToken = auth?.idToken;
-    final email = account?.email;
-    final name = account?.displayName;
+    if (account == null) throw Exception("Google 로그인 취소됨");
 
-    // ✅ 서버 호출
-    final res = await dio.post("/social/login", data: {
-      "provider": "GOOGLE",
-      "providerId": account?.id,
-      "email": email,
-      "name": name,
-    });
-    return res.data;
-  }
+    final providerId = account.id;
+    final email = account.email;
+    final name = account.displayName;
 
-  Future<Map<String, dynamic>> loginWithKakao() async {
-    if (!await kakao.isKakaoTalkInstalled()) {
-      throw Exception("카카오톡 미설치");
+    if (providerId == null || email == null || name == null || name.isEmpty) {
+      throw Exception("Google 로그인 실패: 필수 정보가 없습니다.");
     }
-    final token = await kakao.UserApi.instance.loginWithKakaoTalk();
-    final user = await kakao.UserApi.instance.me();
 
-    final res = await dio.post("/social/login", data: {
-      "provider": "KAKAO",
-      "providerId": user.id.toString(),
-      "email": user.kakaoAccount?.email,
-      "name": user.kakaoAccount?.profile?.nickname,
-    });
+    final res = await dio.post(
+      "/social/google",
+      data: {"providerId": providerId, "email": email, "name": name},
+      options: Options(headers: {"Content-Type": "application/json"}),
+    );
+
     return res.data;
   }
 
+  /// Kakao 로그인
+  Future<Map<String, dynamic>> loginWithKakao() async {
+    kakao.OAuthToken token;
+    if (await kakao.isKakaoTalkInstalled()) {
+      token = await kakao.UserApi.instance.loginWithKakaoTalk();
+    } else {
+      token = await kakao.UserApi.instance.loginWithKakaoAccount();
+    }
+
+    final user = await kakao.UserApi.instance.me();
+    final providerId = user.id?.toString();
+    final email = user.kakaoAccount?.email;
+    final name = user.kakaoAccount?.profile?.nickname;
+
+    if (providerId == null || email == null || name == null || name.isEmpty) {
+      throw Exception("Kakao 로그인 실패: 필수 정보가 없습니다.");
+    }
+
+    final res = await dio.post(
+      "/social/kakao",
+      data: {"providerId": providerId, "email": email, "name": name},
+      options: Options(headers: {"Content-Type": "application/json"}),
+    );
+
+    return res.data;
+  }
+
+  /// Naver 로그인
   Future<Map<String, dynamic>> loginWithNaver() async {
     final result = await FlutterNaverLogin.logIn();
     final account = result.account;
 
-    final res = await dio.post("/social/login", data: {
-      "provider": "NAVER",
-      //"providerId": account.id,
-      //"email": account.email,
-      //"name": account.name,
-    });
+    if (account == null) {
+      throw Exception("Naver 로그인 실패: account 정보가 없습니다.");
+    }
+
+    final providerId = account.id;
+    final email = account.email;
+    final name = account.name ?? account.nickname;
+
+    if (providerId == null || providerId.isEmpty) throw Exception("Naver 로그인 실패: providerId가 없습니다.");
+    if (email == null || email.isEmpty) throw Exception("Naver 로그인 실패: email이 없습니다.");
+    if (name == null || name.isEmpty) throw Exception("Naver 로그인 실패: 이름 정보가 없습니다.");
+
+    final res = await dio.post(
+      "/social/naver",
+      data: {"providerId": providerId, "email": email, "name": name},
+      options: Options(headers: {"Content-Type": "application/json"}),
+    );
+
     return res.data;
   }
 }

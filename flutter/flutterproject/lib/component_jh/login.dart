@@ -1,3 +1,4 @@
+// login_page.dart
 import 'package:flutter/material.dart';
 import 'package:flutterproject/Page/main_page.dart';
 import 'package:flutterproject/component_jh/signup.dart';
@@ -5,9 +6,10 @@ import 'package:flutterproject/provider/TokenProvider.dart';
 import 'package:flutterproject/provider/UserProvider.dart';
 import 'package:provider/provider.dart';
 import '../services/auth_service.dart';
+import '../services/social_login_service.dart'; // 추가
 
 class LoginPage extends StatefulWidget {
-  LoginPage({super.key}); // const 제거
+  LoginPage({super.key});
 
   @override
   State<LoginPage> createState() => _LoginPageState();
@@ -17,6 +19,7 @@ class _LoginPageState extends State<LoginPage> {
   final _idController = TextEditingController();
   final _pwController = TextEditingController();
   final authService = AuthService();
+  final socialService = SocialLoginService(); // 추가
   bool loading = false;
   bool showPassword = false;
   String? errorMsg;
@@ -63,10 +66,23 @@ class _LoginPageState extends State<LoginPage> {
     });
 
     try {
-      final data = await authService.socialLogin(provider);
+      Map<String, dynamic> data;
+
+      switch (provider.toUpperCase()) {
+        case "GOOGLE":
+          data = await socialService.loginWithGoogle();
+          break;
+        case "KAKAO":
+          data = await socialService.loginWithKakao();
+          break;
+        case "NAVER":
+          data = await socialService.loginWithNaver();
+          break;
+        default:
+          throw Exception("지원하지 않는 소셜 로그인입니다.");
+      }
 
       if (data.containsKey("signupTicket")) {
-        // 소셜 첫 가입 → 회원가입 페이지로 이동
         Navigator.push(
           context,
           MaterialPageRoute(
@@ -78,7 +94,6 @@ class _LoginPageState extends State<LoginPage> {
           ),
         );
       } else {
-        // 바로 로그인 처리
         final token = data["accessToken"] as String?;
         if (token != null) {
           await context.read<Tokenprovider>().setToken(token);
@@ -143,7 +158,7 @@ class _LoginPageState extends State<LoginPage> {
               TextButton(
                 onPressed: () => Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => SignUpPage()), // const 제거
+                  MaterialPageRoute(builder: (_) => SignUpPage()),
                 ),
                 child: const Text("회원가입", style: TextStyle(color: Colors.grey)),
               ),
@@ -166,6 +181,7 @@ class _LoginPageState extends State<LoginPage> {
                   ),
                 ],
               ),
+
               if (errorMsg != null)
                 Padding(
                   padding: const EdgeInsets.only(top: 12),

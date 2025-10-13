@@ -118,31 +118,67 @@ public class TokenAuthController {
 
     /* ===== 1) 소셜 로그인 ===== */
     @PostMapping("/social/{provider}")
-    public ResponseEntity<?> socialLogin(@PathVariable String provider, @RequestBody Map<String,String> body) {
+    public ResponseEntity<?> socialLogin(
+            @PathVariable("provider") String provider,
+            @RequestBody(required = false) Map<String,String> body) {
+
+        if (body == null || body.isEmpty()) {
+            return error("BODY_REQUIRED", "요청 본문이 필요합니다.", HttpStatus.BAD_REQUEST);
+        }
+
         String providerUserId = body.get("providerId");
         String email = body.get("email");
         String name = body.get("name");
+
+        if (providerUserId == null || providerUserId.isBlank())
+            return error("PROVIDER_ID_REQUIRED", "소셜 제공자 ID가 필요합니다.", HttpStatus.BAD_REQUEST);
+        if (email == null || email.isBlank())
+            return error("EMAIL_REQUIRED", "이메일이 필요합니다.", HttpStatus.BAD_REQUEST);
+        if (name == null || name.isBlank())
+            return error("NAME_REQUIRED", "이름이 필요합니다.", HttpStatus.BAD_REQUEST);
 
         Optional<UserIndex> userOpt = userIndexRepo.findByProviderAndProviderId(provider.toUpperCase(), providerUserId);
 
         if (userOpt.isPresent()) {
             UserIndex ui = userOpt.get();
-            List<String> roles = List.of("ROLE_" + ui.getRole().name(),
-                    ui.getRole() == UserIndex.Role.ADMIN ? "ROLE_ADMIN" : "ROLE_USER");
-            Map<String,Object> claims = Map.of(EMAIL, ui.getEmail(), UID, ui.getLoginId(),
-                    ROLES, roles, PROVIDER, provider.toUpperCase(), PROVIDER_ID, providerUserId);
+            List<String> roles = List.of(
+                    "ROLE_" + ui.getRole().name(),
+                    ui.getRole() == UserIndex.Role.ADMIN ? "ROLE_ADMIN" : "ROLE_USER"
+            );
+            Map<String,Object> claims = Map.of(
+                    EMAIL, ui.getEmail(),
+                    UID, ui.getLoginId(),
+                    ROLES, roles,
+                    PROVIDER, provider.toUpperCase(),
+                    PROVIDER_ID, providerUserId
+            );
             return ResponseEntity.ok(createTokens(claims, ui.getLoginId()));
         }
 
         String signupTicket = jwtService.createTempToken(
-                Map.of("purpose","signup", EMAIL,email, PROVIDER, provider.toUpperCase(),
-                        PROVIDER_ID, providerUserId, "name", name), 5);
-        return ResponseEntity.ok(Map.of("signupRequired", true, "signupTicket", signupTicket, "email", email));
+                Map.of(
+                        "purpose", "signup",
+                        EMAIL, email,
+                        PROVIDER, provider.toUpperCase(),
+                        PROVIDER_ID, providerUserId,
+                        "name", name
+                ),
+                5
+        );
+
+        return ResponseEntity.ok(
+                Map.of(
+                        "signupRequired", true,
+                        "signupTicket", signupTicket,
+                        "email", email
+                )
+        );
     }
+
 
     /* ===== 2) 소셜 첫가입 컨텍스트 ===== */
     @GetMapping("/social/signup-context")
-    public ResponseEntity<?> signupContext(@RequestParam String ticket) {
+    public ResponseEntity<?> signupContext(@RequestParam("ticket") String ticket) {
         if (ticket == null || ticket.isBlank()) return error("TICKET_MISSING", "유효한 가입 티켓이 없습니다.", HttpStatus.NOT_FOUND);
         try {
             Map<String,Object> claims = jwtService.parseTempToken(ticket);
@@ -250,7 +286,7 @@ public class TokenAuthController {
 
     /* ===== 6) 아이디 찾기 ===== */
     @GetMapping("/find-id")
-    public ResponseEntity<Map<String,String>> findId(@RequestParam String email) {
+    public ResponseEntity<Map<String,String>> findId(@RequestParam("email") String email) {
         return memberRepository.findByMemEmail(email)
                 .map(m -> ResponseEntity.ok(Map.of("loginId", m.getMemId())))
                 .orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND)
