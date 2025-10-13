@@ -117,7 +117,7 @@ class _MainPageState extends State<MainPage> {
                 icon: Icon(Icons.list_alt),
                 label: "주문현황",
               ),
-              BottomNavigationBarItem(icon: Icon(Icons.chat), label: "문의사항"),
+              BottomNavigationBarItem(icon: Icon(Icons.chat), label: "공지사항"),
               BottomNavigationBarItem(icon: Icon(Icons.person), label: "마이페이지"),
             ];
             targets = [
@@ -132,7 +132,7 @@ class _MainPageState extends State<MainPage> {
                 icon: Icon(Icons.search),
                 label: "견적서 작성",
               ),
-              BottomNavigationBarItem(icon: Icon(Icons.chat), label: "문의사항"),
+              BottomNavigationBarItem(icon: Icon(Icons.chat), label: "공지사항"),
               BottomNavigationBarItem(icon: Icon(Icons.person), label: "마이페이지"),
             ];
             targets = [
@@ -150,13 +150,13 @@ class _MainPageState extends State<MainPage> {
                 icon: Icon(Icons.search),
                 label: "견적서 작성",
               ),
-              BottomNavigationBarItem(icon: Icon(Icons.chat), label: "문의사항"),
+              BottomNavigationBarItem(icon: Icon(Icons.chat), label: "공지사항"),
               BottomNavigationBarItem(icon: Icon(Icons.person), label: "마이페이지"),
             ];
             targets = [
               MainPageView.orderList,
               MainPageView.estimate,
-              MainPageView.contact,
+              MainPageView.notice,
               MainPageView.myPage,
             ];
           }
