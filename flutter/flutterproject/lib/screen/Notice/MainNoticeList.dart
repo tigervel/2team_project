@@ -11,8 +11,16 @@ class MainNoticeList extends StatefulWidget {
   State<MainNoticeList> createState() => _NoticeListState();
 }
 
+
 class _NoticeListState extends State<MainNoticeList> {
   late Future<List<Notice>> _noticesFuture;
+    void _onNoticeClick(Notice notice) {
+    Navigator.pushNamed(
+      context,
+      '/notice/detail',
+      arguments: notice.noticeId,
+    );
+  }
 
   @override
   void initState() {
@@ -75,6 +83,7 @@ class _NoticeListState extends State<MainNoticeList> {
                       overflow: TextOverflow.ellipsis,
                     ),
                     subtitle: Text('작성일: ${notice.createdAt.substring(0, 10)}'),
+                    onTap: () => _onNoticeClick(notice),
                   ),
                 );
               },

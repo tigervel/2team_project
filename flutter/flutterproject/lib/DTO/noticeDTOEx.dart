@@ -156,10 +156,10 @@ class NoticePageResponse {
       totalPages: json['totalPages'] as int,
       currentPage: json['currentPage'] as int,
       size: json['size'] as int,
-      hasNext: json['hasNext'] as bool,
-      hasPrevious: json['hasPrevious'] as bool,
-      isFirst: json['isFirst'] as bool,
-      isLast: json['isLast'] as bool,
+      hasNext: json['hasNext'] == true,
+      hasPrevious: json['hasPrevious'] ==true,
+      isFirst: json['isFirst'] ?? false,
+      isLast: json['isLast'] ?? false,
     );
   }
 

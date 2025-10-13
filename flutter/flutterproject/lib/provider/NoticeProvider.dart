@@ -156,7 +156,7 @@ class NoticeProvider extends ChangeNotifier {
       _isLoading = true;
       _errorMessage = null;
       notifyListeners();
-
+      print('호출됨');
       // API 호출
       final response = await _api.getNotices(
         page: page ?? _currentPage,
@@ -164,7 +164,6 @@ class NoticeProvider extends ChangeNotifier {
         category: category ?? (_activeCategory == NoticeCategory.all ? null : _activeCategory),
         keyword: keyword ?? _keyword,
       );
-
       // 상태 업데이트
       _notices = response.content;
       _currentPage = response.currentPage;

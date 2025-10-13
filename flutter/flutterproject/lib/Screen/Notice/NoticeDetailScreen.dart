@@ -21,7 +21,10 @@ class _NoticeDetailScreenState extends State<NoticeDetailScreen> {
   @override
   void initState() {
     super.initState();
-    _loadNoticeDetail();
+    WidgetsBinding.instance.addPostFrameCallback((_){
+       _loadNoticeDetail();
+    });
+   
   }
 
   Future<void> _loadNoticeDetail() async {
