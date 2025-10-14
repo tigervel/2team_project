@@ -95,12 +95,27 @@ class _DriverDeliveryPageState extends State<DriverDeliveryPage> {
           ? paidRaw
           : paidRaw.where((row) => _statusFrom(row['deliveryStatus']) != 2).toList();
 
+      final normalizedUnpaid =
+          unpaidRaw.map((row) => _normalizeRow(row, isOwner: isOwner)).toList();
+      final normalizedInProgress =
+          inProgressRaw.map((row) => _normalizeRow(row, isOwner: isOwner)).toList();
+      final normalizedCompleted =
+          completedRaw.map((row) => _normalizeRow(row, isOwner: isOwner)).toList();
+
+      normalizedUnpaid.sort((a, b) => _compareDeliveries(a, b, _DeliverySection.unpaid));
+      normalizedInProgress.sort(
+        (a, b) => _compareDeliveries(a, b, _DeliverySection.inProgress),
+      );
+      normalizedCompleted.sort(
+        (a, b) => _compareDeliveries(a, b, _DeliverySection.completed),
+      );
+
       if (!mounted) return;
       setState(() {
         userType = type;
-        unpaid = unpaidRaw.map((row) => _normalizeRow(row, isOwner: isOwner)).toList();
-        inProgress = inProgressRaw.map((row) => _normalizeRow(row, isOwner: isOwner)).toList();
-        completed = completedRaw.map((row) => _normalizeRow(row, isOwner: isOwner)).toList();
+        unpaid = normalizedUnpaid;
+        inProgress = normalizedInProgress;
+        completed = normalizedCompleted;
         _resetPageFor(_DeliverySection.unpaid, unpaid.length);
         _resetPageFor(_DeliverySection.inProgress, inProgress.length);
         _resetPageFor(_DeliverySection.completed, completed.length);
@@ -172,6 +187,31 @@ class _DriverDeliveryPageState extends State<DriverDeliveryPage> {
     String stringOf(dynamic value) => value?.toString() ?? '';
 
     final status = _statusFrom(row['deliveryStatus']);
+    final startTime = row['startTime'] ??
+        row['start_time'] ??
+        row['startDate'] ??
+        row['start_date'] ??
+        row['expectedStartDate'] ??
+        row['expected_start_date'] ??
+        row['pickupDate'] ??
+        row['pickup_date'];
+    final paymentDueDate =
+        row['paymentDueDate'] ?? row['dueDate'] ?? row['paymentDeadline'] ?? row['payment_deadline'];
+    final deliveryCompletedAt = row['deliveryCompletedAt'] ??
+        row['deliveryEndTime'] ??
+        row['completedAt'] ??
+        row['completeDate'] ??
+        row['complete_date'];
+    final createdAt = row['createdAt'] ??
+        row['created_at'] ??
+        row['createdDate'] ??
+        row['created_date'] ??
+        row['regDate'] ??
+        row['reg_date'] ??
+        row['registerDate'] ??
+        row['register_date'];
+    final updatedAt =
+        row['updatedAt'] ?? row['updated_at'] ?? row['modifyDate'] ?? row['modify_date'];
 
     return {
       ...row,
@@ -213,10 +253,110 @@ class _DriverDeliveryPageState extends State<DriverDeliveryPage> {
       ),
       'driverName': stringOf(row['driverName'] ?? row['driver_name']),
       'memberName': stringOf(row['memName'] ?? row['memberName'] ?? row['member_name']),
-      'paymentDueDate': row['paymentDueDate'] ?? row['dueDate'] ?? row['paymentDeadline'],
-      'deliveryCompletedAt': row['deliveryCompletedAt'] ?? row['deliveryEndTime'] ?? row['completedAt'],
+      'startTime': startTime,
+      'paymentDueDate': paymentDueDate,
+      'deliveryCompletedAt': deliveryCompletedAt,
+      'createdAt': createdAt,
+      'updatedAt': updatedAt,
       'isOwner': isOwner,
     };
+  }
+
+  DateTime? _parseSortDateTime(dynamic value) {
+    if (value == null) return null;
+    if (value is DateTime) return value;
+    if (value is num) {
+      final intValue = value.toInt();
+      if (intValue <= 0) return null;
+      final digits = intValue.abs().toString();
+      if (digits.length == 8) {
+        try {
+          return DateFormat('yyyyMMdd').parseStrict(digits);
+        } catch (_) {
+          // fall through
+        }
+      } else if (digits.length == 14) {
+        try {
+          return DateFormat('yyyyMMddHHmmss').parseStrict(digits);
+        } catch (_) {
+          // fall through
+        }
+      }
+      if (digits.length <= 10) {
+        return DateTime.fromMillisecondsSinceEpoch(intValue * 1000);
+      }
+      return DateTime.fromMillisecondsSinceEpoch(intValue);
+    }
+    if (value is String) {
+      final trimmed = value.trim();
+      if (trimmed.isEmpty) return null;
+      DateTime? parsed = DateTime.tryParse(trimmed);
+      parsed ??= DateTime.tryParse(trimmed.replaceFirst(' ', 'T'));
+      if (parsed == null && RegExp(r'^\d+$').hasMatch(trimmed)) {
+        final numeric = int.tryParse(trimmed);
+        if (numeric != null) {
+          return _parseSortDateTime(numeric);
+        }
+      }
+      return parsed;
+    }
+    return null;
+  }
+
+  DateTime? _resolveSortDate(Map<String, dynamic> row, _DeliverySection section) {
+    final candidates = <dynamic>[
+      if (section == _DeliverySection.completed) row['deliveryCompletedAt'],
+      if (section == _DeliverySection.completed) row['deliveryEndTime'],
+      if (section == _DeliverySection.completed) row['completedAt'],
+      row['startTime'],
+      row['paymentDueDate'],
+      row['createdAt'],
+      row['updatedAt'],
+      row['matchingDate'] ?? row['matching_date'],
+      row['regDate'] ?? row['reg_date'],
+    ];
+
+    for (final candidate in candidates) {
+      final dt = _parseSortDateTime(candidate);
+      if (dt != null) return dt;
+    }
+    return null;
+  }
+
+  int _compareDeliveries(
+    Map<String, dynamic> a,
+    Map<String, dynamic> b,
+    _DeliverySection section,
+  ) {
+    final dateA = _resolveSortDate(a, section);
+    final dateB = _resolveSortDate(b, section);
+    if (dateA != null && dateB != null) {
+      final diff = dateB.compareTo(dateA);
+      if (diff != 0) return diff;
+    } else if (dateA != null) {
+      return -1;
+    } else if (dateB != null) {
+      return 1;
+    }
+
+    final matchingA = a['matchingNo'] as int?;
+    final matchingB = b['matchingNo'] as int?;
+    if (matchingA != null && matchingB != null) {
+      final diff = matchingB.compareTo(matchingA);
+      if (diff != 0) return diff;
+    } else if (matchingA != null) {
+      return -1;
+    } else if (matchingB != null) {
+      return 1;
+    }
+
+    final idA = a['id']?.toString();
+    final idB = b['id']?.toString();
+    if (idA != null && idB != null) {
+      final diff = idB.compareTo(idA);
+      if (diff != 0) return diff;
+    }
+    return 0;
   }
 
   int _statusFrom(dynamic value) {
@@ -255,9 +395,9 @@ class _DriverDeliveryPageState extends State<DriverDeliveryPage> {
   }
 
   String _formatWeight(String value) {
-    if (value.trim().isEmpty) return '-';
-    if (RegExp(r'[A-Za-z]').hasMatch(value)) return value;
-    return '$value kg';
+    final trimmed = value.trim();
+    if (trimmed.isEmpty) return '-';
+    return trimmed;
   }
 
   String _formatDate(dynamic value) {
