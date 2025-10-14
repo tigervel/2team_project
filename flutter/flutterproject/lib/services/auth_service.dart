@@ -1,3 +1,4 @@
+// lib/services/auth_service.dart
 import 'dart:convert';
 import 'package:flutterproject/API/ApiConfig.dart';
 import 'package:flutterproject/Utils/storage.dart';
@@ -6,7 +7,6 @@ import 'package:http/http.dart' as http;
 class AuthService {
   final String baseUrl = '${Apiconfig.baseUrl}/api';
 
-  // -------------------- 로그인 --------------------
   Future<Map<String, dynamic>> login(String loginId, String password) async {
     final res = await http.post(
       Uri.parse("$baseUrl/auth/login"),
@@ -19,18 +19,15 @@ class AuthService {
       successCallback: (body) async {
         final accessToken = body["accessToken"] as String?;
         final refreshToken = body["refreshToken"] as String?;
-
         if (accessToken == null || accessToken.isEmpty) {
           throw Exception("로그인은 성공했지만 accessToken이 없습니다.");
         }
-
         await Storage.saveToken(accessToken);
         if (refreshToken != null) await Storage.saveRefreshToken(refreshToken);
       },
     );
   }
 
-  // -------------------- 회원가입 --------------------
   Future<Map<String, dynamic>> register({
     required String loginId,
     required String password,
@@ -43,7 +40,6 @@ class AuthService {
     required String userType, // "화주" or "차주"
   }) async {
     final role = userType == "화주" ? "SHIPPER" : "DRIVER";
-
     final res = await http.post(
       Uri.parse("$baseUrl/auth/signup"),
       headers: {"Content-Type": "application/json"},
@@ -71,7 +67,6 @@ class AuthService {
     );
   }
 
-  // -------------------- 소셜 로그인 --------------------
   Future<Map<String, dynamic>> socialLogin(String provider) async {
     final res = await http.post(
       Uri.parse("$baseUrl/auth/social/$provider"),
@@ -80,7 +75,6 @@ class AuthService {
     return _handleResponse(res);
   }
 
-  // -------------------- 소셜 회원가입 완료 --------------------
   Future<Map<String, dynamic>> completeSocialSignup({
     required String signupTicket,
     required String role,
@@ -119,7 +113,6 @@ class AuthService {
     );
   }
 
-  // -------------------- 프로필 조회 --------------------
   Future<Map<String, dynamic>> getProfile() async {
     final token = await Storage.getToken();
     if (token == null || token.isEmpty) {
@@ -140,7 +133,6 @@ class AuthService {
     );
   }
 
-  // -------------------- ID 중복 확인 --------------------
   Future<bool> checkIdDuplicate(String loginId) async {
     final res = await http.get(
       Uri.parse("$baseUrl/auth/check-id?loginId=$loginId"),
@@ -154,7 +146,6 @@ class AuthService {
     }
   }
 
-  // -------------------- 이메일 인증 --------------------
   Future<void> sendEmailCode(String email) async {
     final res = await http.post(
       Uri.parse("$baseUrl/email/send-code"),
@@ -185,7 +176,6 @@ class AuthService {
     }
   }
 
-  /// -------------------- 공통 응답 처리 --------------------
   Future<Map<String, dynamic>> _handleResponse(
     http.Response res, {
     Future<void> Function(Map<String, dynamic> body)? successCallback,

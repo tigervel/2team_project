@@ -118,6 +118,7 @@ public class TokenAuthController {
 
     /* ===== 1) 소셜 로그인 ===== */
     @PostMapping("/social/{provider}")
+    @Transactional
     public ResponseEntity<?> socialLogin(
             @PathVariable("provider") String provider,
             @RequestBody(required = false) Map<String,String> body) {
@@ -126,19 +127,23 @@ public class TokenAuthController {
             return error("BODY_REQUIRED", "요청 본문이 필요합니다.", HttpStatus.BAD_REQUEST);
         }
 
-        String providerUserId = body.get("providerId");
-        String email = body.get("email");
-        String name = body.get("name");
+        final String providerUpper = provider.toUpperCase();
+        final String providerUserId = body.get("providerId");
+        final String rawEmail = body.get("email");
+        final String name = body.get("name");
 
         if (providerUserId == null || providerUserId.isBlank())
             return error("PROVIDER_ID_REQUIRED", "소셜 제공자 ID가 필요합니다.", HttpStatus.BAD_REQUEST);
-        if (email == null || email.isBlank())
+        if (rawEmail == null || rawEmail.isBlank())
             return error("EMAIL_REQUIRED", "이메일이 필요합니다.", HttpStatus.BAD_REQUEST);
         if (name == null || name.isBlank())
             return error("NAME_REQUIRED", "이름이 필요합니다.", HttpStatus.BAD_REQUEST);
 
-        Optional<UserIndex> userOpt = userIndexRepo.findByProviderAndProviderId(provider.toUpperCase(), providerUserId);
+        // 0) 이메일 정규화(소문자 권장)
+        final String email = rawEmail.toLowerCase(Locale.ROOT);
 
+        // 1) 먼저 provider+providerId로 기존 연동 여부 확인
+        Optional<UserIndex> userOpt = userIndexRepo.findByProviderAndProviderId(providerUpper, providerUserId);
         if (userOpt.isPresent()) {
             UserIndex ui = userOpt.get();
             List<String> roles = List.of(
@@ -149,17 +154,62 @@ public class TokenAuthController {
                     EMAIL, ui.getEmail(),
                     UID, ui.getLoginId(),
                     ROLES, roles,
-                    PROVIDER, provider.toUpperCase(),
+                    PROVIDER, providerUpper,
                     PROVIDER_ID, providerUserId
             );
             return ResponseEntity.ok(createTokens(claims, ui.getLoginId()));
         }
 
+        // 2) 연동은 안 됐지만, 같은 이메일의 기존 유저가 있는가?
+        //    (UserIndex에 이메일 인덱스/쿼리 메서드가 없으면 추가하세요: findByEmailIgnoreCase)
+        Optional<UserIndex> existingByEmail = userIndexRepo.findByEmailIgnoreCase(email);
+        if (existingByEmail.isPresent()) {
+            // (보안 권장) 여기서 Google idToken 검증을 통과했는지도 함께 확인하는 것이 안전합니다.
+            UserIndex ui = existingByEmail.get();
+
+            // SocialAccount 테이블에 해당 provider/providerUserId 존재 여부 확인 후 없으면 생성/연결
+            SocialAccount.Provider providerEnum = SocialAccount.Provider.valueOf(providerUpper);
+            SocialAccount sa = socialAccountRepo
+                    .findByProviderAndProviderUserId(providerEnum, providerUserId)
+                    .orElseGet(() -> SocialAccount.builder()
+                            .provider(providerEnum)
+                            .providerUserId(providerUserId)
+                            .build());
+            sa.setUser(ui);
+            sa.setEmail(email);
+            sa.setLoginId(ui.getLoginId());
+            sa.setLinkedAt(LocalDateTime.now());
+            sa.setSignupTicket(null);
+            sa.setSignupTicketExpireAt(null);
+            socialAccountRepo.save(sa);
+
+            // provider / providerId도 UserIndex에 반영 (모델 정책에 따라 유지)
+            ui.setProvider(providerUpper);
+            ui.setProviderId(providerUserId);
+            ui.setUpdatedAt(LocalDateTime.now());
+            userIndexRepo.save(ui);
+
+            // 토큰 발급
+            List<String> roles = List.of(
+                    "ROLE_" + ui.getRole().name(),
+                    ui.getRole() == UserIndex.Role.ADMIN ? "ROLE_ADMIN" : "ROLE_USER"
+            );
+            Map<String,Object> claims = Map.of(
+                    EMAIL, ui.getEmail(),
+                    UID, ui.getLoginId(),
+                    ROLES, roles,
+                    PROVIDER, providerUpper,
+                    PROVIDER_ID, providerUserId
+            );
+            return ResponseEntity.ok(createTokens(claims, ui.getLoginId()));
+        }
+
+        // 3) 여기까지 왔다면 정말 신규 사용자 → 가입 티켓 발급 (현 로직 유지)
         String signupTicket = jwtService.createTempToken(
                 Map.of(
                         "purpose", "signup",
                         EMAIL, email,
-                        PROVIDER, provider.toUpperCase(),
+                        PROVIDER, providerUpper,
                         PROVIDER_ID, providerUserId,
                         "name", name
                 ),
@@ -174,6 +224,7 @@ public class TokenAuthController {
                 )
         );
     }
+
 
 
     /* ===== 2) 소셜 첫가입 컨텍스트 ===== */

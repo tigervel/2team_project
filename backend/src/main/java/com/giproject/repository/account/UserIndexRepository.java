@@ -12,6 +12,7 @@ import java.util.Optional;
 
 public interface UserIndexRepository extends JpaRepository<UserIndex, String> {
 
+	Optional<UserIndex> findByEmailIgnoreCase(String email);
     // 기본 키 조회
     Optional<UserIndex> findByLoginId(String loginId);
     boolean existsByLoginId(String loginId);
