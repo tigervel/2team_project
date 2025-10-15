@@ -1,28 +1,24 @@
-// src/main/java/com/giproject/controller/AuthController.java
 package com.giproject.controller;
 
 import com.giproject.dto.auth.SignupRequest;
 import com.giproject.dto.member.MemberDTO;
+import com.giproject.dto.cargo.CargoOwnerDTO;
+import com.giproject.email.EmailVerificationService;
 import com.giproject.security.JwtService;
 import com.giproject.service.auth.SimpleSignupService;
+import com.giproject.service.auth.CustomUserDetailsService;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 
 import java.util.Map;
-import java.util.Optional;
 
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.validation.BindingResult;
-import org.springframework.web.bind.annotation.CookieValue;
-import org.springframework.web.bind.annotation.RequestHeader;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequiredArgsConstructor
@@ -32,116 +28,97 @@ public class AuthController {
 
     private final SimpleSignupService signupService;
     private final JwtService jwtService;
+    private final EmailVerificationService emailVerificationService;
+    private final CustomUserDetailsService userDetailsService;
 
-    /** 일반 회원가입 */
     @PostMapping("/signup")
     public ResponseEntity<?> signup(@Valid @RequestBody SignupRequest req, BindingResult br) {
         if (br.hasErrors()) {
             var errors = br.getFieldErrors().stream()
                     .map(e -> e.getField() + ": " + e.getDefaultMessage())
                     .toList();
-            log.warn("Signup validation errors: {}", errors);
-            return ResponseEntity.badRequest().body(errors);
-        }
-        try {
-            MemberDTO result = signupService.signup(req);
-            return ResponseEntity.ok(result);
-        } catch (IllegalArgumentException ex) {
-            log.warn("Signup failed (bad request): {}", ex.getMessage());
-            return ResponseEntity.badRequest().body(ex.getMessage());
-        } catch (Exception ex) {
-            log.error("Signup failed (server error)", ex);
-            return ResponseEntity.internalServerError().body("회원가입 중 오류가 발생했습니다.");
-        }
-    }
-
-    /** ID 중복 확인 */
-    @GetMapping("/check-id")
-    public ResponseEntity<?> checkId(@RequestParam("loginId") String loginId) {
-        try {
-            boolean exists = signupService.existsByLoginId(loginId);
-            return ResponseEntity.ok(Map.of("available", !exists));
-        } catch (Exception e) {
-            log.error("check-id failed for {}: {}", loginId, e.getMessage(), e);
-            return ResponseEntity.status(500).body(Map.of(
-                "error", "CHECK_ID_FAILED",
-                "message", e.getClass().getSimpleName() + ": " + (e.getMessage() == null ? "" : e.getMessage())
+            return ResponseEntity.badRequest().body(Map.of(
+                    "error", "VALIDATION_ERROR",
+                    "message", errors
             ));
         }
-    }
 
-    /** 소셜 첫 로그인 후: 프리필 이메일/프로바이더 조회 */
-    @GetMapping("/signup-context")
-    public ResponseEntity<?> signupContext(
-            @CookieValue(value = "signup_token", required = false) String cookieToken,
-            @RequestHeader(value = "Authorization", required = false) String auth
-    ) {
-        String token = extractToken(cookieToken, auth);
-        if (token == null) return ResponseEntity.status(401).body(Map.of("error", "NO_TOKEN"));
-        try {
-            var claims = jwtService.parseSignupToken(token);
-            String email = (String) claims.get("email");
-            String provider = Optional.ofNullable((String) claims.get("provider")).orElse("social");
-            if (email == null || email.isBlank()) {
-                return ResponseEntity.badRequest().body(Map.of("error", "NO_EMAIL_IN_TOKEN"));
-            }
-            return ResponseEntity.ok(Map.of("email", email, "provider", provider));
-        } catch (Exception ex) {
-            log.error("signup-context parse failed", ex);
-            return ResponseEntity.status(401).body(Map.of("error", "INVALID_TOKEN"));
-        }
-    }
-
-    /** 소셜 첫 가입 완료: 토큰의 이메일만 신뢰하여 가입 */
-    @PostMapping("/complete-signup")
-    public ResponseEntity<?> completeSignup(
-            @CookieValue(value = "signup_token", required = false) String cookieToken,
-            @RequestHeader(value = "Authorization", required = false) String auth,
-            @Valid @RequestBody SignupRequest req,
-            BindingResult br
-    ) {
-        if (br.hasErrors()) {
-            var errors = br.getFieldErrors().stream()
-                    .map(e -> e.getField() + ": " + e.getDefaultMessage())
-                    .toList();
-            return ResponseEntity.badRequest().body(errors);
+        if (!emailVerificationService.isVerified(req.getEmail())) {
+            return ResponseEntity.badRequest().body(Map.of(
+                    "error", "EMAIL_NOT_VERIFIED",
+                    "message", "이메일 인증을 완료해주세요."
+            ));
         }
 
-        String token = extractToken(cookieToken, auth);
-        if (token == null) return ResponseEntity.status(401).body(Map.of("error", "NO_TOKEN"));
-
         try {
-            var claims = jwtService.parseSignupToken(token);
-            String email = (String) claims.get("email");
-            if (email == null || email.isBlank()) {
-                return ResponseEntity.badRequest().body(Map.of("error", "NO_EMAIL_IN_TOKEN"));
-            }
+            Object result = signupService.signup(req);
 
-            // 프론트 이메일 무시 → 토큰 이메일 사용
-            SignupRequest safeReq = new SignupRequest(
-                    req.getRole(),
-                    req.getLoginId(),
-                    req.getPassword(),
-                    req.getName(),
-                    email,
-                    req.getPhone(),
-                    req.getAddress()
-            );
+            UserDetails userDetails = switch (result) {
+                case MemberDTO m -> userDetailsService.loadUserByUsername(m.getMemId());
+                case CargoOwnerDTO c -> userDetailsService.loadUserByUsername(c.getCargoId());
+                default -> throw new IllegalStateException("알 수 없는 회원 타입");
+            };
 
-            MemberDTO result = signupService.signup(safeReq);
-            return ResponseEntity.ok(result);
+            var auth = new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
+            String access  = jwtService.generateAccessToken(auth);
+            String refresh = jwtService.generateRefreshToken(auth);
+
+            if (result instanceof MemberDTO m) m.withTokens(access, refresh);
+            else if (result instanceof CargoOwnerDTO c) c.withTokens(access, refresh);
+
+            return ResponseEntity.ok(Map.of(
+                    "success", true,
+                    "member", result
+            ));
+
         } catch (IllegalArgumentException ex) {
-            return ResponseEntity.badRequest().body(ex.getMessage());
+            return ResponseEntity.badRequest().body(Map.of(
+                    "error", "VALIDATION_ERROR",
+                    "message", ex.getMessage()
+            ));
         } catch (Exception ex) {
-            log.error("Complete-signup failed", ex);
+            log.error("회원가입 실패", ex);
             return ResponseEntity.internalServerError().body(Map.of(
                     "error", "SERVER_ERROR",
-                    "message", Optional.ofNullable(ex.getMessage()).orElse("")
+                    "message", "회원가입 처리 중 문제가 발생했습니다."
             ));
         }
     }
 
-    /** 쿠키 우선, 없으면 Authorization: Bearer */
+    @GetMapping("/check-id")
+    public ResponseEntity<?> checkId(@RequestParam("loginId") String loginId) {
+        if (loginId == null || loginId.isBlank()) {
+            return ResponseEntity.badRequest().body(Map.of(
+                    "available", false,
+                    "message", "아이디는 필수입니다."
+            ));
+        }
+        if (!loginId.matches("^[A-Za-z0-9]+$")) {
+            return ResponseEntity.badRequest().body(Map.of(
+                    "available", false,
+                    "message", "아이디는 영문/숫자만 가능합니다."
+            ));
+        }
+        if (loginId.length() < 6 || loginId.length() > 15) {
+            return ResponseEntity.badRequest().body(Map.of(
+                    "available", false,
+                    "message", "아이디는 6~15자여야 합니다."
+            ));
+        }
+
+        boolean exists = signupService.existsByLoginId(loginId);
+        if (exists) {
+            return ResponseEntity.ok(Map.of(
+                    "available", false,
+                    "message", "이미 사용 중인 아이디입니다."
+            ));
+        }
+        return ResponseEntity.ok(Map.of(
+                "available", true,
+                "message", "사용 가능한 아이디입니다."
+        ));
+    }
+
     private String extractToken(String cookieToken, String authHeader) {
         if (cookieToken != null && !cookieToken.isBlank()) return cookieToken;
         if (authHeader != null && authHeader.startsWith("Bearer ")) return authHeader.substring(7);

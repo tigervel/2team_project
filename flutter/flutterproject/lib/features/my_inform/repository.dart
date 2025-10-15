@@ -23,12 +23,12 @@ class MyInformRepository {
   }
 
   Future<List<Map<String, dynamic>>> getMyAllEstimateList() async {
-    final r = await dio.get('/g2i4/estimates/me/all', queryParameters: {'page': 1, 'size': 1000});
+    final r = await dio.get('/g2i4/estimate/subpath/my-all-list');
     return _asList(r.data);
   }
 
   Future<List<Map<String, dynamic>>> getMyPaidEstimateList() async {
-    final r = await dio.get('/g2i4/estimates/me/paid', queryParameters: {'page': 1, 'size': 1000});
+    final r = await dio.get('/g2i4/estimate/subpath/paidlist');
     return _asList(r.data);
   }
 
@@ -43,7 +43,7 @@ class MyInformRepository {
   }
 
   Future<List<MonthlyPoint>> getOwnerMonthlyRevenue() async {
-    final r = await dio.get('/g2i4/owner/metrics/monthly-revenue');
+    final r = await dio.get('/g2i4/owner/revenue/monthly');
     final list = (r.data as List?) ?? [];
     return list.map((e) => MonthlyPoint.fromJson(e as Map<String, dynamic>)).toList();
   }

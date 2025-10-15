@@ -1,15 +1,38 @@
 import 'dart:io';
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/auth_token.dart';
+import '../../API/ApiConfig.dart';
 
 // =================== 공통 상수/유틸 ===================
-const String kApiBase = String.fromEnvironment(
-  'API_BASE',
-  defaultValue: 'http://10.0.2.2:8080', // 에뮬레이터 기본
-);
+const String _envApiBase = String.fromEnvironment('API_BASE');
+const String _envLegacyBase = String.fromEnvironment('BASE_URL');
+
+String _resolveApiBase() {
+  if (_envApiBase.isNotEmpty) return _envApiBase;
+  if (_envLegacyBase.isNotEmpty) return _envLegacyBase;
+
+  if (kIsWeb) {
+    return 'http://localhost:8080';
+  }
+
+  if (Platform.isAndroid) {
+    return 'http://10.0.2.2:8080';
+  }
+
+  if (Platform.isIOS ||
+      Platform.isMacOS ||
+      Platform.isWindows ||
+      Platform.isLinux) {
+    return 'http://127.0.0.1:8080';
+  }
+
+  return Apiconfig.baseUrl;
+}
+
+String get kApiBase => _resolveApiBase();
 
 const String kDefaultAvatar =
     'assets/images/avatar_placeholder.png'; // 프로젝트 내 플레이스홀더(없으면 네트워크 이미지로 대체)
@@ -73,15 +96,17 @@ class _EditMyInformPageState extends State<EditMyInformPage> {
   }
 
   void _attachAuthInterceptor() {
-    dio.interceptors.add(InterceptorsWrapper(
-      onRequest: (options, handler) async {
-        final token = await loadAccessToken();
-        if (token.isNotEmpty) {
-          options.headers['Authorization'] = 'Bearer $token';
-        }
-        handler.next(options);
-      },
-    ));
+    dio.interceptors.add(
+      InterceptorsWrapper(
+        onRequest: (options, handler) async {
+          final token = await loadAccessToken();
+          if (token.isNotEmpty) {
+            options.headers['Authorization'] = 'Bearer $token';
+          }
+          handler.next(options);
+        },
+      ),
+    );
   }
 
   Future<void> _loadUser() async {
@@ -91,7 +116,8 @@ class _EditMyInformPageState extends State<EditMyInformPage> {
       final raw = res.data ?? {};
       final t =
           raw['userType'] ?? raw['type'] ?? raw['role'] ?? raw['loginType'];
-      final data = raw['data'] ??
+      final data =
+          raw['data'] ??
           raw['user'] ??
           raw['payload'] ??
           raw['profile'] ??
@@ -104,64 +130,86 @@ class _EditMyInformPageState extends State<EditMyInformPage> {
       }
 
       if (t == 'MEMBER') {
-        id = _getFirst([
+        id =
+            _getFirst([
               data['mem_id'],
               data['memberId'],
               data['id'],
-              data['username']
+              data['username'],
             ]) ??
             '';
         name =
             _getFirst([data['mem_name'], data['memberName'], data['name']]) ??
-                '';
-        email = _getFirst(
-                [data['mem_email'], data['memberEmail'], data['email']]) ??
             '';
-        phone = _getFirst(
-                [data['mem_phone'], data['memberPhone'], data['phone']]) ??
-            '';
-        address = _getFirst([
-              data['mem_address'],
-              data['memberAddress'],
-              data['address']
+        email =
+            _getFirst([
+              data['mem_email'],
+              data['memberEmail'],
+              data['email'],
             ]) ??
             '';
-        createdDate = _getFirst([
+        phone =
+            _getFirst([
+              data['mem_phone'],
+              data['memberPhone'],
+              data['phone'],
+            ]) ??
+            '';
+        address =
+            _getFirst([
+              data['mem_address'],
+              data['memberAddress'],
+              data['address'],
+            ]) ??
+            '';
+        createdDate =
+            _getFirst([
               data['mem_create_id_date_time'],
               data['memCreatedDateTime'],
               data['created_at'],
-              data['createdAt']
+              data['createdAt'],
             ]) ??
             '';
       } else {
-        id = _getFirst([
+        id =
+            _getFirst([
               data['cargo_id'],
               data['cargoId'],
               data['id'],
-              data['username']
+              data['username'],
             ]) ??
             '';
         name =
             _getFirst([data['cargo_name'], data['cargoName'], data['name']]) ??
-                '';
-        email = _getFirst(
-                [data['cargo_email'], data['cargoEmail'], data['email']]) ??
             '';
-        phone = _getFirst(
-                [data['cargo_phone'], data['cargoPhone'], data['phone']]) ??
-            '';
-        address = _getFirst([
-              data['cargo_address'],
-              data['cargoAddress'],
-              data['address']
+        email =
+            _getFirst([
+              data['cargo_email'],
+              data['cargoEmail'],
+              data['email'],
             ]) ??
             '';
-        createdDate = _getFirst([
+        phone =
+            _getFirst([
+              data['cargo_phone'],
+              data['cargoPhone'],
+              data['phone'],
+            ]) ??
+            '';
+        address =
+            _getFirst([
+              data['cargo_address'],
+              data['cargoAddress'],
+              data['address'],
+            ]) ??
+            '';
+        createdDate =
+            _getFirst([
               data['cargo_created_date_time'],
               data['cargo_created_datetime'],
               data['cargoCreateidDateTime'],
               data['created_at'],
-              data['createdAt']
+              data['createdAt'],
             ]) ??
             '';
       }
@@ -180,9 +228,9 @@ class _EditMyInformPageState extends State<EditMyInformPage> {
       });
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('회원 정보를 불러오지 못했습니다: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('회원 정보를 불러오지 못했습니다: $e')));
       }
     } finally {
       if (mounted) setState(() => loading = false);
@@ -203,12 +251,14 @@ class _EditMyInformPageState extends State<EditMyInformPage> {
           mainAxisSize: MainAxisSize.min,
           children: [
             TextField(
-                controller: addrCtrl,
-                decoration: const InputDecoration(labelText: '주소')),
+              controller: addrCtrl,
+              decoration: const InputDecoration(labelText: '주소'),
+            ),
             const SizedBox(height: 12),
             TextField(
-                controller: postCtrl,
-                decoration: const InputDecoration(labelText: '우편번호')),
+              controller: postCtrl,
+              decoration: const InputDecoration(labelText: '우편번호'),
+            ),
           ],
         ),
         actions: [
@@ -238,18 +288,23 @@ class _EditMyInformPageState extends State<EditMyInformPage> {
       final url = (userType == 'MEMBER')
           ? '/g2i4/member/${Uri.encodeComponent(id)}/address'
           : '/g2i4/cargo/${Uri.encodeComponent(id)}/address';
-      await dio.put(url, data: {
-        'address': address,
-        'postcode': postcode.isEmpty ? null : postcode
-      });
+      await dio.put(
+        url,
+        data: {
+          'address': address,
+          'postcode': postcode.isEmpty ? null : postcode,
+        },
+      );
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(const SnackBar(content: Text('주소가 변경되었습니다.')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('주소가 변경되었습니다.')));
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('주소 변경 실패: $e')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('주소 변경 실패: $e')));
       }
     }
   }
@@ -260,33 +315,40 @@ class _EditMyInformPageState extends State<EditMyInformPage> {
       if (_pwdCurrentCtrl.text.isEmpty ||
           _pwdNextCtrl.text.isEmpty ||
           _pwdConfirmCtrl.text.isEmpty) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(const SnackBar(content: Text('비밀번호를 모두 입력하세요.')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('비밀번호를 모두 입력하세요.')));
         return;
       }
       if (_pwdNextCtrl.text != _pwdConfirmCtrl.text) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(const SnackBar(content: Text('새 비밀번호가 일치하지 않습니다.')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('새 비밀번호가 일치하지 않습니다.')));
         return;
       }
       final url = (userType == 'MEMBER')
           ? '/g2i4/member/${Uri.encodeComponent(id)}/password'
           : '/g2i4/cargo/${Uri.encodeComponent(id)}/password';
-      await dio.put(url, data: {
-        'currentPassword': _pwdCurrentCtrl.text,
-        'newPassword': _pwdNextCtrl.text
-      });
+      await dio.put(
+        url,
+        data: {
+          'currentPassword': _pwdCurrentCtrl.text,
+          'newPassword': _pwdNextCtrl.text,
+        },
+      );
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(const SnackBar(content: Text('비밀번호가 변경되었습니다.')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('비밀번호가 변경되었습니다.')));
       }
       _pwdCurrentCtrl.clear();
       _pwdNextCtrl.clear();
       _pwdConfirmCtrl.clear();
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('비밀번호 변경 실패: $e')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('비밀번호 변경 실패: $e')));
       }
     }
   }
@@ -294,15 +356,18 @@ class _EditMyInformPageState extends State<EditMyInformPage> {
   Future<void> _uploadAvatar() async {
     try {
       final picker = ImagePicker();
-      final picked =
-          await picker.pickImage(source: ImageSource.gallery, imageQuality: 92);
+      final picked = await picker.pickImage(
+        source: ImageSource.gallery,
+        imageQuality: 92,
+      );
       if (picked == null) return;
 
       final file = File(picked.path);
       final len = await file.length();
       if (len > 5 * 1024 * 1024) {
-        ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('파일 크기는 5MB를 넘을 수 없습니다.')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('파일 크기는 5MB를 넘을 수 없습니다.')));
         return;
       }
 
@@ -327,13 +392,15 @@ class _EditMyInformPageState extends State<EditMyInformPage> {
         });
       }
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(const SnackBar(content: Text('프로필 이미지가 업로드되었습니다.')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('프로필 이미지가 업로드되었습니다.')));
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('업로드 실패: $e')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('업로드 실패: $e')));
       }
     } finally {
       if (mounted) setState(() => uploading = false);
@@ -349,11 +416,13 @@ class _EditMyInformPageState extends State<EditMyInformPage> {
           content: const Text('프로필 이미지를 삭제할까요?'),
           actions: [
             TextButton(
-                onPressed: () => Navigator.pop(context, false),
-                child: const Text('취소')),
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('취소'),
+            ),
             ElevatedButton(
-                onPressed: () => Navigator.pop(context, true),
-                child: const Text('삭제')),
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('삭제'),
+            ),
           ],
         ),
       );
@@ -364,13 +433,15 @@ class _EditMyInformPageState extends State<EditMyInformPage> {
       setState(() => avatarUrl = null);
 
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(const SnackBar(content: Text('프로필 이미지가 삭제되었습니다.')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('프로필 이미지가 삭제되었습니다.')));
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('삭제 실패: $e')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('삭제 실패: $e')));
       }
     } finally {
       if (mounted) setState(() => uploading = false);
@@ -388,29 +459,28 @@ class _EditMyInformPageState extends State<EditMyInformPage> {
   @override
   Widget build(BuildContext context) {
     if (loading) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
     return Scaffold(
       backgroundColor: const Color(0xFFF3F4F6),
-      appBar: AppBar(
-        title: const Text('회원 정보 수정'),
-      ),
+      appBar: AppBar(title: const Text('회원 정보 수정')),
       body: SingleChildScrollView(
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text('로그인 유형: ${userType == 'MEMBER' ? '일반 회원' : '화물(차량) 소유자'}',
-                style: const TextStyle(color: Colors.grey)),
+            Text(
+              '로그인 유형: ${userType == 'MEMBER' ? '일반 회원' : '화물(차량) 소유자'}',
+              style: const TextStyle(color: Colors.grey),
+            ),
             const SizedBox(height: 16),
 
             // Profile Section
             Card(
               shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12)),
+                borderRadius: BorderRadius.circular(12),
+              ),
               child: Padding(
                 padding: const EdgeInsets.all(16),
                 child: LayoutBuilder(
@@ -426,8 +496,9 @@ class _EditMyInformPageState extends State<EditMyInformPage> {
                           backgroundImage: (avatarUrl != null)
                               ? NetworkImage(avatarUrl!)
                               : (kDefaultAvatar.isNotEmpty
-                                  ? AssetImage(kDefaultAvatar) as ImageProvider
-                                  : null),
+                                    ? AssetImage(kDefaultAvatar)
+                                          as ImageProvider
+                                    : null),
                         ),
                         const SizedBox(width: 16, height: 16),
                         Column(
@@ -436,15 +507,19 @@ class _EditMyInformPageState extends State<EditMyInformPage> {
                             ElevatedButton(
                               onPressed: uploading ? null : _uploadAvatar,
                               style: ElevatedButton.styleFrom(
-                                  minimumSize: const Size(160, 40)),
+                                minimumSize: const Size(160, 40),
+                              ),
                               child: Text(uploading ? '업로드 중...' : '사진 업로드'),
                             ),
                             const SizedBox(height: 8),
                             TextButton(
                               onPressed: uploading ? null : _deleteAvatar,
                               style: TextButton.styleFrom(
-                                  foregroundColor: Colors.red),
-                              child: const Text('���� ����'),
+                                minimumSize: const Size(160, 40),
+                                foregroundColor: Colors.red,
+                              ),
+
+                              child: const Text('프로필 이미지 삭제'),
                             ),
                           ],
                         ),
@@ -454,8 +529,10 @@ class _EditMyInformPageState extends State<EditMyInformPage> {
                     final infoSection = Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text('회원 정보',
-                            style: TextStyle(fontWeight: FontWeight.bold)),
+                        const Text(
+                          '회원 정보',
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
                         const SizedBox(height: 8),
                         Text('이름 : $name'),
                         const SizedBox(height: 6),
@@ -516,13 +593,14 @@ class _EditMyInformPageState extends State<EditMyInformPage> {
                 ),
                 const SizedBox(width: 12),
                 SizedBox(
-                  width: 140,
+                  width: 160,
                   height: 48,
                   child: OutlinedButton(
                     onPressed: _openPostcodeDialog,
                     child: const Text('주소 찾기'),
                   ),
                 ),
+                
               ],
             ),
             const SizedBox(height: 12),
@@ -535,8 +613,12 @@ class _EditMyInformPageState extends State<EditMyInformPage> {
                   onPressed: _saveAddress,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF6B46C1),
+                    foregroundColor: Colors.white,
                   ),
-                  child: const Text('변경하기'),
+                  child: const Text(
+                    '변경하기',
+                    style: TextStyle(color: Colors.white),
+                  ),
                 ),
               ),
             ),
@@ -580,8 +662,12 @@ class _EditMyInformPageState extends State<EditMyInformPage> {
                   onPressed: _changePassword,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF6B46C1),
+                    foregroundColor: Colors.white,
                   ),
-                  child: const Text('변경하기'),
+                  child: const Text(
+                    '변경하기',
+                    style: TextStyle(color: Colors.white),
+                  ),
                 ),
               ),
             ),

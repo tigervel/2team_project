@@ -17,7 +17,7 @@ import lombok.ToString;
 
 @Getter
 @Setter
-@ToString(exclude = {"memPw", "accessToken", "refreshToken"}) // 비번/토큰 로그 노출 방지
+@ToString(exclude = {"memPw", "accessToken", "refreshToken"})
 public class MemberDTO extends User {
 
     private static final long serialVersionUID = 1L;
@@ -48,12 +48,12 @@ public class MemberDTO extends User {
                      String memPhone,
                      String memAddress,
                      LocalDateTime memCreateIdDateTime,
-                     List<String> rolenames) {
+                     List<String> roleNames) {
 
         super(
             memId,
             (memPw == null ? "" : memPw),
-            rolenames.stream()
+            roleNames.stream()
                      .filter(Objects::nonNull)
                      .map(String::trim)
                      .filter(s -> !s.isEmpty())
@@ -70,10 +70,9 @@ public class MemberDTO extends User {
         this.memPhone = memPhone;
         this.memAddress = memAddress;
         this.memCreateIdDateTime = memCreateIdDateTime;
-        this.roleNames = (rolenames != null) ? new ArrayList<>(rolenames) : new ArrayList<>();
+        this.roleNames = (roleNames != null) ? new ArrayList<>(roleNames) : new ArrayList<>();
     }
 
-    /** 안전한 클레임(비밀번호 제외) */
     public Map<String, Object> getClaims() {
         Map<String, Object> m = new HashMap<>();
         m.put("memId", memId);
@@ -88,7 +87,6 @@ public class MemberDTO extends User {
         return m;
     }
 
-    /** 엔티티 -> DTO : 도메인=SHIPPER, 플랫폼=(ADMIN|USER) */
     public static MemberDTO fromMember(Member m) {
         boolean isAdmin = false;
         try {
@@ -97,8 +95,8 @@ public class MemberDTO extends User {
         } catch (Exception ignore) {}
 
         List<String> roles = new ArrayList<>(2);
-        roles.add("SHIPPER");                  // 도메인 축
-        roles.add(isAdmin ? "ADMIN" : "USER"); // 플랫폼 축
+        roles.add("SHIPPER");
+        roles.add(isAdmin ? "ADMIN" : "USER");
 
         return new MemberDTO(
             m.getMemId(),
@@ -112,7 +110,12 @@ public class MemberDTO extends User {
         );
     }
 
-    /** 토큰까지 한 번에 세팅 */
+    public MemberDTO withTokens(String access, String refresh) {
+        this.accessToken = access;
+        this.refreshToken = refresh;
+        return this;
+    }
+
     public static MemberDTO of(String loginId,
                                String email,
                                String name,
@@ -123,8 +126,7 @@ public class MemberDTO extends User {
                                String accessToken,
                                String refreshToken) {
         MemberDTO dto = new MemberDTO(loginId, "", email, name, phone, address, createdAt, roles);
-        dto.setAccessToken(accessToken);
-        dto.setRefreshToken(refreshToken);
+        dto.withTokens(accessToken, refreshToken);
         return dto;
     }
 }

@@ -17,7 +17,7 @@ class FeesExtraDTO {
     return FeesExtraDTO(
       exno: json['exno'] as int,
       extraChargeTitle: json['extraChargeTitle'] as String,
-      extraCharge: json['extraCharge'] as int,
+      extraCharge: (json['extraCharge'] as num).toInt(),
       updatedAt: json['updatedAt'] != null 
           ? DateTime.parse(json['updatedAt'] as String) 
           : null,

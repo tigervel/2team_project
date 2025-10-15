@@ -15,6 +15,8 @@ public interface SocialAccountRepo extends JpaRepository<SocialAccount, Long> {
 
     /** 로그인ID 기준 존재 여부 (가장 빠른 체크) */
     boolean existsByUser_LoginId(String loginId);
+    
+    
 
     /** 어떤 공급자들이 연결되어 있는지 (필요 시 화면 표시) */
     @Query("select s.provider from SocialAccount s where s.user.loginId = :loginId")
@@ -26,6 +28,6 @@ public interface SocialAccountRepo extends JpaRepository<SocialAccount, Long> {
     /** 특정 공급자 연결 여부 */
     boolean existsByUser_LoginIdAndProvider(String loginId, Provider provider);
     
-    Optional<SocialAccount> findByProviderAndProviderUserId(Provider provider, String providerUserId);
+    Optional<SocialAccount> findByProviderAndProviderUserId(SocialAccount.Provider provider, String providerUserId);
     Optional<SocialAccount> findBySignupTicket(String signupTicket);
 }

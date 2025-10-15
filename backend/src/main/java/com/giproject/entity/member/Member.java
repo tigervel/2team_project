@@ -1,4 +1,3 @@
-// com.giproject.entity.member.Member
 package com.giproject.entity.member;
 
 import com.giproject.entity.account.UserIndex;
@@ -63,8 +62,9 @@ public class Member {
     private List<String> memberRoleList = new ArrayList<>();
 
     /** 소셜 가입 여부 캐시(옵션) */
-    @Column(name = "social")
-    private boolean social;
+    @Column(name = "social", nullable = false)
+    @Builder.Default
+    private boolean social = false;
 
     // ===== 권한 편의 메서드 =====
     public void addRole(String role) {

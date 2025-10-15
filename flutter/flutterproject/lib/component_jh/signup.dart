@@ -1,13 +1,21 @@
 import 'package:flutter/material.dart';
+import 'package:flutterproject/component_jh/login.dart';
+import 'package:flutterproject/services/auth_service.dart';
 import 'package:kpostal/kpostal.dart';
-import 'package:http/http.dart' as http;
-import 'dart:convert';
 
 class SignUpPage extends StatefulWidget {
-  final String? socialEmail; // 소셜 로그인으로 받은 이메일
-  final bool isSocial; // 소셜 회원가입 여부
+  final String? socialEmail;   // 소셜 로그인 이메일
+  final String? socialName;    // 소셜 로그인 이름
+  final bool isSocial;         // 소셜 회원가입 여부
+  final String? signupTicket;  // 소셜 로그인 티켓
 
-  const SignUpPage({super.key, this.socialEmail, this.isSocial = false});
+  const SignUpPage({
+    super.key,
+    this.socialEmail,
+    this.socialName,
+    this.isSocial = false,
+    this.signupTicket,
+  });
 
   @override
   State<SignUpPage> createState() => _SignUpPageState();
@@ -15,13 +23,14 @@ class SignUpPage extends StatefulWidget {
 
 class _SignUpPageState extends State<SignUpPage> {
   final _formKey = GlobalKey<FormState>();
+  final AuthService authService = AuthService();
 
   // Controllers
   final _idController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
-  late TextEditingController _emailController;
-  final _nameController = TextEditingController();
+  late final TextEditingController _emailController;
+  late final TextEditingController _nameController;
   final _phoneController = TextEditingController();
   final _addressController = TextEditingController();
   final _detailAddressController = TextEditingController();
@@ -37,9 +46,10 @@ class _SignUpPageState extends State<SignUpPage> {
   // 사용자 유형
   String userType = "화주";
 
-  // Password visibility
+  // UI 상태
   bool showPassword = false;
   bool showConfirmPassword = false;
+  bool submitting = false;
 
   // 실시간 오류 메시지
   String? _idError;
@@ -52,17 +62,21 @@ class _SignUpPageState extends State<SignUpPage> {
   bool verified = false;
   bool verifying = false;
 
-  // 예시 중복 아이디
-  final List<String> existingIds = ["test01", "user123"];
-
   @override
   void initState() {
     super.initState();
 
     _emailController = TextEditingController(
-      text: widget.isSocial ? widget.socialEmail : "",
+      text: widget.isSocial ? (widget.socialEmail ?? "") : "",
+    );
+    _nameController = TextEditingController(
+      text: widget.isSocial ? (widget.socialName ?? "") : "",
     );
 
+    // 소셜일 때는 서버가 이메일을 이미 검증했다고 가정 → 이메일 인증 생략
+    if (widget.isSocial) verified = true;
+
+    // FocusListeners
     _idFocus.addListener(() {
       if (!_idFocus.hasFocus) setState(() => _idError = null);
     });
@@ -96,55 +110,40 @@ class _SignUpPageState extends State<SignUpPage> {
     super.dispose();
   }
 
-  // 정규식
+  // 정규식 검증
   bool _isValidId(String id) => RegExp(r'^[a-zA-Z0-9]{4,12}$').hasMatch(id);
   bool _isValidPassword(String pw) =>
       RegExp(r'^(?=.*[A-Za-z])(?=.*\d)(?=.*[!@#$%^&*]).{8,}$').hasMatch(pw);
   bool _isValidEmail(String email) =>
       RegExp(r'^[\w-]+(\.[\w-]+)*@([\w-]+\.)+[a-zA-Z]{2,7}$').hasMatch(email);
 
-  // 중복 확인
-  void _checkIdDuplicate() {
-    final id = _idController.text;
-    if (!_isValidId(id)) {
-      _showDialog("아이디 형식 오류", "아이디는 4~12자의 영어/숫자로 입력해야 합니다.");
-    } else if (existingIds.contains(id)) {
-      _showDialog("중복 아이디", "이미 사용 중인 아이디입니다.");
-    } else {
-      _showDialog("사용 가능", "사용 가능한 아이디입니다.");
-    }
+  String? _validateRequired(String? value, String fieldName) {
+    if (value == null || value.trim().isEmpty) return "$fieldName 입력은 필수입니다.";
+    return null;
   }
 
-  // 이메일 인증 코드 발송
+  // 이메일 인증 발송
   Future<void> _sendEmailCode() async {
+    if (widget.isSocial) return; // 소셜은 스킵
     final email = _emailController.text.trim();
     if (!_isValidEmail(email)) {
       _showDialog("이메일 형식 오류", "올바른 이메일 주소를 입력해주세요.");
       return;
     }
 
-    final url = Uri.parse("http://10.0.2.2:8080/api/email/send-code");
     try {
-      final res = await http.post(
-        url,
-        headers: {"Content-Type": "application/json"},
-        body: jsonEncode({"email": email}),
-      );
-
-      if (res.statusCode == 200) {
-        setState(() => codeSent = true);
-        _showDialog("인증코드 발송", "$email 로 인증코드를 발송했습니다.");
-      } else {
-        final body = jsonDecode(res.body);
-        _showDialog("오류", body["message"] ?? "메일 발송 실패");
-      }
+      await authService.sendEmailCode(email);
+      if (!mounted) return;
+      setState(() => codeSent = true);
+      _showDialog("인증코드 발송", "$email 로 인증코드를 발송했습니다.");
     } catch (e) {
       _showDialog("오류", e.toString());
     }
   }
 
-  // 인증 코드 확인
+  // 이메일 인증 확인
   Future<void> _verifyCode() async {
+    if (widget.isSocial) return; // 소셜은 스킵
     setState(() => verifying = true);
     final email = _emailController.text.trim();
     final code = _codeController.text.trim();
@@ -154,29 +153,142 @@ class _SignUpPageState extends State<SignUpPage> {
       return;
     }
 
-    final url = Uri.parse("http://10.0.2.2:8080/api/email/verify");
     try {
-      final res = await http.post(
-        url,
-        headers: {"Content-Type": "application/json"},
-        body: jsonEncode({"email": email, "code": code}),
-      );
-
-      if (res.statusCode == 200) {
-        final body = jsonDecode(res.body);
-        if (body["verified"] == true) {
-          setState(() => verified = true);
-          _showDialog("인증 완료", "이메일 인증이 완료되었습니다.");
-        } else {
-          _showDialog("실패", "코드가 틀렸거나 만료되었습니다.");
-        }
+      final result = await authService.verifyEmailCode(email, code);
+      if (!mounted) return;
+      if (result) {
+        setState(() => verified = true);
+        _showDialog("인증 완료", "이메일 인증이 완료되었습니다.");
       } else {
-        _showDialog("오류", "검증 실패");
+        _showDialog("실패", "코드가 틀렸거나 만료되었습니다.");
       }
     } catch (e) {
       _showDialog("오류", e.toString());
     } finally {
-      setState(() => verifying = false);
+      if (mounted) setState(() => verifying = false);
+    }
+  }
+
+  // ID 중복 확인
+  Future<void> _checkIdDuplicate() async {
+    final id = _idController.text.trim();
+    if (!_isValidId(id)) {
+      _showDialog("아이디 형식 오류", "아이디는 4~12자의 영어/숫자로 입력해야 합니다.");
+      return;
+    }
+
+    try {
+      final available = await authService.checkIdDuplicate(id);
+      _showDialog(available ? "사용 가능" : "사용 불가",
+          available ? "사용 가능한 아이디입니다." : "이미 존재하는 아이디입니다.");
+    } catch (e) {
+      _showDialog("오류", e.toString());
+    }
+  }
+
+  // 주소 검색
+  Future<void> _searchAddress() async {
+    final result = await Navigator.push<Kpostal>(
+      context,
+      MaterialPageRoute(
+        fullscreenDialog: true,
+        builder: (_) => Scaffold( // ← const 제거
+          body: KpostalView(useLocalServer: true, localPort: 1024),
+        ),
+      ),
+    );
+
+    if (result != null && mounted) {
+      setState(() {
+        _addressController.text =
+            "${result.address}${(result.buildingName != null && result.buildingName!.isNotEmpty) ? " (${result.buildingName})" : ""}";
+      });
+    }
+  }
+
+  // 회원가입 처리
+  Future<void> _signUp() async {
+    if (submitting) return;
+    if (!_formKey.currentState!.validate()) return;
+
+    setState(() {
+      submitting = true;
+      _idError = _isValidId(_idController.text)
+          ? null
+          : "아이디는 4~12자의 영어/숫자여야 합니다.";
+      _passwordError = _isValidPassword(_passwordController.text)
+          ? null
+          : "비밀번호는 최소 8자, 숫자+영문+특수문자 포함해야 합니다.";
+      _confirmError =
+          _confirmPasswordController.text == _passwordController.text
+              ? null
+              : "비밀번호가 일치하지 않습니다.";
+      // 소셜은 이메일 유효성 체크/인증 생략
+      _emailError = widget.isSocial
+          ? null
+          : (_isValidEmail(_emailController.text)
+              ? null
+              : "올바른 이메일 형식이 아닙니다.");
+    });
+
+    if (_idError != null ||
+        _passwordError != null ||
+        _confirmError != null ||
+        _emailError != null) {
+      setState(() => submitting = false);
+      return;
+    }
+
+    if (!widget.isSocial && !verified) {
+      _showDialog("인증 필요", "이메일 인증을 완료해주세요.");
+      setState(() => submitting = false);
+      return;
+    }
+
+    try {
+      if (widget.isSocial) {
+        // 안전 가드: signupTicket 없으면 바로 안내
+        if (widget.signupTicket == null || widget.signupTicket!.isEmpty) {
+          _showDialog("오류", "소셜 가입 티켓이 없습니다. 처음부터 다시 시도해주세요.");
+          return;
+        }
+
+        await authService.completeSocialSignup(
+          signupTicket: widget.signupTicket!,
+          role: userType == "화주" ? "SHIPPER" : "DRIVER",
+          loginId: _idController.text.trim(),
+          password: _passwordController.text.trim(),
+          name: _nameController.text.trim(),
+          phone: _phoneController.text.trim(),
+          address: _addressController.text.trim(),
+          detailAddress: _detailAddressController.text.trim(),
+          carNumber: userType == "차주" ? _carNumberController.text.trim() : null,
+        );
+      } else {
+        await authService.register(
+          loginId: _idController.text.trim(),
+          password: _passwordController.text.trim(),
+          email: _emailController.text.trim(),
+          name: _nameController.text.trim(),
+          phone: _phoneController.text.trim(),
+          address: _addressController.text.trim(),
+          detailAddress: _detailAddressController.text.trim(),
+          carNumber: userType == "차주" ? _carNumberController.text.trim() : null,
+          userType: userType,
+        );
+      }
+
+      if (!mounted) return;
+      // 가입 완료 후 로그인 페이지로 (const 제거)
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(builder: (_) => LoginPage()),
+        (_) => false,
+      );
+    } catch (e) {
+      _showDialog("오류", e.toString());
+    } finally {
+      if (mounted) setState(() => submitting = false);
     }
   }
 
@@ -196,70 +308,15 @@ class _SignUpPageState extends State<SignUpPage> {
     );
   }
 
-  Future<void> _searchAddress() async {
-    final result = await Navigator.push<Kpostal>(
-      context,
-      MaterialPageRoute(
-        fullscreenDialog: true,
-        builder: (_) => Scaffold(
-          appBar: AppBar(title: const Text("주소 검색")),
-          body: KpostalView(useLocalServer: true, localPort: 1024),
-        ),
-      ),
-    );
-
-    if (result != null) {
-      setState(() {
-        _addressController.text =
-            "${result.address}${result.buildingName != null && result.buildingName!.isNotEmpty ? " (${result.buildingName})" : ""}";
-      });
-    }
-  }
-
-  void _signUp() {
-    if (!_formKey.currentState!.validate()) return;
-
-    setState(() {
-      _idError = _isValidId(_idController.text)
-          ? null
-          : "아이디는 4~12자의 영어/숫자여야 합니다.";
-      _passwordError = _isValidPassword(_passwordController.text)
-          ? null
-          : "비밀번호는 최소 8자, 숫자+영문+특수문자 포함해야 합니다.";
-      _confirmError =
-          _confirmPasswordController.text == _passwordController.text
-          ? null
-          : "비밀번호가 일치하지 않습니다.";
-      _emailError = _isValidEmail(_emailController.text)
-          ? null
-          : "올바른 이메일 형식이 아닙니다.";
-    });
-
-    if (_idError != null ||
-        _passwordError != null ||
-        _confirmError != null ||
-        _emailError != null)
-      return;
-    if (!widget.isSocial && !verified) {
-      _showDialog("인증 필요", "이메일 인증을 완료해주세요.");
-      return;
-    }
-
-    _showDialog(
-      "가입 정보",
-      "회원구분: $userType\nID: ${_idController.text}\n이메일: ${_emailController.text}\n주소: ${_addressController.text} ${_detailAddressController.text}\n차량번호: ${userType == "차주" ? _carNumberController.text : "없음"}",
-    );
-  }
-
-  String? _validateRequired(String? value, String fieldName) {
-    if (value == null || value.trim().isEmpty) return "$fieldName 입력은 필수입니다.";
-    return null;
-  }
-
   @override
   Widget build(BuildContext context) {
+    final isSocial = widget.isSocial;
+
     return Scaffold(
-      appBar: AppBar(title: const Text("회원가입")),
+      appBar: AppBar(
+        title: const Text("회원가입", style: TextStyle(color: Colors.white)),
+        backgroundColor: Colors.indigo,
+      ),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(16),
@@ -268,6 +325,8 @@ class _SignUpPageState extends State<SignUpPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                const SizedBox(height: 10),
+
                 // 사용자 유형
                 Center(
                   child: ToggleButtons(
@@ -276,21 +335,18 @@ class _SignUpPageState extends State<SignUpPage> {
                     fillColor: Colors.indigo,
                     color: Colors.indigo,
                     isSelected: [userType == "화주", userType == "차주"],
-                    onPressed: (index) =>
-                        setState(() => userType = index == 0 ? "화주" : "차주"),
+                    onPressed: submitting
+                        ? null
+                        : (index) => setState(
+                              () => userType = index == 0 ? "화주" : "차주",
+                            ),
                     children: const [
                       Padding(
-                        padding: EdgeInsets.symmetric(
-                          horizontal: 20,
-                          vertical: 8,
-                        ),
+                        padding: EdgeInsets.symmetric(horizontal: 20, vertical: 8),
                         child: Text("화주"),
                       ),
                       Padding(
-                        padding: EdgeInsets.symmetric(
-                          horizontal: 20,
-                          vertical: 8,
-                        ),
+                        padding: EdgeInsets.symmetric(horizontal: 20, vertical: 8),
                         child: Text("차주"),
                       ),
                     ],
@@ -305,6 +361,7 @@ class _SignUpPageState extends State<SignUpPage> {
                       child: TextFormField(
                         controller: _idController,
                         focusNode: _idFocus,
+                        enabled: !submitting,
                         onChanged: (val) {
                           setState(() {
                             _idError = _isValidId(val)
@@ -330,7 +387,7 @@ class _SignUpPageState extends State<SignUpPage> {
                     SizedBox(
                       height: 55,
                       child: ElevatedButton(
-                        onPressed: _checkIdDuplicate,
+                        onPressed: submitting ? null : _checkIdDuplicate,
                         child: const Text("중복 확인"),
                       ),
                     ),
@@ -342,6 +399,7 @@ class _SignUpPageState extends State<SignUpPage> {
                 TextFormField(
                   controller: _passwordController,
                   focusNode: _passwordFocus,
+                  enabled: !submitting,
                   obscureText: !showPassword,
                   onChanged: (val) {
                     setState(() {
@@ -366,11 +424,10 @@ class _SignUpPageState extends State<SignUpPage> {
                       borderRadius: BorderRadius.circular(12),
                     ),
                     suffixIcon: IconButton(
-                      icon: Icon(
-                        showPassword ? Icons.visibility_off : Icons.visibility,
-                      ),
-                      onPressed: () =>
-                          setState(() => showPassword = !showPassword),
+                      icon: Icon(showPassword ? Icons.visibility_off : Icons.visibility),
+                      onPressed: submitting
+                          ? null
+                          : () => setState(() => showPassword = !showPassword),
                     ),
                   ),
                 ),
@@ -380,6 +437,7 @@ class _SignUpPageState extends State<SignUpPage> {
                 TextFormField(
                   controller: _confirmPasswordController,
                   focusNode: _confirmFocus,
+                  enabled: !submitting,
                   obscureText: !showConfirmPassword,
                   onChanged: (val) {
                     setState(() {
@@ -399,14 +457,10 @@ class _SignUpPageState extends State<SignUpPage> {
                       borderRadius: BorderRadius.circular(12),
                     ),
                     suffixIcon: IconButton(
-                      icon: Icon(
-                        showConfirmPassword
-                            ? Icons.visibility_off
-                            : Icons.visibility,
-                      ),
-                      onPressed: () => setState(
-                        () => showConfirmPassword = !showConfirmPassword,
-                      ),
+                      icon: Icon(showConfirmPassword ? Icons.visibility_off : Icons.visibility),
+                      onPressed: submitting
+                          ? null
+                          : () => setState(() => showConfirmPassword = !showConfirmPassword),
                     ),
                   ),
                 ),
@@ -419,15 +473,9 @@ class _SignUpPageState extends State<SignUpPage> {
                       child: TextFormField(
                         controller: _emailController,
                         focusNode: _emailFocus,
-                        readOnly: widget.isSocial || verified, // 인증 완료면 수정 불가
-                        onChanged: (val) {
-                          setState(() {
-                            _emailError = _isValidEmail(val)
-                                ? null
-                                : "올바른 이메일 형식이 아닙니다.";
-                          });
-                        },
-                        validator: (v) => _validateRequired(v, "이메일"),
+                        readOnly: isSocial,
+                        enabled: !submitting,
+                        validator: (v) => isSocial ? null : _validateRequired(v, "이메일"),
                         decoration: InputDecoration(
                           labelText: "이메일",
                           errorText: _emailError,
@@ -441,47 +489,48 @@ class _SignUpPageState extends State<SignUpPage> {
                         ),
                       ),
                     ),
-                    const SizedBox(width: 8),
-                    if (!widget.isSocial)
+                    if (!isSocial) ...[
+                      const SizedBox(width: 8),
                       SizedBox(
                         height: 55,
                         child: ElevatedButton(
-                          onPressed: verified ? null : _sendEmailCode,
-                          child: Text(verified ? "인증 완료" : "인증하기"),
-                        ),
-                      ),
-                  ],
-                ),
-
-                // 인증 코드 입력 칸과 확인 버튼 (인증 완료되면 안 보이게)
-                if (codeSent && !verified && !widget.isSocial)
-                  Column(
-                    children: [
-                      const SizedBox(height: 8),
-                      TextField(
-                        controller: _codeController,
-                        decoration: const InputDecoration(labelText: "인증코드"),
-                      ),
-                      const SizedBox(height: 8),
-                      SizedBox(
-                        height: 55,
-                        child: ElevatedButton(
-                          onPressed: verifying ? null : _verifyCode,
-                          child: verifying
-                              ? const CircularProgressIndicator(
-                                  color: Colors.white,
-                                )
-                              : const Text("인증 확인"),
+                          onPressed: submitting
+                              ? null
+                              : (codeSent ? _verifyCode : _sendEmailCode),
+                          child: Text(
+                            codeSent
+                                ? (verified ? "인증 완료" : (verifying ? "확인중..." : "인증 확인"))
+                                : "인증번호 발송",
+                          ),
                         ),
                       ),
                     ],
-                  ),
-
+                  ],
+                ),
                 const SizedBox(height: 16),
+
+                if (codeSent && !verified && !isSocial)
+                  TextFormField(
+                    controller: _codeController,
+                    enabled: !submitting && !verifying,
+                    decoration: InputDecoration(
+                      labelText: "인증 코드",
+                      contentPadding: const EdgeInsets.symmetric(
+                        vertical: 20,
+                        horizontal: 12,
+                      ),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                  ),
+                if (codeSent && !verified && !isSocial) const SizedBox(height: 16),
 
                 // 이름
                 TextFormField(
                   controller: _nameController,
+                  readOnly: isSocial,
+                  enabled: !submitting,
                   validator: (v) => _validateRequired(v, "이름"),
                   decoration: InputDecoration(
                     labelText: "이름",
@@ -499,6 +548,7 @@ class _SignUpPageState extends State<SignUpPage> {
                 // 전화번호
                 TextFormField(
                   controller: _phoneController,
+                  enabled: !submitting,
                   validator: (v) => _validateRequired(v, "전화번호"),
                   decoration: InputDecoration(
                     labelText: "전화번호",
@@ -517,7 +567,7 @@ class _SignUpPageState extends State<SignUpPage> {
                 TextFormField(
                   controller: _addressController,
                   readOnly: true,
-                  onTap: _searchAddress,
+                  onTap: submitting ? null : _searchAddress,
                   validator: (v) => _validateRequired(v, "주소"),
                   decoration: InputDecoration(
                     labelText: "주소",
@@ -530,7 +580,7 @@ class _SignUpPageState extends State<SignUpPage> {
                     ),
                     suffixIcon: IconButton(
                       icon: const Icon(Icons.search),
-                      onPressed: _searchAddress,
+                      onPressed: submitting ? null : _searchAddress,
                     ),
                   ),
                 ),
@@ -539,6 +589,7 @@ class _SignUpPageState extends State<SignUpPage> {
                 // 상세주소
                 TextFormField(
                   controller: _detailAddressController,
+                  enabled: !submitting,
                   decoration: InputDecoration(
                     labelText: "상세 주소",
                     contentPadding: const EdgeInsets.symmetric(
@@ -556,6 +607,7 @@ class _SignUpPageState extends State<SignUpPage> {
                 if (userType == "차주")
                   TextFormField(
                     controller: _carNumberController,
+                    enabled: !submitting,
                     validator: (v) => _validateRequired(v, "차량 번호"),
                     decoration: InputDecoration(
                       labelText: "차량 번호",
@@ -568,23 +620,30 @@ class _SignUpPageState extends State<SignUpPage> {
                       ),
                     ),
                   ),
-                const SizedBox(height: 24),
+                if (userType == "차주") const SizedBox(height: 16),
 
                 // 회원가입 버튼
                 SizedBox(
                   height: 55,
                   child: ElevatedButton(
-                    onPressed: _signUp,
+                    onPressed: submitting ? null : _signUp,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.indigo,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
                     ),
-                    child: const Text(
-                      "회원가입",
-                      style: TextStyle(fontSize: 18, color: Colors.white),
-                    ),
+                    child: submitting
+                        ? const SizedBox(
+                            width: 22, height: 22,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2, color: Colors.white,
+                            ),
+                          )
+                        : const Text(
+                            "회원가입",
+                            style: TextStyle(fontSize: 18, color: Colors.white),
+                          ),
                   ),
                 ),
               ],

@@ -23,7 +23,7 @@ public class SignupRequest {
 
     /** 서비스 로그인 ID (memId/cargoId 공용) */
     @NotBlank(message = "loginId는 필수입니다.")
-    @Size(min = 8, max = 15, message = "loginId는 8~15자여야 합니다.")
+    @Size(min = 6, max = 15, message = "loginId는 6~15자여야 합니다.")
     @Pattern(regexp = "^[A-Za-z0-9]+$", message = "loginId는 영문/숫자만 가능합니다.")
     private String loginId;
 

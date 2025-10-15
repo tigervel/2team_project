@@ -44,12 +44,12 @@ class MatchingApi {
   }
 
   Future<void> rejectMatching({
-  required int eno,
+  required int estimateNo,
   required String bearerToken,
 }) async {
   await _dio.post(
-   'g2i4/estimate/subpath/accepted',
-    queryParameters: {'eno': eno},
+   '/g2i4/estimate/subpath/rejected',
+    data: {'estimateNo': estimateNo},
     options: Options(headers: {'Authorization': 'Bearer $bearerToken'}),
   );
 }
