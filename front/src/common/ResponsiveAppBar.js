@@ -20,11 +20,13 @@ import axios from 'axios';
 
 import { login as loginAction, logout as logoutAction, getUserInfoAsync } from '../slice/loginSlice';
 
+import { API_SERVER_HOST } from '../api/serverConfig';
+
 // ✅ 백엔드 베이스 URL (단일 정의)
 const API_BASE =
   (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE) ||
   process.env.REACT_APP_API_BASE ||
-  'http://localhost:8080';
+  API_SERVER_HOST;
 
 const pages = [
   { label: '견적서 작성', path: '/estimatepage' },

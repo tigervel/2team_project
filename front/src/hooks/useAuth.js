@@ -4,10 +4,12 @@ import { tokenStore } from '../lib/tokenStore';
 import { useDispatch } from 'react-redux';
 import { login as loginAction } from '../slice/loginSlice';
 
+import { API_SERVER_HOST } from '../api/serverConfig';
+
 const API_BASE =
     import.meta?.env?.VITE_API_BASE ||
     process.env.REACT_APP_API_BASE ||
-    'http://localhost:8080';
+    API_SERVER_HOST;
 
 export default function useAuth() {
     const navigate = useNavigate();

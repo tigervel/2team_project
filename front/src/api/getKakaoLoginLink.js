@@ -1,6 +1,5 @@
 import axios from "axios"
-
-export const API_SERVER_HOST = "http://localhost:8080";
+import { API_SERVER_HOST } from "./serverConfig";
 const rest_api_key = `565114d3ec7b2515badd76cddff1136a`
 const redirect_uri = `http://localhost:3000/member/kakao`
 

@@ -6,11 +6,13 @@ import { Navigate, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { logout as logoutAction } from "../slice/loginSlice";
 
+import { API_SERVER_HOST } from "../api/serverConfig";
+
 // 백엔드 베이스 URL
 const API_BASE =
    import.meta?.env?.VITE_API_BASE ||
    process.env.REACT_APP_API_BASE ||
-   "http://localhost:8080";
+   API_SERVER_HOST;
 
 // 토큰 유틸
 const saveTokens = ({ accessToken, refreshToken }, remember = true) => {

@@ -5,10 +5,12 @@ import {
     TextField, Button, Stack, Typography, LinearProgress
 } from "@mui/material";
 
+import { API_SERVER_HOST } from "../../../api/serverConfig";
+
 const API_BASE =
     import.meta?.env?.VITE_API_BASE ||
     process.env.REACT_APP_API_BASE ||
-    "http://localhost:8080";
+    API_SERVER_HOST;
 
 export default function EmailVerifyDialog({ open, email, onClose, onVerified }) {
     const [phase, setPhase] = React.useState("idle"); // idle | sending | code | verifying | verified | error

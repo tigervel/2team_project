@@ -1,15 +1,17 @@
 // src/hooks/useLogout.js
 import { useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { API_SERVER_HOST } from '../api/serverConfig';
+
+const API_BASE =
+    import.meta?.env?.VITE_API_BASE ||
+    process.env.REACT_APP_API_BASE ||
+    API_SERVER_HOST;
 
 export default function useLogout() {
     const navigate = useNavigate();
 
     const logout = useCallback(async (redirectTo = '/login') => {
-        const API_BASE =
-            import.meta?.env?.VITE_API_BASE ||
-            process.env.REACT_APP_API_BASE ||
-            'http://localhost:8080';
 
         try {
             // 1) 로컬/세션 저장소 토큰 제거 (프로젝트 키에 맞게 추가/수정)

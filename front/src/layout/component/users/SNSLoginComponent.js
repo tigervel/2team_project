@@ -1,10 +1,12 @@
 import { Button } from "@mui/material";
 
+import { API_SERVER_HOST } from "../../../api/serverConfig";
+
 /* eslint-disable no-undef */
 const API_BASE =
     (typeof import.meta !== "undefined" && import.meta.env?.VITE_API_BASE) ||
     process.env.REACT_APP_API_BASE ||
-    "http://localhost:8080";
+    API_SERVER_HOST;
 
 const ButtonStyle = {
     mb: 1,

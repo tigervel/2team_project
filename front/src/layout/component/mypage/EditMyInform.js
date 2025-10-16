@@ -10,11 +10,13 @@ import {
 import Visibility from '@mui/icons-material/Visibility';
 import VisibilityOff from '@mui/icons-material/VisibilityOff';
 
+import { API_SERVER_HOST } from "../../../api/serverConfig";
+
 // =================== 공통 상수/유틸 ===================
 const API_BASE =
   import.meta?.env?.VITE_API_BASE ||
   process.env.REACT_APP_API_BASE ||
-  'http://localhost:8080';
+  API_SERVER_HOST;
 
 const DEFAULT_AVATAR = '/image/placeholders/avatar.svg';
 

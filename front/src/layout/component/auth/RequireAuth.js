@@ -2,10 +2,12 @@ import { useEffect, useState } from 'react';
 import { Outlet, Navigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
 
+import { API_SERVER_HOST } from "../../../api/serverConfig";
+
 const API_BASE =
   import.meta?.env?.VITE_API_BASE ||
   process.env.REACT_APP_API_BASE ||
-  'http://localhost:8080';
+  API_SERVER_HOST;
 
 const pickToken = () =>
   localStorage.getItem('accessToken') ||

@@ -14,11 +14,13 @@ import { simplifyBatch } from "../../../api/addressApi/addressApi";
 import axios from 'axios';
 import ReportComponent from './ReportComponent';
 
+import { API_SERVER_HOST } from "../../../api/serverConfig";
+
 // ===== 공통 API 베이스/인스턴스 =====
 const API_BASE =
   import.meta?.env?.VITE_API_BASE ||
   process.env.REACT_APP_API_BASE ||
-  'http://localhost:8080';
+  API_SERVER_HOST;
 
 const api = axios.create({ baseURL: API_BASE });
 api.interceptors.request.use((config) => {

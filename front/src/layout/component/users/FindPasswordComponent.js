@@ -7,10 +7,12 @@ import { useTheme } from '@mui/material/styles';
 import usePasswordForm from '../../../hooks/usePasswordForm';
 import { useSearchParams } from 'react-router-dom';
 
+import { API_SERVER_HOST } from "../../../api/serverConfig";
+
 const API_BASE =
     (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE) ||
     process.env.REACT_APP_API_BASE ||
-    'http://localhost:8080';
+    API_SERVER_HOST;
 
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 

@@ -1,6 +1,5 @@
 import axios from "axios";
-
-export const API_SERVER_HOST = "http://localhost:3000";
+import { API_SERVER_HOST } from "./serverConfig";
 
 const myhost = `${API_SERVER_HOST}/api/users`
 

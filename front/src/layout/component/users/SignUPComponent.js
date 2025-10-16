@@ -13,6 +13,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import useIdForm from '../../../hooks/useIdForm';
 import usePasswordForm from '../../../hooks/usePasswordForm';
 import EmailVerifyDialog from '../auth/EmailVerifyDialog';
+import { API_SERVER_HOST } from "../../../api/serverConfig";
 
 // ✅ 공통 에러 메시지 헬퍼: 객체/배열/Error 모두 문자열로 변환
 function getErrorMessage(data) {
@@ -27,11 +28,13 @@ function getErrorMessage(data) {
     return String(data);
 }
 
+
+
 // 백엔드 베이스 URL
 const API_BASE =
     (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE) ||
     process.env.REACT_APP_API_BASE ||
-    'http://localhost:8080';
+    API_SERVER_HOST;
 
 // 해시에 signup_ticket이 실려 온 경우를 대비한 파서
 function getTicketFromHash(hash) {

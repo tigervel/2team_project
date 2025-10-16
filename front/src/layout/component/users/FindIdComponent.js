@@ -11,11 +11,13 @@ import {
 import EmailVerifyDialog from '../auth/EmailVerifyDialog';
 import { useNavigate } from 'react-router-dom';
 
+import { API_SERVER_HOST } from "../../../api/serverConfig";
+
 // 환경별 API 베이스
 const API_BASE =
     (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE) ||
     process.env.REACT_APP_API_BASE ||
-    'http://localhost:8080';
+    API_SERVER_HOST;
 
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 

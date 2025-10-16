@@ -11,6 +11,7 @@ import PersonIcon from '@mui/icons-material/Person';
 import BuildIcon from '@mui/icons-material/Build';
 import { useSelector } from 'react-redux';
 import axios from 'axios';
+import { API_SERVER_HOST } from '../api/serverConfig';
 
 const drawerWidth = 240;
 const APPBAR_HEIGHT_MOBILE = 56;
@@ -28,11 +29,13 @@ const pickCargoId = (obj) => {
     null
   );
 };
+
+
 // ✅ API 베이스 (앱 전반과 동일 규칙)
 const API_BASE =
   (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE) ||
   (typeof process !== 'undefined' && process.env?.REACT_APP_API_BASE) ||
-  'http://localhost:8080';
+  API_SERVER_HOST;
 
 const api = axios.create({ baseURL: API_BASE });
 api.interceptors.request.use((config) => {
