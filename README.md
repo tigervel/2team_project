@@ -109,7 +109,7 @@
 
 ## 🌐 배포 주소 (Deployment)
 
-- **웹 앱**: https://g2i4project.duckdns.org
+- **웹 앱**: http://g2i4project.duckdns.org
 
 ## 📁 프로젝트 구조
 
