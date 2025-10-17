@@ -31,7 +31,7 @@
 | 이름   | 역할                                                   | GitHub |
 | ------ | ------------------------------------------------------ | ------- |
 | 문정현 | Fullstack Developer (회원가입/로그인/소셜 로그인)        | [GitHub 프로필](https://github.com/wjdgus2103) |
-| 이재준 | Fullstack Developer (화주 마이페이지/차주 마이페이지)      | [GitHub 프로필]() |
+| 이재준 | Fullstack Developer (화주 마이페이지/차주 마이페이지)      | [GitHub 프로필](https://github.com/ljj0806) |
 | 임성훈 | Fullstack Developer (공지사항/Q&A 및 문의하기)     | [GitHub 프로필](https://github.com/flyEggr) |
 | 주덕호 | Fullstack Developer (견적서/주문서 작성 및 결제/ 메인페이지)            | [GitHub 프로필](https://github.com/tigervel) |
 | 최예지 | Fullstack Developer (관리자 페이지/운송료 조정/이용 통계)    | [GitHub 프로필](https://github.com/ooyeji) |
