@@ -72,6 +72,22 @@
 - 반응형 UI
 - 사용자 권한 기반 기능 제한
 
+
+## 📊 시스템 구성도
+
+<details>
+  <summary>🧭 프로세스 흐름도 보기 (클릭하여 펼치기)</summary>
+  <br/>
+  <img src="./docs/2teamproject.drawio (1).png" alt="프로세스 흐름도" width="800px"/>
+</details>
+
+<details>
+  <summary>🗂️ ERD Cloud 보기 (클릭하여 펼치기)</summary>
+  <br/>
+  <img src="./docs/g2i4 (2).png" alt="ERD Cloud" width="800px"/>
+</details>
+
+
 ## 🛠️ 사용 기술 (Tech Stack)
 
 | 분야 | 사용 기술 |
@@ -91,6 +107,10 @@
 
 ---
 
+## 🌐 배포 주소 (Deployment)
+
+- **웹 앱**: https://g2i4project.duckdns.org
+
 ## 📁 프로젝트 구조
 
 ```bash
@@ -105,6 +125,8 @@ freight-logistics-system/
 │   ├── src/
 │   └── public/
 ├── docs/                   # 프로젝트 문서
-│   └── 요구사항정의서.md
+│   ├── 요구사항정의서.md
+│   ├── 2teamproject.drawio (1).png
+│   └── g2i4 (2).png
 └── README.md
 
